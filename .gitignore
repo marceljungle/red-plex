@@ -1,0 +1,5 @@
+.env
+__pycache__/
+*.pyc
+logs/
+data/plex_albums_cache.csv
