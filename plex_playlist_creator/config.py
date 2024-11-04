@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Plex configuration
 PLEX_URL = os.getenv('PLEX_URL', 'http://localhost:32400')

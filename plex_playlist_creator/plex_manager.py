@@ -51,14 +51,17 @@ class PlexManager:
 
     def get_rating_key(self, path):
         """Returns the rating key if the path matches an album folder."""
+        logger.info(f'Matched album folder name: {path}, returning rating key...')
         return next((key for key, folder in self.album_data.items() if path in folder), None)
 
     def fetch_albums_by_keys(self, rating_keys):
         """Fetches album objects from Plex using their rating keys."""
+        logger.info(f'Fetching albums from Plex using rating keys: {rating_keys}.')
         return self.plex.fetchItems(rating_keys)
 
     def create_playlist(self, name, albums):
         """Creates a playlist in Plex."""
-        playlist = self.plex.createPlaylist(name, albums)
+        logger.info(f'Creating playlist with name "{name}" and {len(albums)} albums.')
+        playlist = self.plex.createPlaylist(name, self.section_name, albums)
         logger.info(f'Playlist "{name}" created with {len(albums)} albums.')
         return playlist

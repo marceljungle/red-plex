@@ -1,5 +1,5 @@
 plexapi
 requests
-ratelimit
-retrying
+pyrate-limiter
+tenacity
 python-dotenv
