@@ -14,7 +14,6 @@ setup(
         'requests',
         'tenacity',
         'pyrate-limiter',
-        'python-dotenv',
         'click',
         'pyyaml',
     ],
