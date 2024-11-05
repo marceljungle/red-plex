@@ -1,6 +1,6 @@
 # red-plex
 
-**red-plex** is a command-line tool for creating Plex playlists based on collages from the REDacted music tracker. It allows users to generate playlists in their Plex Media Server by matching music albums from specified collages.
+**red-plex** is a command-line tool for creating Plex playlists based on collages from RED. It allows users to generate playlists in their Plex Media Server by matching music albums from specified collages.
 
 ## Table of Contents
 
