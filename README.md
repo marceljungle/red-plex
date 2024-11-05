@@ -29,7 +29,7 @@
 
 - Python 3.7 or higher
 - Plex Media Server with accessible API
-- REDacted API key
+- RED API key
 
 #### Python modules
 - plexapi
