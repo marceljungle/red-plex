@@ -1,9 +1,13 @@
+"""Module for managing Plex albums and playlists."""
+
 import os
 import csv
 from plexapi.server import PlexServer
 from plex_playlist_creator.logger import logger
 
 class PlexManager:
+    """Handles operations related to Plex albums and playlists."""
+
     def __init__(self, url, token, section_name, csv_file='data/plex_albums_cache.csv'):
         self.url = url
         self.token = token
@@ -25,12 +29,13 @@ class PlexManager:
                     media_path = tracks[0].media[0].parts[0].file
                     num_files_in_directory = len(os.listdir(os.path.dirname(media_path)))
                     if num_files_in_directory < album.leafCount:
-                        album_folder = os.path.basename(os.path.dirname(os.path.dirname(media_path)))
+                        album_folder = os.path\
+                            .basename(os.path.dirname(os.path.dirname(media_path)))
                     else:
                         album_folder = os.path.basename(os.path.dirname(media_path))
                     writer.writerow([album.ratingKey, album_folder])
                 else:
-                    logger.warning(f'Skipping album with no tracks: {album.title}')
+                    logger.warning('Skipping album with no tracks: %s', album.title)
         logger.info('Albums cached successfully.')
 
     def load_albums_from_csv(self):
@@ -51,17 +56,17 @@ class PlexManager:
 
     def get_rating_key(self, path):
         """Returns the rating key if the path matches an album folder."""
-        logger.info(f'Matched album folder name: {path}, returning rating key...')
+        logger.info('Matched album folder name: %s, returning rating key...', path)
         return next((key for key, folder in self.album_data.items() if path in folder), None)
 
     def fetch_albums_by_keys(self, rating_keys):
         """Fetches album objects from Plex using their rating keys."""
-        logger.info(f'Fetching albums from Plex using rating keys: {rating_keys}.')
+        logger.info('Fetching albums from Plex using rating keys: %s', rating_keys)
         return self.plex.fetchItems(rating_keys)
 
     def create_playlist(self, name, albums):
         """Creates a playlist in Plex."""
-        logger.info(f'Creating playlist with name "{name}" and {len(albums)} albums.')
+        logger.info('Creating playlist with name "%s" and %d albums.', name, len(albums))
         playlist = self.plex.createPlaylist(name, self.section_name, albums)
-        logger.info(f'Playlist "{name}" created with {len(albums)} albums.')
+        logger.info('Playlist "%s" created with %d albums.', name, len(albums))
         return playlist

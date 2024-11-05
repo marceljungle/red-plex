@@ -1,3 +1,5 @@
+"""Configuration class"""
+
 import os
 import yaml
 
@@ -20,7 +22,7 @@ def load_config():
         save_config(DEFAULT_CONFIG)
         return DEFAULT_CONFIG
 
-    with open(CONFIG_FILE_PATH, 'r') as config_file:
+    with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as config_file:
         config = yaml.safe_load(config_file)
         if not config:
             config = DEFAULT_CONFIG
@@ -29,7 +31,7 @@ def load_config():
 def save_config(config):
     """Save configuration to the config.yml file."""
     os.makedirs(CONFIG_DIR, exist_ok=True)
-    with open(CONFIG_FILE_PATH, 'w') as config_file:
+    with open(CONFIG_FILE_PATH, 'w', encoding='utf-8') as config_file:
         yaml.dump(config, config_file, default_flow_style=False)
 
 def ensure_config_exists():
