@@ -1,3 +1,4 @@
+import html
 from plex_playlist_creator.logger import logger
 
 class PlaylistCreator:
@@ -8,7 +9,7 @@ class PlaylistCreator:
     def create_playlist_from_collage(self, collage_id):
         """Creates a Plex playlist based on a RED collage."""
         collage_data = self.redacted_api.get_collage(collage_id)
-        collage_name = collage_data.get('response', {}).get('name', f'Collage {collage_id}')
+        collage_name = html.unescape(collage_data.get('response', {}).get('name', f'Collage {collage_id}'))
         group_ids = collage_data.get('response', {}).get('torrentGroupIDList', [])
 
         matched_rating_keys = set()
