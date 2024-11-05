@@ -1,7 +1,12 @@
+"""Module for creating Plex playlists from RED collages."""
+
 import html
 from plex_playlist_creator.logger import logger
 
+# pylint: disable=too-few-public-methods
 class PlaylistCreator:
+    """Handles the creation of Plex playlists based on RED collages."""
+
     def __init__(self, plex_manager, redacted_api):
         self.plex_manager = plex_manager
         self.redacted_api = redacted_api
@@ -9,7 +14,9 @@ class PlaylistCreator:
     def create_playlist_from_collage(self, collage_id):
         """Creates a Plex playlist based on a RED collage."""
         collage_data = self.redacted_api.get_collage(collage_id)
-        collage_name = html.unescape(collage_data.get('response', {}).get('name', f'Collage {collage_id}'))
+        collage_name = html.unescape(
+            collage_data.get('response', {}).get('name', f'Collage {collage_id}')
+        )
         group_ids = collage_data.get('response', {}).get('torrentGroupIDList', [])
 
         matched_rating_keys = set()
@@ -25,4 +32,4 @@ class PlaylistCreator:
             albums = self.plex_manager.fetch_albums_by_keys(list(matched_rating_keys))
             self.plex_manager.create_playlist(collage_name, albums)
         else:
-            logger.warning(f'No matching albums found for collage "{collage_name}".')
+            logger.warning('No matching albums found for collage "%s".', collage_name)

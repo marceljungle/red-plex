@@ -1,3 +1,5 @@
+"""Logger class"""
+
 import logging
 import os
 
