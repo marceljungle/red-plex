@@ -1,13 +1,33 @@
 import os
-from dotenv import load_dotenv
+import yaml
 
-load_dotenv(override=True)
+# Determine the path to the user's config directory
+CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.config', 'red-plex')
+CONFIG_FILE_PATH = os.path.join(CONFIG_DIR, 'config.yml')
 
-# Plex configuration
-PLEX_URL = os.getenv('PLEX_URL', 'http://localhost:32400')
-PLEX_TOKEN = os.getenv('PLEX_TOKEN')
-SECTION_NAME = os.getenv('SECTION_NAME', 'Music')
+# Default configuration values
+DEFAULT_CONFIG = {
+    'PLEX_URL': 'http://localhost:32400',
+    'PLEX_TOKEN': '',
+    'SECTION_NAME': 'Music',
+    'RED_API_KEY': ''
+}
 
-# RED configuration
-RED_API_KEY = os.getenv('RED_API_KEY')
-COLLAGE_IDS = os.getenv('COLLAGE_IDS', '34966').split(',')
+def load_config():
+    """Load configuration from the config.yml file."""
+    if not os.path.exists(CONFIG_FILE_PATH):
+        # If the config file doesn't exist, create it with default values
+        save_config(DEFAULT_CONFIG)
+        return DEFAULT_CONFIG
+
+    with open(CONFIG_FILE_PATH, 'r') as config_file:
+        config = yaml.safe_load(config_file)
+        if not config:
+            config = DEFAULT_CONFIG
+    return config
+
+def save_config(config):
+    """Save configuration to the config.yml file."""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with open(CONFIG_FILE_PATH, 'w') as config_file:
+        yaml.dump(config, config_file, default_flow_style=False)

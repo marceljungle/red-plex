@@ -3,3 +3,5 @@ requests
 pyrate-limiter
 tenacity
 python-dotenv
+click
+pyyaml
