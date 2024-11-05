@@ -67,7 +67,7 @@ Before using red-plex, you need to configure it with your Plex and REDacted API 
 2. Update Configuration Settings
    In the `config.yml` file, update the following settings:
    ```
-   PLEX_URL: 'http://localhost:32400'  # URL of your Plex Media Server
+   PLEX_URL: 'http://localhost:32400'   # URL of your Plex Media Server
    PLEX_TOKEN: 'your_plex_token_here'   # Your Plex API token
    SECTION_NAME: 'Music'                # The name of your music library section in Plex
    RED_API_KEY: 'your_red_api_key_here' # Your REDacted API key 
