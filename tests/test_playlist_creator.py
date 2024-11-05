@@ -1,19 +1,23 @@
+"""Unit tests for the PlaylistCreator class."""
+
 import unittest
 from unittest.mock import MagicMock
 from plex_playlist_creator.playlist_creator import PlaylistCreator
 
 class TestPlaylistCreator(unittest.TestCase):
+    """Tests for the PlaylistCreator class."""
+
     def setUp(self):
-        # Mock PlexManager and RedactedAPI
+        """Set up mocks for PlexManager and RedactedAPI."""
         self.mock_plex_manager = MagicMock()
         self.mock_red_api = MagicMock()
         self.playlist_creator = PlaylistCreator(self.mock_plex_manager, self.mock_red_api)
 
     def test_create_playlist_from_collage(self):
+        """Test creating a playlist from a collage ID."""
         collage_id = '123'
         collage_name = 'Test Collage'
         group_ids = ['1', '2']
-        file_paths = ['Album1', 'Album2']
         rating_keys = [111, 222]
 
         # Mock the return values of RedactedAPI methods
@@ -46,7 +50,8 @@ class TestPlaylistCreator(unittest.TestCase):
         self.assertEqual(self.mock_red_api.get_file_paths_from_torrent_group.call_count, 2)
         self.assertEqual(self.mock_plex_manager.get_rating_key.call_count, 2)
         self.mock_plex_manager.fetch_albums_by_keys.assert_called_with([111, 222])
-        self.mock_plex_manager.create_playlist.assert_called_with(collage_name, ['AlbumObject1', 'AlbumObject2'])
+        self.mock_plex_manager.create_playlist\
+            .assert_called_with(collage_name, ['AlbumObject1', 'AlbumObject2'])
 
 if __name__ == '__main__':
     unittest.main()
