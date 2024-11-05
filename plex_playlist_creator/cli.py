@@ -7,6 +7,7 @@ from plex_playlist_creator.config import (
     DEFAULT_CONFIG,
     load_config,
     save_config,
+    ensure_config_exists
 )
 from plex_playlist_creator.plex_manager import PlexManager
 from plex_playlist_creator.redacted_api import RedactedAPI
@@ -62,6 +63,9 @@ def show_config():
 @config.command('edit')
 def edit_config():
     """Open the configuration file in the default editor."""
+    # Ensure the configuration file exists
+    ensure_config_exists()
+    
     editor = os.environ.get('EDITOR', 'nano')  # Default to 'nano' if EDITOR is not set
     click.echo(f"Opening config file at {CONFIG_FILE_PATH}...")
     subprocess.call([editor, CONFIG_FILE_PATH])

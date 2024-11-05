@@ -31,3 +31,9 @@ def save_config(config):
     os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CONFIG_FILE_PATH, 'w') as config_file:
         yaml.dump(config, config_file, default_flow_style=False)
+
+def ensure_config_exists():
+    """Ensure the configuration file exists, creating it with default values if it doesn't."""
+    if not os.path.exists(CONFIG_FILE_PATH):
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        save_config(DEFAULT_CONFIG)
