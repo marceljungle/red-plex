@@ -15,6 +15,7 @@
 5. [Usage](#usage)
    - [Commands](#commands)
    - [Examples](#examples)
+6. [Considerations](#considerations)
 
 ### Features
 
@@ -127,3 +128,8 @@ This command will:
 #### Resetting Configuration
 
 `red-plex config reset`
+
+### Considerations
+
+- Bad tagged albums won't be counted in some cases.
+- It has to be run on the host which has Plex Server running. (For now)

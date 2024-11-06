@@ -1,0 +1,42 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Bump version and tag
+        id: tag_version
+        run: |
+          echo "Fetching tags..."
+          git fetch --tags
+          VERSION=$(python setup.py --version)
+          echo "Current version: $VERSION"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin --tags
+          echo "::set-output name=VERSION::$VERSION"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.tag_version.outputs.VERSION }}
+          release_name: v${{ steps.tag_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          body: |
+            See the changelog for details.
+
+      - name: Upload Distribution to PyPI
+        if: success()
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
