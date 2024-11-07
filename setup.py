@@ -1,10 +1,19 @@
 """Setup script for installing the package."""
 
+import re
 from setuptools import setup, find_packages
+
+# Read the version from the package's __init__.py
+with open('plex_playlist_creator/__init__.py', 'r', encoding="utf-8") as f:
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M)
+    if version_match:
+        version = version_match.group(1)
+    else:
+        raise RuntimeError("Unable to find version string.")
 
 setup(
     name='red-plex',
-    version='1.0.0',
+    version=version,
     description='A tool for creating Plex playlists from RED collages',
     author='marceljungle',
     author_email='gigi.dan2011@gmail.com',

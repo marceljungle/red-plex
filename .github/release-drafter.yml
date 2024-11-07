@@ -1,0 +1,21 @@
+name-template: 'v$NEXT_PATCH_VERSION'
+tag-template: 'v$NEXT_PATCH_VERSION'
+categories:
+  - title: '🚀 New Features'
+    labels:
+      - 'feature'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+  - title: '🧰 Maintenance'
+    labels:
+      - 'chore'
+      - 'documentation'
+      - 'refactor'
+change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
+template: |
+  ## Changes
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/marceljungle/red-plex/compare/$PREVIOUS_TAG...$NEW_TAG
