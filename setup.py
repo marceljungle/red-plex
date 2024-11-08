@@ -2,6 +2,10 @@
 
 import re
 from setuptools import setup, find_packages
+import pathlib
+
+here = pathlib.Path(__file__).parent.resolve()
+long_description = (here / "README.md").read_text(encoding="utf-8")
 
 # Read the version from the package's __init__.py
 with open('plex_playlist_creator/__init__.py', 'r', encoding="utf-8") as f:
@@ -15,6 +19,8 @@ setup(
     name='red-plex',
     version=version,
     description='A tool for creating Plex playlists from RED collages',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author='marceljungle',
     author_email='gigi.dan2011@gmail.com',
     url='https://github.com/marceljungle/red-plex',
