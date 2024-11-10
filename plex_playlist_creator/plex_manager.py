@@ -24,10 +24,10 @@ class PlexManager:
         """Saves minimal album information to a CSV file."""
         music_library = self.plex.library.section(self.section_name)
         all_albums = music_library.searchAlbums()
-        
+
         # Ensure the directory for CSV file exists
         os.makedirs(os.path.dirname(self.csv_file), exist_ok=True)
-        
+
         with open(self.csv_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             for album in all_albums:
