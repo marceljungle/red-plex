@@ -8,11 +8,15 @@ from plex_playlist_creator.logger import logger
 class PlexManager:
     """Handles operations related to Plex albums and playlists."""
 
-    def __init__(self, url, token, section_name, csv_file='data/plex_albums_cache.csv'):
+    def __init__(self, url, token, section_name, csv_file=None):
         self.url = url
         self.token = token
         self.section_name = section_name
-        self.csv_file = csv_file
+
+        # Define CSV file location based on OS
+        default_csv_path = os.path.join('data', 'plex_albums_cache.csv')
+        self.csv_file = csv_file if csv_file else default_csv_path
+
         self.plex = PlexServer(self.url, self.token)
         self.album_data = self.load_albums_from_csv()
 
@@ -20,7 +24,10 @@ class PlexManager:
         """Saves minimal album information to a CSV file."""
         music_library = self.plex.library.section(self.section_name)
         all_albums = music_library.searchAlbums()
+        
+        # Ensure the directory for CSV file exists
         os.makedirs(os.path.dirname(self.csv_file), exist_ok=True)
+        
         with open(self.csv_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             for album in all_albums:
