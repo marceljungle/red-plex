@@ -73,7 +73,7 @@ def edit_config():
     ensure_config_exists()
 
     # Default to 'nano' if EDITOR is not set
-    editor = os.environ.get('EDITOR', 'nano')
+    editor = os.environ.get('EDITOR', 'notepad' if os.name == 'nt' else 'nano')
     click.echo(f"Opening config file at {CONFIG_FILE_PATH}...")
     subprocess.call([editor, CONFIG_FILE_PATH])
 
