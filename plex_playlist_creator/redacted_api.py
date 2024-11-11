@@ -3,6 +3,7 @@
 import html
 import time
 import requests
+from unicodedata import normalize
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 from plex_playlist_creator.logger import logger
@@ -65,6 +66,11 @@ class RedactedAPI:
             torrent.get("filePath")
             for torrent in torrent_group.get("response", {}).get("torrents", [])
         ]
-        unescaped_file_paths = [html.unescape(path) for path in file_paths if path]
-        logger.info('Extracted file paths: %s', unescaped_file_paths)
-        return unescaped_file_paths
+        normalized_file_paths = [self.normalize(path) for path in file_paths if path]
+        logger.info('Extracted file paths: %s', normalized_file_paths)
+        return normalized_file_paths
+
+    def normalize(self, text):
+        unescaped_text = html.unescape(text)
+        removed_direction_control = unescaped_text.replace("\u200e", "")
+        return removed_direction_control
