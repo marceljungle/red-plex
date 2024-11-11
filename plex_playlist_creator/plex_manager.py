@@ -63,8 +63,10 @@ class PlexManager:
 
     def get_rating_key(self, path):
         """Returns the rating key if the path matches an album folder."""
-        logger.info('Matched album folder name: %s, returning rating key...', path)
-        return next((key for key, folder in self.album_data.items() if path in folder), None)
+        rating_key = next((key for key, folder in self.album_data.items() if path in folder), None)
+        if rating_key:
+            logger.info('Matched album folder name: %s, returning rating key %s...', path, rating_key)
+        return rating_key
 
     def fetch_albums_by_keys(self, rating_keys):
         """Fetches album objects from Plex using their rating keys."""
