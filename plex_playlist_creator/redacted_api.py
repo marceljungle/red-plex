@@ -3,7 +3,6 @@
 import html
 import time
 import requests
-from unicodedata import normalize
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 from plex_playlist_creator.logger import logger
@@ -71,6 +70,7 @@ class RedactedAPI:
         return normalized_file_paths
 
     def normalize(self, text):
+        """Unescape text and remove direction control unicode character."""
         unescaped_text = html.unescape(text)
         removed_direction_control = unescaped_text.replace("\u200e", "")
         return removed_direction_control
