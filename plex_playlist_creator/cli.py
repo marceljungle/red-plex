@@ -88,7 +88,7 @@ def reset_config():
 @cli.group()
 def cache():
     """Manage saved albums cache."""
-    
+
 @cache.command('show')
 def show_cache():
     """Show the location of the cache file if it exists."""
@@ -100,7 +100,7 @@ def show_cache():
             click.echo(f"Cache file exists at: {os.path.abspath(cache_file)}")
         else:
             click.echo("Cache file does not exist.")
-    except Exception as exc:
+    except Exception as exc: # pylint: disable=W0718
         logger.exception('Failed to show cache: %s', exc)
         click.echo(f"An error occurred while showing the cache: {exc}")
 
@@ -111,7 +111,7 @@ def reset_cache():
         album_cache = AlbumCache()
         album_cache.reset_cache()
         click.echo("Cache has been reset successfully.")
-    except Exception as exc:
+    except Exception as exc: # pylint: disable=W0718
         logger.exception('Failed to reset cache: %s', exc)
         click.echo(f"An error occurred while resetting the cache: {exc}")
 
