@@ -13,6 +13,7 @@ from plex_playlist_creator.config import (
 )
 from plex_playlist_creator.plex_manager import PlexManager
 from plex_playlist_creator.redacted_api import RedactedAPI
+from plex_playlist_creator.album_cache import AlbumCache
 from plex_playlist_creator.playlist_creator import PlaylistCreator
 from plex_playlist_creator.logger import logger
 
@@ -55,18 +56,18 @@ def convert(collage_ids):
 
 
 @cli.group()
-def config_group():
+def config():
     """View or edit configuration settings."""
 
 
-@config_group.command('show')
+@config.command('show')
 def show_config():
     """Display the current configuration."""
     config_data = load_config()
     click.echo(yaml.dump(config_data, default_flow_style=False))
 
 
-@config_group.command('edit')
+@config.command('edit')
 def edit_config():
     """Open the configuration file in the default editor."""
     # Ensure the configuration file exists
@@ -78,12 +79,41 @@ def edit_config():
     subprocess.call([editor, CONFIG_FILE_PATH])
 
 
-@config_group.command('reset')
+@config.command('reset')
 def reset_config():
     """Reset the configuration to default values."""
     save_config(DEFAULT_CONFIG)
     click.echo(f"Configuration reset to default values at {CONFIG_FILE_PATH}")
 
+@cli.group()
+def cache():
+    """Manage saved albums cache."""
+    
+@cache.command('show')
+def show_cache():
+    """Show the location of the cache file if it exists."""
+    try:
+        album_cache = AlbumCache()
+        cache_file = album_cache.csv_file
+
+        if os.path.exists(cache_file):
+            click.echo(f"Cache file exists at: {os.path.abspath(cache_file)}")
+        else:
+            click.echo("Cache file does not exist.")
+    except Exception as exc:
+        logger.exception('Failed to show cache: %s', exc)
+        click.echo(f"An error occurred while showing the cache: {exc}")
+
+@cache.command('reset')
+def reset_cache():
+    """Reset the saved albums cache."""
+    try:
+        album_cache = AlbumCache()
+        album_cache.reset_cache()
+        click.echo("Cache has been reset successfully.")
+    except Exception as exc:
+        logger.exception('Failed to reset cache: %s', exc)
+        click.echo(f"An error occurred while resetting the cache: {exc}")
 
 if __name__ == '__main__':
     cli()
