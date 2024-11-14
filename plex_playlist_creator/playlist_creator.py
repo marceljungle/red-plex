@@ -3,17 +3,16 @@
 import html
 from plex_playlist_creator.logger import logger
 
-# pylint: disable=too-few-public-methods
-class PlaylistCreator:
-    """Handles the creation of Plex playlists based on RED collages."""
+class PlaylistCreator: # pylint: disable=R0903
+    """Handles the creation of Plex playlists based on Gazelle collages."""
 
-    def __init__(self, plex_manager, redacted_api):
+    def __init__(self, plex_manager, gazelle_api):
         self.plex_manager = plex_manager
-        self.redacted_api = redacted_api
+        self.gazelle_api = gazelle_api
 
     def create_playlist_from_collage(self, collage_id):
-        """Creates a Plex playlist based on a RED collage."""
-        collage_data = self.redacted_api.get_collage(collage_id)
+        """Creates a Plex playlist based on a Gazelle collage."""
+        collage_data = self.gazelle_api.get_collage(collage_id)
         collage_name = html.unescape(
             collage_data.get('response', {}).get('name', f'Collage {collage_id}')
         )
@@ -21,8 +20,8 @@ class PlaylistCreator:
 
         matched_rating_keys = set()
         for group_id in group_ids:
-            torrent_group = self.redacted_api.get_torrent_group(group_id)
-            file_paths = self.redacted_api.get_file_paths_from_torrent_group(torrent_group)
+            torrent_group = self.gazelle_api.get_torrent_group(group_id)
+            file_paths = self.gazelle_api.get_file_paths_from_torrent_group(torrent_group)
             for path in file_paths:
                 rating_key = self.plex_manager.get_rating_key(path)
                 if rating_key:

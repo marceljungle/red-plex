@@ -13,8 +13,17 @@ DEFAULT_CONFIG = {
     'PLEX_URL': 'http://localhost:32400',
     'PLEX_TOKEN': '',
     'SECTION_NAME': 'Music',
-    'RED_API_KEY': '',
-    'LOG_LEVEL': 'INFO'
+    'LOG_LEVEL': 'INFO',
+    'RED': {
+        'API_KEY': '',
+        'BASE_URL': 'https://redacted.ch',
+        'RATE_LIMIT': {'calls': 10, 'seconds': 10}
+    },
+    'OPS': {
+        'API_KEY': '',
+        'BASE_URL': 'https://orpheus.network',
+        'RATE_LIMIT': {'calls': 4, 'seconds': 15}
+    }
 }
 
 def load_config():
