@@ -3,8 +3,9 @@
 import os
 import yaml
 
-# Determine the path to the user's config directory
-CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.config', 'red-plex')
+# Determine the path to the user's config directory based on OS
+home_dir = os.getenv('APPDATA') if os.name == 'nt' else os.path.expanduser('~/.config')
+CONFIG_DIR = os.path.join(home_dir, 'red-plex')
 CONFIG_FILE_PATH = os.path.join(CONFIG_DIR, 'config.yml')
 
 # Default configuration values
@@ -12,7 +13,17 @@ DEFAULT_CONFIG = {
     'PLEX_URL': 'http://localhost:32400',
     'PLEX_TOKEN': '',
     'SECTION_NAME': 'Music',
-    'RED_API_KEY': ''
+    'LOG_LEVEL': 'INFO',
+    'RED': {
+        'API_KEY': '',
+        'BASE_URL': 'https://redacted.ch',
+        'RATE_LIMIT': {'calls': 10, 'seconds': 10}
+    },
+    'OPS': {
+        'API_KEY': '',
+        'BASE_URL': 'https://orpheus.network',
+        'RATE_LIMIT': {'calls': 4, 'seconds': 15}
+    }
 }
 
 def load_config():
