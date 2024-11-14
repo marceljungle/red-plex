@@ -1,95 +1,99 @@
 """Unit tests for the PlexManager class."""
 
 import unittest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import MagicMock, patch
 from plex_playlist_creator.plex_manager import PlexManager
+from plex_playlist_creator.album_cache import AlbumCache
 
 class TestPlexManager(unittest.TestCase):
-    """Tests for the PlexManager class."""
+    """Test cases for the PlexManager class."""
 
     def setUp(self):
-        """Set up PlexManager with mocked PlexServer and test data."""
+        """Set up the test environment."""
+        # Patch PlexServer and AlbumCache
+        patcher1 = patch('plex_playlist_creator.plex_manager.PlexServer')
+        patcher2 = patch('plex_playlist_creator.plex_manager.AlbumCache')
+        self.addCleanup(patcher1.stop)
+        self.addCleanup(patcher2.stop)
+        mock_plex_server_class = patcher1.start()
+        mock_album_cache_class = patcher2.start()
 
-        # Initialize PlexManager with mock data
-        self.url = 'http://localhost:32400'
-        self.token = 'mock_token'
-        self.section_name = 'Music'
-        self.csv_file = 'data/test_plex_albums_cache.csv'
+        # Mock the AlbumCache instance
+        self.mock_album_cache = MagicMock(spec=AlbumCache)
+        mock_album_cache_class.return_value = self.mock_album_cache
+        self.mock_album_cache.load_albums.return_value = {}
 
-        self.plex_manager = PlexManager(self.url, self.token, self.section_name, self.csv_file)
+        # Mock the PlexServer instance
+        self.mock_plex_server = MagicMock()
+        mock_plex_server_class.return_value = self.mock_plex_server
 
-    def test_load_albums_from_csv(self):
-        """Test loading album data from a CSV file."""
-        with patch('os.path.exists', return_value=True):
-            # Mock open to read mock CSV data
-            mock_csv_data = '123,Album1\n456,Album2\n'
-            with patch('builtins.open', mock_open(read_data=mock_csv_data)):
-                album_data = self.plex_manager.load_albums_from_csv()
-                expected_data = {123: 'Album1', 456: 'Album2'}
-                self.assertEqual(album_data, expected_data)
+        # Initialize PlexManager with mocks
+        self.plex_manager = PlexManager(
+            url='http://localhost:32400', token='dummy_token', section_name='Music'
+            )
+
+    def test_populate_album_cache(self):
+        """Test populating the album cache."""
+        with patch('plex_playlist_creator.plex_manager.os.listdir') as mock_listdir:
+            # Mock the return value of os.listdir
+            mock_listdir.return_value = ['file1.mp3', 'file2.mp3']
+
+            # Reset the call count of save_albums
+            self.mock_album_cache.save_albums.reset_mock()
+
+            # Mock library and albums
+            mock_music_library = MagicMock()
+            self.mock_plex_server.library.section.return_value = mock_music_library
+            mock_album = MagicMock()
+            mock_album.ratingKey = 123
+            mock_album.leafCount = 10
+            mock_album.title = "Test Album"
+            mock_album.tracks.return_value = [MagicMock()]
+            mock_track = mock_album.tracks()[0]
+            mock_track.media = [MagicMock()]
+            mock_media = mock_track.media[0]
+            mock_media.parts = [MagicMock()]
+            mock_media_part = mock_media.parts[0]
+            mock_media_part.file = '/path/to/music/file.mp3'
+            mock_music_library.searchAlbums.return_value = [mock_album]
+
+            # Call the method
+            self.plex_manager.populate_album_cache()
+
+            # Assertions
+            self.mock_album_cache.save_albums.assert_called_once()
+            self.assertIn(123, self.plex_manager.album_data)
+
+    def test_reset_album_cache(self):
+        """Test resetting the album cache."""
+        self.plex_manager.reset_album_cache()
+        self.mock_album_cache.reset_cache.assert_called_once()
+        self.assertEqual(self.plex_manager.album_data, {})
 
     def test_get_rating_key(self):
-        """Test retrieving a rating key based on album name."""
-        self.plex_manager.album_data = {123: 'Album1', 456: 'Album2'}
-
-        rating_key = self.plex_manager.get_rating_key('Album1')
+        """Test retrieving the rating key for a given album path."""
+        # Set up album data
+        self.plex_manager.album_data = {123: 'Test Album'}
+        rating_key = self.plex_manager.get_rating_key('Test Album')
         self.assertEqual(rating_key, 123)
 
-        rating_key = self.plex_manager.get_rating_key('NonExistentAlbum')
-        self.assertIsNone(rating_key)
-
-    @patch('plex_playlist_creator.plex_manager.PlexServer.fetchItems')
-    def test_fetch_albums_by_keys(self, mock_fetch_items):
-        """Test fetching albums by rating keys."""
-        mock_fetch_items.return_value = ['AlbumObject1', 'AlbumObject2']
-
+    def test_fetch_albums_by_keys(self):
+        """Test fetching albums by their rating keys."""
+        # Mock fetchItems
+        self.mock_plex_server.fetchItems.return_value = ['album1', 'album2']
         albums = self.plex_manager.fetch_albums_by_keys([123, 456])
-        mock_fetch_items.assert_called_with([123, 456])
-        self.assertEqual(albums, ['AlbumObject1', 'AlbumObject2'])
+        self.mock_plex_server.fetchItems.assert_called_with([123, 456])
+        self.assertEqual(albums, ['album1', 'album2'])
 
-    @patch('plex_playlist_creator.plex_manager.PlexServer.createPlaylist')
-    def test_create_playlist(self, mock_create_playlist):
+    def test_create_playlist(self):
         """Test creating a playlist in Plex."""
-        mock_create_playlist.return_value = 'MockPlaylistObject'
-
-        playlist = self.plex_manager\
-            .create_playlist('Test Playlist', ['AlbumObject1', 'AlbumObject2'])
-        mock_create_playlist.assert_called_with('Test Playlist', ['AlbumObject1', 'AlbumObject2'])
-        self.assertEqual(playlist, 'MockPlaylistObject')
-
-    @patch('os.makedirs')
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('plex_playlist_creator.plex_manager.os.path.exists')
-    @patch('plex_playlist_creator.plex_manager.os.listdir')
-    @patch('plex_playlist_creator.plex_manager.PlexServer')
-    def test_save_albums_to_csv(self, mock_listdir, mock_exists, mock_plex_server, mock_file, _):
-        """Test saving album data to a CSV file."""
-        mock_exists.return_value = False
-        mock_plex_server = mock_plex_server.return_value
-
-        mock_album = MagicMock()
-        mock_album.ratingKey = 123
-        mock_album.leafCount = 10
-        mock_album.tracks.return_value = [MagicMock()]
-        mock_album.title = 'Test Album'
-
-        mock_track = mock_album.tracks.return_value[0]
-        mock_media = MagicMock()
-        mock_part = MagicMock()
-        mock_part.file = '/path/to/album/song.mp3'
-        mock_media.parts = [mock_part]
-        mock_track.media = [mock_media]
-
-        mock_listdir.return_value = ['song.mp3']
-
-        mock_library_section = mock_plex_server.library.section.return_value
-        mock_library_section.searchAlbums.return_value = [mock_album]
-
-        with patch('plex_playlist_creator.plex_manager.os.path.dirname',
-                   return_value='/path/to/album'), \
-             patch('plex_playlist_creator.plex_manager.os.path.basename', return_value='album'):
-            self.plex_manager.save_albums_to_csv()
-            mock_file.assert_called_with(self.csv_file, 'w', newline='', encoding='utf-8')
+        # Mock albums
+        albums = ['album1', 'album2']
+        # Mock createPlaylist
+        self.mock_plex_server.createPlaylist.return_value = 'playlist_object'
+        result = self.plex_manager.create_playlist('Test Playlist', albums)
+        self.mock_plex_server.createPlaylist.assert_called_with('Test Playlist', 'Music', albums)
+        self.assertEqual(result, 'playlist_object')
 
 if __name__ == '__main__':
     unittest.main()

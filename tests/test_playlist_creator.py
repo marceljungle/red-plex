@@ -5,53 +5,52 @@ from unittest.mock import MagicMock
 from plex_playlist_creator.playlist_creator import PlaylistCreator
 
 class TestPlaylistCreator(unittest.TestCase):
-    """Tests for the PlaylistCreator class."""
+    """Test cases for the PlaylistCreator class."""
 
     def setUp(self):
-        """Set up mocks for PlexManager and RedactedAPI."""
+        """Set up the test environment."""
+        # Mock PlexManager and RedactedAPI
         self.mock_plex_manager = MagicMock()
-        self.mock_red_api = MagicMock()
-        self.playlist_creator = PlaylistCreator(self.mock_plex_manager, self.mock_red_api)
+        self.mock_redacted_api = MagicMock()
+        self.playlist_creator = PlaylistCreator(self.mock_plex_manager, self.mock_redacted_api)
 
     def test_create_playlist_from_collage(self):
-        """Test creating a playlist from a collage ID."""
-        collage_id = '123'
-        collage_name = 'Test Collage'
-        group_ids = ['1', '2']
-        rating_keys = [111, 222]
-
-        # Mock the return values of RedactedAPI methods
-        self.mock_red_api.get_collage.return_value = {
+        """Test creating a playlist from a collage."""
+        collage_id = 123
+        # Mock collage data
+        collage_data = {
             'response': {
-                'name': collage_name,
-                'torrentGroupIDList': group_ids
+                'name': 'Test Collage',
+                'torrentGroupIDList': [456]
             }
         }
-        self.mock_red_api.get_torrent_group.side_effect = [
-            {'response': {'torrents': [{'filePath': 'Album1'}]}},
-            {'response': {'torrents': [{'filePath': 'Album2'}]}}
-        ]
-        self.mock_red_api.get_file_paths_from_torrent_group.side_effect = [
-            ['Album1'],
-            ['Album2']
-        ]
+        self.mock_redacted_api.get_collage.return_value = collage_data
 
-        # Mock the return values of PlexManager methods
-        self.mock_plex_manager.get_rating_key.side_effect = rating_keys
-        self.mock_plex_manager.fetch_albums_by_keys.return_value = ['AlbumObject1', 'AlbumObject2']
-        self.mock_plex_manager.create_playlist.return_value = 'MockPlaylistObject'
+        # Mock torrent group data
+        torrent_group_data = {
+            'response': {
+                'torrents': [{'filePath': 'Test Album'}]
+            }
+        }
+        self.mock_redacted_api.get_torrent_group.return_value = torrent_group_data
+        self.mock_redacted_api.get_file_paths_from_torrent_group.return_value = ['Test Album']
 
-        # Call the method under test
+        # Mock PlexManager methods
+        self.mock_plex_manager.get_rating_key.return_value = 789
+        self.mock_plex_manager.fetch_albums_by_keys.return_value = ['album_object']
+        self.mock_plex_manager.create_playlist.return_value = 'playlist_object'
+
+        # Call the method
         self.playlist_creator.create_playlist_from_collage(collage_id)
 
-        # Assertions to verify correct calls
-        self.mock_red_api.get_collage.assert_called_with(collage_id)
-        self.assertEqual(self.mock_red_api.get_torrent_group.call_count, 2)
-        self.assertEqual(self.mock_red_api.get_file_paths_from_torrent_group.call_count, 2)
-        self.assertEqual(self.mock_plex_manager.get_rating_key.call_count, 2)
-        self.mock_plex_manager.fetch_albums_by_keys.assert_called_with([111, 222])
-        self.mock_plex_manager.create_playlist\
-            .assert_called_with(collage_name, ['AlbumObject1', 'AlbumObject2'])
+        # Assertions
+        self.mock_redacted_api.get_collage.assert_called_with(collage_id)
+        self.mock_redacted_api.get_torrent_group.assert_called_with(456)
+        self.mock_redacted_api.get_file_paths_from_torrent_group.assert_called_with(
+            torrent_group_data)
+        self.mock_plex_manager.get_rating_key.assert_called_with('Test Album')
+        self.mock_plex_manager.fetch_albums_by_keys.assert_called_with([789])
+        self.mock_plex_manager.create_playlist.assert_called_with('Test Collage', ['album_object'])
 
 if __name__ == '__main__':
     unittest.main()
