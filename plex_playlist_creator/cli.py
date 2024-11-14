@@ -64,7 +64,10 @@ def config():
 def show_config():
     """Display the current configuration."""
     config_data = load_config()
-    click.echo(yaml.dump(config_data, default_flow_style=False))
+    path_with_config = (
+    "Configuration path: " + str(CONFIG_FILE_PATH) + "\n\n" +
+    yaml.dump(config_data, default_flow_style=False))
+    click.echo(path_with_config)
 
 
 @config.command('edit')
