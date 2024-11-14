@@ -13,7 +13,8 @@ DEFAULT_CONFIG = {
     'PLEX_URL': 'http://localhost:32400',
     'PLEX_TOKEN': '',
     'SECTION_NAME': 'Music',
-    'RED_API_KEY': ''
+    'RED_API_KEY': '',
+    'LOG_LEVEL': 'INFO'
 }
 
 def load_config():
