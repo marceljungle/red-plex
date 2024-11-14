@@ -15,12 +15,25 @@ from plex_playlist_creator.plex_manager import PlexManager
 from plex_playlist_creator.redacted_api import RedactedAPI
 from plex_playlist_creator.album_cache import AlbumCache
 from plex_playlist_creator.playlist_creator import PlaylistCreator
-from plex_playlist_creator.logger import logger
-
+from plex_playlist_creator.logger import logger, configure_logger
 
 @click.group()
 def cli():
     """A CLI tool for creating Plex playlists from RED collages."""
+    # Load configuration
+    config_data = load_config()
+
+    # Get log level from configuration, default to 'INFO' if not set
+    log_level = config_data.get('LOG_LEVEL', 'INFO').upper()
+
+    # Validate log level
+    valid_log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+    if log_level not in valid_log_levels:
+        print(f"Invalid LOG_LEVEL '{log_level}' in configuration. Defaulting to 'INFO'.")
+        log_level = 'INFO'
+
+    # Configure logger
+    configure_logger(log_level)
 
 
 @cli.command()
