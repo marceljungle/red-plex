@@ -23,6 +23,7 @@ class PlexManager:
 
     def populate_album_cache(self):
         """Fetches albums from Plex and saves them to the cache."""
+        logger.info('Creating album cache, this can take a while depending on the library size...')
         music_library = self.plex.library.section(self.section_name)
         all_albums = music_library.searchAlbums()
         album_data = {}
