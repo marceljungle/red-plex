@@ -36,7 +36,7 @@ class TestPlaylistCreator(unittest.TestCase):
         self.mock_redacted_api.get_file_paths_from_torrent_group.return_value = ['Test Album']
 
         # Mock PlexManager methods
-        self.mock_plex_manager.get_rating_key.return_value = 789
+        self.mock_plex_manager.get_rating_keys.return_value = [789]
         self.mock_plex_manager.fetch_albums_by_keys.return_value = ['album_object']
         self.mock_plex_manager.create_playlist.return_value = 'playlist_object'
 
@@ -48,7 +48,7 @@ class TestPlaylistCreator(unittest.TestCase):
         self.mock_redacted_api.get_torrent_group.assert_called_with(456)
         self.mock_redacted_api.get_file_paths_from_torrent_group.assert_called_with(
             torrent_group_data)
-        self.mock_plex_manager.get_rating_key.assert_called_with('Test Album')
+        self.mock_plex_manager.get_rating_keys.assert_called_with('Test Album')
         self.mock_plex_manager.fetch_albums_by_keys.assert_called_with([789])
         self.mock_plex_manager.create_playlist.assert_called_with('Test Collage', ['album_object'])
 

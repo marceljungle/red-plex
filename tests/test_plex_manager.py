@@ -70,12 +70,12 @@ class TestPlexManager(unittest.TestCase):
         self.mock_album_cache.reset_cache.assert_called_once()
         self.assertEqual(self.plex_manager.album_data, {})
 
-    def test_get_rating_key(self):
+    def test_get_rating_keys(self):
         """Test retrieving the rating key for a given album path."""
         # Set up album data
         self.plex_manager.album_data = {123: 'Test Album'}
-        rating_key = self.plex_manager.get_rating_key('Test Album')
-        self.assertEqual(rating_key, 123)
+        rating_key = self.plex_manager.get_rating_keys('Test Album')
+        self.assertEqual(rating_key, [123])
 
     def test_fetch_albums_by_keys(self):
         """Test fetching albums by their rating keys."""
