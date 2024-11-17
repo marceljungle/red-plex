@@ -23,9 +23,9 @@ class PlaylistCreator: # pylint: disable=R0903
             torrent_group = self.gazelle_api.get_torrent_group(group_id)
             file_paths = self.gazelle_api.get_file_paths_from_torrent_group(torrent_group)
             for path in file_paths:
-                rating_key = self.plex_manager.get_rating_key(path)
-                if rating_key:
-                    matched_rating_keys.add(int(rating_key))
+                rating_keys = self.plex_manager.get_rating_keys(path)
+                if rating_keys:
+                    matched_rating_keys.update(int(key) for key in rating_keys)
 
         if matched_rating_keys:
             albums = self.plex_manager.fetch_albums_by_keys(list(matched_rating_keys))

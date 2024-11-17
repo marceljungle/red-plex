@@ -23,7 +23,6 @@ def cli():
     """A CLI tool for creating Plex playlists from RED and OPS collages."""
     # Load configuration
     config_data = load_config()
-    print("loaded config")
 
     # Get log level from configuration, default to 'INFO' if not set
     log_level = config_data.get('LOG_LEVEL', 'INFO').upper()

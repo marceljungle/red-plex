@@ -23,6 +23,7 @@ class PlexManager:
 
     def populate_album_cache(self):
         """Fetches albums from Plex and saves them to the cache."""
+        logger.info('Creating album cache, this can take a while depending on the library size...')
         music_library = self.plex.library.section(self.section_name)
         all_albums = music_library.searchAlbums()
         album_data = {}
@@ -31,13 +32,8 @@ class PlexManager:
             tracks = album.tracks()
             if tracks:
                 media_path = tracks[0].media[0].parts[0].file
-                num_files_in_directory = len(os.listdir(os.path.dirname(media_path)))
-                if num_files_in_directory < album.leafCount:
-                    # Determine album folder name when files are in subdirectories
-                    album_folder = os.path.basename(os.path.dirname(os.path.dirname(media_path)))
-                else:
-                    album_folder = os.path.basename(os.path.dirname(media_path))
-                album_data[int(album.ratingKey)] = album_folder
+                album_folder_path = os.path.dirname(media_path)
+                album_data[int(album.ratingKey)] = album_folder_path
             else:
                 logger.warning('Skipping album with no tracks: %s', album.title)
 
@@ -49,13 +45,13 @@ class PlexManager:
         self.album_cache.reset_cache()
         self.album_data = {}
 
-    def get_rating_key(self, path):
+    def get_rating_keys(self, path):
         """Returns the rating key if the path matches an album folder."""
-        rating_key = next((key for key, folder in self.album_data.items() if path in folder), None)
-        if rating_key:
-            logger.info('Matched album folder name: %s, returning rating key %s...', path,
-                         rating_key)
-        return rating_key
+        rating_keys = [key for key, folder_path in self.album_data.items() if path in folder_path]
+        if rating_keys:
+            logger.info('Matched album folder name: %s, returning rating keys %s...', path,
+                         rating_keys)
+        return rating_keys
 
     def fetch_albums_by_keys(self, rating_keys):
         """Fetches album objects from Plex using their rating keys."""
