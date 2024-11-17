@@ -218,7 +218,6 @@ red-plex cache reset
 ### Considerations
 
 - **Album Matching**: The tool matches albums based on the folder names in your Plex library. Ensure that your music library is properly organized and tagged for the best results.
-- **Run Location**: The application currently needs to be run on the host where the Plex Media Server is running.
 - **Logging**: You can adjust the verbosity of the application's logging by setting the `LOG_LEVEL` in your configuration file.
 - **API Rate Limits**: Be mindful of the API rate limits for each site. The defaults are set in the configuration, but you may need to adjust them based on your usage and the site's policies.
 - **Required Credentials**: Make sure you have valid API keys for the sites you wish to use and that they are correctly entered in the configuration file.
