@@ -26,7 +26,7 @@ class PlexManager:
         """Fetches new albums from Plex and updates the cache."""
         logger.info('Updating album cache...')
         music_library = self.plex.library.section(self.section_name)
-        
+
         # Determine the latest addedAt date from the existing cache
         if self.album_data:
             latest_added_at = max(added_at for _, added_at in self.album_data.values())
