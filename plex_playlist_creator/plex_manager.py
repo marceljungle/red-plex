@@ -19,14 +19,14 @@ class PlexManager:
         self.album_cache = AlbumCache(csv_file)
         self.album_data = self.album_cache.load_albums()
 
-        if not self.album_data:
-            self.populate_album_cache()
+        # Always attempt to update the cache with new albums
+        self.populate_album_cache()
 
     def populate_album_cache(self):
-        """Fetches albums from Plex and saves them to the cache."""
+        """Fetches new albums from Plex and updates the cache."""
         logger.info('Updating album cache...')
         music_library = self.plex.library.section(self.section_name)
-
+        
         # Determine the latest addedAt date from the existing cache
         if self.album_data:
             latest_added_at = max(added_at for _, added_at in self.album_data.values())
