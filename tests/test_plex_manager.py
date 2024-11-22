@@ -73,7 +73,7 @@ class TestPlexManager(unittest.TestCase):
     def test_get_rating_keys(self):
         """Test retrieving the rating key for a given album path."""
         # Set up album data
-        self.plex_manager.album_data = {123: 'Test Album'}
+        self.plex_manager.album_data = {123: ('Test Album', '2021-07-27T16:02:08.070557')}
         rating_key = self.plex_manager.get_rating_keys('Test Album')
         self.assertEqual(rating_key, [123])
 
