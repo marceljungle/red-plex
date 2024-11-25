@@ -146,5 +146,27 @@ def reset_cache():
         logger.exception('Failed to reset cache: %s', exc)
         click.echo(f"An error occurred while resetting the cache: {exc}")
 
+@cache.command('update')
+def update_cache():
+    """Update the saved albums cache with the latest albums from Plex."""
+    try:
+        # Load configuration
+        config_data = load_config()
+        plex_token = config_data.get('PLEX_TOKEN')
+        plex_url = config_data.get('PLEX_URL', 'http://localhost:32400')
+        section_name = config_data.get('SECTION_NAME', 'Music')
+
+        if not plex_token:
+            logger.error('PLEX_TOKEN must be set in the config file.')
+            click.echo('PLEX_TOKEN must be set in the config file.')
+            return
+
+        # Initialize & update cache using PlexManager
+        PlexManager(plex_url, plex_token, section_name)
+        click.echo("Cache has been updated successfully.")
+    except Exception as exc: # pylint: disable=W0718
+        logger.exception('Failed to update cache: %s', exc)
+        click.echo(f"An error occurred while updating the cache: {exc}")
+
 if __name__ == '__main__':
     cli()
