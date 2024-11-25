@@ -85,7 +85,7 @@ Before using **red-plex**, you need to configure it with your Plex and Gazelle-b
    
    RED:
      API_KEY: 'your_red_api_key_here'  # Your RED API key
-     BASE_URL: 'https://redacted.ch'   # Base URL for RED
+     BASE_URL: 'https://redacted.sh'   # Base URL for RED
      RATE_LIMIT:
        calls: 10                       # Number of API calls allowed
        seconds: 10                     # Time window in seconds
@@ -104,7 +104,7 @@ Before using **red-plex**, you need to configure it with your Plex and Gazelle-b
    - **LOG_LEVEL**: The logging level for the application. Options are `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`. Defaults to `INFO`.
    - **RED**:
      - **API_KEY**: Your API key from Redacted.
-     - **BASE_URL**: The base URL for Redacted's API. Defaults to `https://redacted.ch`.
+     - **BASE_URL**: The base URL for Redacted's API. Defaults to `https://redacted.sh`.
      - **RATE_LIMIT**: API rate limiting settings for Redacted.
    - **OPS**:
      - **API_KEY**: Your API key from Orpheus Network.

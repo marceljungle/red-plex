@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
     'LOG_LEVEL': 'INFO',
     'RED': {
         'API_KEY': '',
-        'BASE_URL': 'https://redacted.ch',
+        'BASE_URL': 'https://redacted.sh',
         'RATE_LIMIT': {'calls': 10, 'seconds': 10}
     },
     'OPS': {
