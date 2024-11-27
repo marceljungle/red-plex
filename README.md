@@ -215,6 +215,12 @@ To reset the album cache:
 red-plex cache reset
 ```
 
+To update the album cache:
+
+```bash
+red-plex cache update
+```
+
 ### Considerations
 
 - **Album Matching**: The tool matches albums based on the folder names in your Plex library. Ensure that your music library is properly organized and tagged for the best results.
