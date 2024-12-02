@@ -24,7 +24,7 @@ class AlbumCache:
             for album_id, (folder_name, added_at) in album_data.items():
                 writer.writerow([album_id, folder_name, added_at.isoformat()])
         logger.info('Albums saved to cache.')
-        
+
     def load_albums(self):
         """Loads album data from the CSV file."""
         album_data = {}
