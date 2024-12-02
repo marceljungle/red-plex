@@ -47,8 +47,8 @@ class PlaylistCreator:
                 cached_group_ids = set()
             # Ask user if they want to update
             response = click.confirm(
-                f'Playlist "{collage_name}" already exists. \
-                    Do you want to update it with new items?',
+                f'Playlist "{collage_name}" already exists. '
+                'Do you want to update it with new items?',
                 default=True
             )
             if not response:
@@ -115,18 +115,18 @@ class PlaylistCreator:
             click.echo(message)
 
     def create_playlist_from_bookmarks(self, file_paths, site):
-            """Creates a Plex playlist based on the user's bookmarks from a Gazelle-based site."""
-            matched_rating_keys = {
-                int(key)
-                for path in file_paths
-                for key in (self.plex_manager.get_rating_keys(path) or [])
-            }
+        """Creates a Plex playlist based on the user's bookmarks from a Gazelle-based site."""
+        matched_rating_keys = {
+            int(key)
+            for path in file_paths
+            for key in (self.plex_manager.get_rating_keys(path) or [])
+        }
 
-            if matched_rating_keys:
-                albums = self.plex_manager.fetch_albums_by_keys(list(matched_rating_keys))
-                playlist_name = f'{site} Bookmarks'
-                self.plex_manager.create_playlist(playlist_name, albums)
-            else:
-                message = f'No matching albums found for bookmarks on "{site}".'
-                logger.warning(message)
-                print(message)
+        if matched_rating_keys:
+            albums = self.plex_manager.fetch_albums_by_keys(list(matched_rating_keys))
+            playlist_name = f'{site} Bookmarks'
+            self.plex_manager.create_playlist(playlist_name, albums)
+        else:
+            message = f'No matching albums found for bookmarks on "{site}".'
+            logger.warning(message)
+            print(message)
