@@ -24,10 +24,11 @@ class AlbumCache:
             for album_id, (folder_name, added_at) in album_data.items():
                 writer.writerow([album_id, folder_name, added_at.isoformat()])
         logger.info('Albums saved to cache.')
-
+        
     def load_albums(self):
         """Loads album data from the CSV file."""
         album_data = {}
+        # pylint: disable=duplicate-code
         if os.path.exists(self.csv_file):
             with open(self.csv_file, newline='', encoding='utf-8') as f:
                 reader = csv.reader(f)

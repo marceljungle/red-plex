@@ -36,6 +36,7 @@ class PlaylistCache:
     def load_cache(self):
         """Loads playlist data from the CSV file."""
         cache = {}
+        # pylint: disable=duplicate-code
         if os.path.exists(self.csv_file):
             with open(self.csv_file, newline='', encoding='utf-8') as f:
                 reader = csv.reader(f)
