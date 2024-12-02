@@ -80,3 +80,18 @@ class PlexManager:
         playlist = self.plex.createPlaylist(name, self.section_name, albums)
         logger.info('Playlist "%s" created with %d albums.', name, len(albums))
         return playlist
+
+    def get_playlist_by_name(self, name):
+        """Finds a playlist by name."""
+        playlists = self.plex.playlists()
+        for playlist in playlists:
+            if playlist.title == name:
+                logger.info('Found existing playlist with name "%s".', name)
+                return playlist
+        logger.info('No existing playlist found with name "%s".', name)
+        return None
+
+    def add_items_to_playlist(self, playlist, albums):
+        """Adds albums to an existing playlist."""
+        logger.info('Adding %d albums to playlist "%s".', len(albums), playlist.title)
+        playlist.addItems(albums)
