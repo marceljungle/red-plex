@@ -6,6 +6,7 @@ import tempfile
 import os
 from plex_playlist_creator.playlist_creator import PlaylistCreator
 
+# pylint: disable=duplicate-code
 class TestPlaylistCreator(unittest.TestCase):
     """Test cases for the PlaylistCreator class."""
 
