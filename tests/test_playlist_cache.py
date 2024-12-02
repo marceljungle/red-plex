@@ -5,6 +5,7 @@ import unittest
 import tempfile
 from plex_playlist_creator.playlist_cache import PlaylistCache
 
+# pylint: disable=consider-using-with
 class TestPlaylistCache(unittest.TestCase):
     """Test cases for the PlaylistCache class."""
 
