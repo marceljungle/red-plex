@@ -15,6 +15,7 @@ from plex_playlist_creator.config import (
 from plex_playlist_creator.plex_manager import PlexManager
 from plex_playlist_creator.gazelle_api import GazelleAPI
 from plex_playlist_creator.album_cache import AlbumCache
+from plex_playlist_creator.playlist_cache import PlaylistCache
 from plex_playlist_creator.playlist_creator import PlaylistCreator
 from plex_playlist_creator.logger import logger, configure_logger
 
@@ -89,7 +90,7 @@ def convert(collage_ids, site):
     for collage_id in collage_ids:
         try:
             playlist_creator.create_playlist_from_collage(collage_id)
-        except Exception as exc: # pylint: disable=W0718
+        except Exception as exc:  # pylint: disable=W0718
             logger.exception(
                 'Failed to create playlist for collage %s on site %s: %s',
                 collage_id, site.upper(), exc)
@@ -126,11 +127,10 @@ def edit_config():
     try:
         subprocess.call([editor, CONFIG_FILE_PATH])
     except FileNotFoundError:
-        message = f"Editor '{editor}' not found. Please set\
-            the EDITOR environment variable to a valid editor."
+        message = f"Editor '{editor}' not found. Please set the EDITOR environment variable to a valid editor."
         logger.error(message)
         click.echo(message)
-    except Exception as exc: # pylint: disable=W0718
+    except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to open editor: %s', exc)
         click.echo(f"An error occurred while opening the editor: {exc}")
 
@@ -159,7 +159,7 @@ def show_cache():
             click.echo(f"Cache file exists at: {os.path.abspath(cache_file)}")
         else:
             click.echo("Cache file does not exist.")
-    except Exception as exc: # pylint: disable=W0718
+    except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to show cache: %s', exc)
         click.echo(f"An error occurred while showing the cache: {exc}")
 
@@ -172,7 +172,7 @@ def reset_cache():
             album_cache = AlbumCache()
             album_cache.reset_cache()
             click.echo("Cache has been reset successfully.")
-        except Exception as exc: # pylint: disable=W0718
+        except Exception as exc:  # pylint: disable=W0718
             logger.exception('Failed to reset cache: %s', exc)
             click.echo(f"An error occurred while resetting the cache: {exc}")
 
@@ -196,9 +196,43 @@ def update_cache():
         # Initialize & update cache using PlexManager
         PlexManager(plex_url, plex_token, section_name)
         click.echo("Cache has been updated successfully.")
-    except Exception as exc: # pylint: disable=W0718
+    except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cache: %s', exc)
         click.echo(f"An error occurred while updating the cache: {exc}")
+
+
+@cli.group('playlist-cache')
+def playlist_cache():
+    """Manage playlist cache."""
+
+
+@playlist_cache.command('show')
+def show_playlist_cache():
+    """Shows the location of the playlist cache file if it exists."""
+    try:
+        playlist_cache = PlaylistCache()
+        cache_file = playlist_cache.csv_file
+
+        if os.path.exists(cache_file):
+            click.echo(f"Playlist cache file exists at: {os.path.abspath(cache_file)}")
+        else:
+            click.echo("Playlist cache file does not exist.")
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to show playlist cache: %s', exc)
+        click.echo(f"An error occurred while showing the playlist cache: {exc}")
+
+
+@playlist_cache.command('reset')
+def reset_playlist_cache():
+    """Resets the saved playlist cache."""
+    if click.confirm('Are you sure you want to reset the playlist cache?'):
+        try:
+            playlist_cache = PlaylistCache()
+            playlist_cache.reset_cache()
+            click.echo("Playlist cache has been reset successfully.")
+        except Exception as exc:  # pylint: disable=W0718
+            logger.exception('Failed to reset playlist cache: %s', exc)
+            click.echo(f"An error occurred while resetting the playlist cache: {exc}")
 
 
 @cli.group()
@@ -219,7 +253,7 @@ def create_playlist_from_bookmarks(site):
         bookmarks_data = gazelle_api.get_bookmarks()
         file_paths = gazelle_api.get_file_paths_from_bookmarks(bookmarks_data)
         playlist_creator.create_playlist_from_bookmarks(file_paths, site.upper())
-    except Exception as exc: # pylint: disable=W0718
+    except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to create playlist from bookmarks on site %s: %s',
                          site.upper(), exc)
         click.echo(f'Failed to create playlist from bookmarks on site {site.upper()}: {exc}')
