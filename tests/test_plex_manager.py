@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 from plex_playlist_creator.plex_manager import PlexManager
 from plex_playlist_creator.album_cache import AlbumCache
 
+# pylint: disable=duplicate-code
 class TestPlexManager(unittest.TestCase):
     """Test cases for the PlexManager class."""
 
@@ -70,12 +71,12 @@ class TestPlexManager(unittest.TestCase):
         self.mock_album_cache.reset_cache.assert_called_once()
         self.assertEqual(self.plex_manager.album_data, {})
 
-    def test_get_rating_key(self):
+    def test_get_rating_keys(self):
         """Test retrieving the rating key for a given album path."""
         # Set up album data
-        self.plex_manager.album_data = {123: 'Test Album'}
-        rating_key = self.plex_manager.get_rating_key('Test Album')
-        self.assertEqual(rating_key, 123)
+        self.plex_manager.album_data = {123: ('Test Album', '2021-07-27T16:02:08.070557')}
+        rating_key = self.plex_manager.get_rating_keys('Test Album')
+        self.assertEqual(rating_key, [123])
 
     def test_fetch_albums_by_keys(self):
         """Test fetching albums by their rating keys."""

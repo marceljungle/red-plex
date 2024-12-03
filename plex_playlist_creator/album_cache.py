@@ -3,6 +3,7 @@
 import os
 import csv
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -20,19 +21,26 @@ class AlbumCache:
         os.makedirs(os.path.dirname(self.csv_file), exist_ok=True)
         with open(self.csv_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            for album_id, folder_name in album_data.items():
-                writer.writerow([album_id, folder_name])
+            for album_id, (folder_name, added_at) in album_data.items():
+                writer.writerow([album_id, folder_name, added_at.isoformat()])
         logger.info('Albums saved to cache.')
 
     def load_albums(self):
         """Loads album data from the CSV file."""
         album_data = {}
+        # pylint: disable=duplicate-code
         if os.path.exists(self.csv_file):
             with open(self.csv_file, newline='', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    album_id, folder_name = row
-                    album_data[int(album_id)] = folder_name
+                    if len(row) == 3:
+                        album_id, folder_name, added_at_str = row
+                        added_at = datetime.fromisoformat(added_at_str)
+                    else:
+                        # Handle old cache files without added_at
+                        album_id, folder_name = row
+                        added_at = datetime.min  # Assign a default date
+                    album_data[int(album_id)] = (folder_name, added_at)
             logger.info('Albums loaded from cache.')
         else:
             logger.info('Cache file not found.')
