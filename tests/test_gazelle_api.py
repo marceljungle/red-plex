@@ -50,14 +50,13 @@ class TestGazelleAPI(unittest.TestCase):
         mock_api_call.assert_called_with('collage', {'id': '123', 'showonlygroups': 'true'})
         self.assertEqual(result, {'response': 'collage_data'})
 
-    @patch.object(GazelleAPI, 'api_call')
+    @patch('plex_playlist_creator.gazelle_api.GazelleAPI.api_call')
     def test_get_torrent_group(self, mock_api_call):
         """Test retrieving a torrent group from the Gazelle-based service."""
-        mock_api_call.return_value = {'response': 'torrent_group_data'}
-        group_id = 456
-        result = self.gazelle_api.get_torrent_group(group_id)
-        mock_api_call.assert_called_with('torrentgroup', {'id': 456})
-        self.assertEqual(result, {'response': 'torrent_group_data'})
+        mock_api_call.return_value = {'response': {'group': 'group data'}}
+        result = self.gazelle_api.get_torrent_group(456)  # Corrected to self.gazelle_api
+        self.assertEqual(result, {'response': {'group': 'group data'}})
+        mock_api_call.assert_called_with('torrentgroup', {'id': '456'})
 
     def test_get_file_paths_from_torrent_group(self):
         """Test extracting file paths from a torrent group."""

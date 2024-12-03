@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 from plex_playlist_creator.plex_manager import PlexManager
 from plex_playlist_creator.album_cache import AlbumCache
 
+# pylint: disable=duplicate-code
 class TestPlexManager(unittest.TestCase):
     """Test cases for the PlexManager class."""
 
