@@ -127,7 +127,8 @@ def edit_config():
     try:
         subprocess.call([editor, CONFIG_FILE_PATH])
     except FileNotFoundError:
-        message = f"Editor '{editor}' not found. Please set the EDITOR environment variable to a valid editor."
+        message = f"Editor '{editor}' not found. \
+            Please set the EDITOR environment variable to a valid editor."
         logger.error(message)
         click.echo(message)
     except Exception as exc:  # pylint: disable=W0718
@@ -210,6 +211,7 @@ def playlist_cache():
 def show_playlist_cache():
     """Shows the location of the playlist cache file if it exists."""
     try:
+        # pylint: disable=redefined-outer-name
         playlist_cache = PlaylistCache()
         cache_file = playlist_cache.csv_file
 
@@ -227,6 +229,7 @@ def reset_playlist_cache():
     """Resets the saved playlist cache."""
     if click.confirm('Are you sure you want to reset the playlist cache?'):
         try:
+            # pylint: disable=redefined-outer-name
             playlist_cache = PlaylistCache()
             playlist_cache.reset_cache()
             click.echo("Playlist cache has been reset successfully.")
