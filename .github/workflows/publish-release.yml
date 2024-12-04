@@ -1,15 +1,17 @@
 name: Publish Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Release Drafter"]
+    types:
+      - completed
 
 permissions:
   contents: write
 
 jobs:
   publish_release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
