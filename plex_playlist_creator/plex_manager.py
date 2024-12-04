@@ -32,7 +32,7 @@ class PlexManager:
             latest_added_at = max(added_at for _, added_at in self.album_data.values())
             logger.info('Latest album added at: %s', latest_added_at)
         else:
-            latest_added_at = datetime.min  # No albums in cache, get all albums
+            latest_added_at = None
             logger.info('No existing albums in cache. Fetching all albums.')
 
         # Fetch albums added after the latest date in cache
