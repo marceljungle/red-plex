@@ -1,7 +1,6 @@
 """Module for managing Plex albums and playlists."""
 
 import os
-from datetime import datetime
 from plexapi.server import PlexServer
 from plex_playlist_creator.logger import logger
 from plex_playlist_creator.album_cache import AlbumCache
