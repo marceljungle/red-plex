@@ -18,4 +18,4 @@ template: |
 
   $CHANGES
 
-  **Full Changelog**: https://github.com/marceljungle/red-plex/compare/$PREVIOUS_TAG...$NEW_TAG
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$NEW_TAG
