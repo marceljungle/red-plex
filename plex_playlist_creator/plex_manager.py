@@ -1,6 +1,7 @@
 """Module for managing Plex albums and playlists."""
 
 import os
+from datetime import datetime
 from plexapi.server import PlexServer
 from plex_playlist_creator.logger import logger
 from plex_playlist_creator.album_cache import AlbumCache
@@ -31,7 +32,7 @@ class PlexManager:
             latest_added_at = max(added_at for _, added_at in self.album_data.values())
             logger.info('Latest album added at: %s', latest_added_at)
         else:
-            latest_added_at = None
+            latest_added_at = datetime(1970, 1, 1)
             logger.info('No existing albums in cache. Fetching all albums.')
 
         # Fetch albums added after the latest date in cache
