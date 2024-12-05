@@ -1,7 +1,20 @@
-name-template: 'v$NEXT_PATCH_VERSION'
-tag-template: 'v$NEXT_PATCH_VERSION'
+name-template: 'v$NEXT_VERSION'
+tag-template: 'v$NEXT_VERSION'
 draft: false
 prerelease: false
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'minor'
+  patch:
+    labels:
+      - 'patch'
+  default: patch
+
 categories:
   - title: '🚀 New Features'
     labels:
@@ -14,10 +27,12 @@ categories:
       - 'chore'
       - 'documentation'
       - 'refactor'
+
 change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
 template: |
   ## Changes
 
   $CHANGES
 
-  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$NEW_TAG
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$NEXT_VERSION
+
