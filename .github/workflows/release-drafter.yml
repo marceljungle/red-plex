@@ -9,22 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  update_release_draft:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Update Release Draft
-        uses: release-drafter/release-drafter@v6
-        with:
-          publish: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   create_tag:
-    needs: update_release_draft
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -53,4 +38,21 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git tag -a "v${{ steps.get_version.outputs.VERSION }}" -m "Release v${{ steps.get_version.outputs.VERSION }}"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git push origin "v${{ steps.get_version.outputs.VERSION }}"
+
+  update_release_draft:
+    needs: create_tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Publish Release
+        uses: release-drafter/release-drafter@v6
+        with:
+          tag: v${{ steps.get_version.outputs.VERSION }}
+          publish: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
