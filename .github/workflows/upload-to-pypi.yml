@@ -19,6 +19,7 @@ jobs:
         with:
           fetch-depth: 0
           tags: true
+          ref: main
 
       - name: Get Latest Tag
         id: get_version
