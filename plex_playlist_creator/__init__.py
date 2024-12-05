@@ -1,3 +1,3 @@
 """ Version control """
 
-__version__ = '1.3.1'
+__version__ = 'DO_NOT_EDIT'
