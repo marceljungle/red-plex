@@ -1,5 +1,5 @@
-name-template: 'v$NEXT_VERSION'
-tag-template: 'v$NEXT_VERSION'
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
 draft: false
 prerelease: false
 
@@ -34,5 +34,4 @@ template: |
 
   $CHANGES
 
-  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$NEXT_VERSION
-
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$RESOLVED_VERSION
