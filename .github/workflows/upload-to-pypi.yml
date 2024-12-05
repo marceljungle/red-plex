@@ -2,7 +2,7 @@ name: Upload to PyPI
 
 on:
   workflow_run:
-    workflows: ["Publish Release"]
+    workflows: ["Release Drafter"]
     types:
       - completed
 
