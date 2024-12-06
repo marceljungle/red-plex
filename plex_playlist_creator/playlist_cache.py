@@ -3,6 +3,7 @@
 import os
 import csv
 import logging
+from .cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
 
@@ -11,9 +12,12 @@ class PlaylistCache:
     """Manages playlist cache using a CSV file."""
 
     def __init__(self, csv_file=None):
-        # Define the default CSV file path
-        default_csv_path = os.path.join('data', 'playlist_cache.csv')
+        # Define the default CSV file path in the cache directory
+        default_csv_path = os.path.join(get_cache_directory(), 'playlist_cache.csv')
         self.csv_file = csv_file if csv_file else default_csv_path
+
+        # Ensure the cache directory exists
+        ensure_directory_exists(os.path.dirname(self.csv_file))
 
     def save_playlist(self, playlist_id, playlist_name, torrent_group_ids):
         """Saves playlist data to the CSV file."""
