@@ -15,7 +15,7 @@ def configure_logger(log_level='INFO'):
         log_dir = os.path.join(os.getenv('APPDATA'), 'red-plex', 'logs')
     else:  # Linux/macOS
         log_dir = os.path.join(Path.home(), '.cache', 'red-plex', 'logs')
-    
+
     # Ensure the log directory exists
     os.makedirs(log_dir, exist_ok=True)
 
@@ -47,4 +47,4 @@ def configure_logger(log_level='INFO'):
     logger.addHandler(stream_handler)
 
     # Log where the logs are being saved for transparency
-    logger.info(f"Logs are being saved to: {log_file_path}")
+    logger.info("Logs are being saved to: [%s]", log_file_path)
