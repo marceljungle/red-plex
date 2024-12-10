@@ -1,7 +1,7 @@
 
 # red-plex
 
-**red-plex** is a command-line tool for creating Plex playlists based on collages and bookmarks from Gazelle-based music trackers like Redacted (RED) and Orpheus Network (OPS). It allows users to generate playlists in their Plex Media Server by matching music albums from specified collages or personal bookmarks.
+**red-plex** is a command-line tool for creating and updating Plex playlists based on collages and bookmarks from Gazelle-based music trackers like Redacted (RED) and Orpheus Network (OPS). It allows users to generate playlists in their Plex Media Server by matching music albums from specified collages or personal bookmarks, and now also provides a way to synchronize previously created playlists with updated collage information.
 
 ## Table of Contents
 
@@ -24,7 +24,8 @@
 - **Create Playlists from Bookmarks**: Generate Plex playlists based on your personal bookmarks from Gazelle-based sites.
 - **Multiple Collage IDs**: Support for processing multiple collage IDs in a single command.
 - **Optimized Album Caching**: The album cache now includes timestamps to allow incremental updates, reducing the need to scan the entire library each time.
-- **Playlist Cache Management**: Keeps track of processed playlist items to avoid reprocessing and to detect new additions.
+- **Playlist Cache Management**: Keeps track of processed playlists, including site and collage IDs, to enable automatic updating of existing playlists without re-specifying collage IDs.
+- **New Playlist Update Feature**: Automatically synchronize all cached playlists with their source collages, ensuring that they stay up-to-date with new albums you've acquired.
 - **Configurable Logging**: Adjust the logging level via the configuration file.
 - **Easy Configuration**: Simple setup using a `config.yml` file.
 - **Command-Line Interface**: Seamless interaction through a user-friendly CLI.
@@ -99,19 +100,6 @@ Before using red-plex, you need to configure it with your Plex and Gazelle-based
        seconds: 15                     # Time window in seconds
    ```
 
-  - **PLEX_URL**: The URL where your Plex server is accessible. Defaults to `http://localhost:32400`.
-  - **PLEX_TOKEN**: Your Plex API token. You can obtain this from the Plex web app under account settings.
-  - **SECTION_NAME**: The name of your music library in Plex. Defaults to `Music`.
-  - **LOG_LEVEL**: The logging level for the application. Options are `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`. Defaults to `INFO`.
-  - **RED**:
-    - **API_KEY**: Your API key from Redacted.
-    - **BASE_URL**: The base URL for Redacted's API. Defaults to `https://redacted.sh`.
-    - **RATE_LIMIT**: API rate limiting settings for Redacted.
-  - **OPS**:
-    - **API_KEY**: Your API key from Orpheus Network.
-    - **BASE_URL**: The base URL for Orpheus Network's API. Defaults to `https://orpheus.network`.
-    - **RATE_LIMIT**: API rate limiting settings for Orpheus Network.
-
 3. **Save and Close the Configuration File**  
    After updating the configuration, save the file and close the editor.
 
@@ -159,8 +147,16 @@ red-plex config reset
   - `red-plex cache update`: Updates the album cache with new albums added since the last update.
 
 - **Playlist Cache Management**  
-  - `red-plex playlist-cache show`: Shows the location of the playlist cache file if it exists.
-  - `red-plex playlist-cache reset`: Resets the saved playlist cache.
+  The playlist cache stores site and collage IDs for each playlist, enabling automatic updates without manually providing collage IDs again.
+  
+  - `red-plex playlists cache show`: Shows the location of the playlist cache file if it exists.
+  - `red-plex playlists cache reset`: Resets the saved playlist cache.
+
+- **Synchronize Existing Playlists with Collages**  
+  ```bash
+  red-plex playlists update
+  ```
+  Automatically updates all cached playlists by retrieving new albums from their associated collages and adding them to the existing Plex playlists. This command uses the stored site and collage IDs in the playlist cache, so you don’t need to re-enter collage IDs every time you want to sync.
 
 - **Configuration Commands**  
   - `red-plex config show`: Displays the current configuration settings.
@@ -173,16 +169,25 @@ red-plex config reset
   ```bash
   red-plex convert 12345 67890 --site red
   ```
+  This will create or update playlists in Plex for the given collage IDs from Redacted.
 
 - **Creating Playlists from Bookmarks**  
   ```bash
-  red-plex bookmarks --site red
+  red-plex bookmarks create-playlist --site red
   ```
+  This creates a playlist in Plex from your Redacted bookmarks.
 
 - **Updating the Album Cache**  
   ```bash
   red-plex cache update
   ```
+  Updates the album cache with newly added albums in your Plex library.
+
+- **Synchronizing All Cached Playlists**  
+  ```bash
+  red-plex playlists update
+  ```
+  Updates all your cached playlists from their respective collages, ensuring your Plex playlists stay current with new additions.
 
 ## Considerations
 
@@ -190,7 +195,7 @@ red-plex config reset
 - **Incremental Album Cache Updates**: Updates only new albums, reducing processing time.
 - **API Rate Limits**: Be mindful of the API rate limits for each site.
 - **Required Credentials**: Ensure valid API keys are correctly entered in the configuration file.
-- **Cache Management**: Regularly updating the album cache improves performance.
-- **Site Specification**: The --site option is mandatory when using the convert and bookmarks commands. You must specify the site (red or ops) to ensure the correct API is used.
-- **Logging**: You can adjust the verbosity of the application's logging by setting the LOG_LEVEL in your configuration file.
-- **Playlist Cache**: The tool maintains a cache of processed playlist items to avoid reprocessing and to detect new additions efficiently.
+- **Cache Management**: Regularly updating the album cache improves performance and accuracy.
+- **Site Specification**: The `--site` option is mandatory when using the `convert` and `bookmarks` commands.
+- **Logging**: Adjust the verbosity of logging in your `config.yml` file as needed.
+- **Playlist Cache**: The playlist cache now stores `site` and `collage_id` for each playlist, allowing the new `red-plex playlists update` command to refresh all playlists without manual input of collage IDs.
