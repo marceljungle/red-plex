@@ -27,3 +27,6 @@ class TestCacheUtils(unittest.TestCase):
         mock_uname.return_value.sysname = "Linux"
         cache_dir = get_cache_directory()
         self.assertIn(".cache/red-plex", cache_dir)
+
+if __name__ == '__main__':
+    unittest.main()
