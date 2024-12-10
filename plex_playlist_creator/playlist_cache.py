@@ -19,7 +19,7 @@ class PlaylistCache:
         self.csv_file = csv_file if csv_file else default_csv_path
         ensure_directory_exists(os.path.dirname(self.csv_file))
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, R0917
     def save_playlist(self, rating_key, playlist_name, site, collage_id, torrent_group_ids):
         """Saves or updates a single playlist entry in the cache."""
         playlists = self.get_all_playlists()
