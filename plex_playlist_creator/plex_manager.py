@@ -19,9 +19,6 @@ class PlexManager:
         self.album_cache = AlbumCache(csv_file)
         self.album_data = self.album_cache.load_albums()
 
-        # Always attempt to update the cache with new albums
-        self.populate_album_cache()
-
     def populate_album_cache(self):
         """Fetches new albums from Plex and updates the cache."""
         logger.info('Updating album cache...')
