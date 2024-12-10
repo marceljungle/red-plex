@@ -5,6 +5,7 @@
 
 ## Table of Contents
 
+- [Overview](#overview)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Python Modules](#python-modules)
@@ -17,6 +18,14 @@
   - [Commands](#commands)
   - [Examples](#examples)
 - [Considerations](#considerations)
+
+## Overview
+
+- **Library Scanning**: The application scans the folder structure of your Plex music library, extracting album paths to create a local cache for efficient matching.
+- **Fetching Collages**: It connects to a Gazelle-based site (like Redacted or Orpheus) using API credentials to fetch collages or bookmarks, retrieving torrent paths for the albums listed.
+- **Matching Albums**: The app compares the torrent paths from the site with the album paths in the Plex library. It identifies matching albums based on folder names.
+- **Creating Playlists**: For each collage or bookmark, it creates a corresponding Plex playlist containing all matched albums.
+- **Cache Management**: Both album and playlist data are cached to avoid redundant scanning and to enable incremental updates.
 
 ## Features
 
