@@ -7,69 +7,90 @@ from .cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
 
-
 class PlaylistCache:
-    """Manages playlist cache using a CSV file."""
+    """Manages playlist cache using a CSV file.
+    
+    CSV format (one playlist per row):
+    rating_key,playlist_name,site,collage_id,torrent_group_ids (comma-separated)
+    """
 
     def __init__(self, csv_file=None):
-        # Define the default CSV file path in the cache directory
         default_csv_path = os.path.join(get_cache_directory(), 'playlist_cache.csv')
         self.csv_file = csv_file if csv_file else default_csv_path
-
-        # Ensure the cache directory exists
         ensure_directory_exists(os.path.dirname(self.csv_file))
 
-    def save_playlist(self, playlist_id, playlist_name, torrent_group_ids):
-        """Saves playlist data to the CSV file."""
-        # Ensure the directory for the CSV file exists
-        os.makedirs(os.path.dirname(self.csv_file), exist_ok=True)
-        # Load existing cache
-        cache = self.load_cache()
-        # Update cache with the playlist
-        cache[playlist_id] = {
-            'name': playlist_name,
-            'torrent_group_ids': torrent_group_ids
-        }
-        # Write the cache back to file
+    # pylint: disable=too-many-arguments, too-many-positional-arguments
+    def save_playlist(self, rating_key, playlist_name, site, collage_id, torrent_group_ids):
+        """Saves or updates a single playlist entry in the cache."""
+        playlists = self.get_all_playlists()
+
+        # Check if this playlist is already in the cache
+        updated = False
+        for pl in playlists:
+            if pl['rating_key'] == rating_key:
+                pl['playlist_name'] = playlist_name
+                pl['site'] = site
+                pl['collage_id'] = collage_id
+                pl['torrent_group_ids'] = torrent_group_ids
+                updated = True
+                break
+
+        if not updated:
+            playlists.append({
+                'rating_key': rating_key,
+                'playlist_name': playlist_name,
+                'site': site,
+                'collage_id': collage_id,
+                'torrent_group_ids': torrent_group_ids
+            })
+
+        # Write back to CSV
         with open(self.csv_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            for pid, data in cache.items():
-                writer.writerow([pid, data['name'], ','.join(map(str, data['torrent_group_ids']))])
-        logger.info('Playlist saved to cache.')
+            for pl in playlists:
+                writer.writerow([
+                    pl['rating_key'],
+                    pl['playlist_name'],
+                    pl['site'],
+                    pl['collage_id'],
+                    ','.join(map(str, pl['torrent_group_ids']))
+                ])
+        logger.info('Playlists saved to cache.')
 
-    def load_cache(self):
-        """Loads playlist data from the CSV file."""
-        cache = {}
-        # pylint: disable=duplicate-code
+    def get_playlist(self, rating_key):
+        """Retrieve a single playlist by rating_key."""
+        playlists = self.get_all_playlists()
+        for pl in playlists:
+            if pl['rating_key'] == rating_key:
+                return pl
+        return None
+
+    def get_all_playlists(self):
+        """Retrieve all playlists from the cache."""
+        playlists = []
         if os.path.exists(self.csv_file):
             with open(self.csv_file, newline='', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    if len(row) == 3:
-                        playlist_id, name, group_ids_str = row
-                        torrent_group_ids = list(
-                            map(int, group_ids_str.split(','))) if group_ids_str else []
-                        cache[int(playlist_id)] = {
-                            'name': name,
-                            'torrent_group_ids': torrent_group_ids
-                        }
-            logger.info('Playlists loaded from cache.')
-        else:
-            logger.info('Playlist cache file not found.')
-        return cache
-
-    def get_playlist(self, playlist_id):
-        """Retrieves playlist data from the cache by ID."""
-        cache = self.load_cache()
-        return cache.get(playlist_id)
-
-    def get_playlist_by_name(self, playlist_name):
-        """Retrieves playlist data from the cache by name."""
-        cache = self.load_cache()
-        for pid, data in cache.items():
-            if data['name'] == playlist_name:
-                return pid, data
-        return None, None
+                    if len(row) == 5:
+                        rating_key_str, playlist_name, site, collage_id_str, group_ids_str = row
+                        try:
+                            rating_key = int(rating_key_str)
+                        except ValueError:
+                            continue
+                        try:
+                            collage_id = int(collage_id_str)
+                        except ValueError:
+                            collage_id = None
+                        group_ids = [int(g.strip()) for g in group_ids_str.split(',') if g.strip()]
+                        playlists.append({
+                            'rating_key': rating_key,
+                            'playlist_name': playlist_name,
+                            'site': site,
+                            'collage_id': collage_id,
+                            'torrent_group_ids': group_ids
+                        })
+        return playlists
 
     def reset_cache(self):
         """Deletes the playlist cache file if it exists."""

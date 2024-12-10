@@ -68,7 +68,7 @@ class TestPlaylistCreator(unittest.TestCase):
         self.mock_plex_manager.get_playlist_by_name.return_value = None
 
         # Run the method under test
-        self.playlist_creator.create_playlist_from_collage(123)
+        self.playlist_creator.create_or_update_playlist_from_collage(123)
 
         # Assertions
         self.mock_gazelle_api.get_torrent_group.assert_called_with(456)

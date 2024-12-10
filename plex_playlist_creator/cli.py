@@ -20,8 +20,8 @@ from plex_playlist_creator.playlist_creator import PlaylistCreator
 from plex_playlist_creator.logger import logger, configure_logger
 
 
-def initialize_managers(site):
-    """Helper function to initialize managers."""
+def initialize_plex_manager():
+    """Initialize PlexManager without populating cache."""
     config_data = load_config()
     plex_token = config_data.get('PLEX_TOKEN')
     plex_url = config_data.get('PLEX_URL', 'http://localhost:32400')
@@ -31,26 +31,32 @@ def initialize_managers(site):
         message = 'PLEX_TOKEN must be set in the config file.'
         logger.error(message)
         click.echo(message)
-        return None, None, None
+        return None
 
-    # Get site-specific configuration
+    return PlexManager(plex_url, plex_token, section_name)
+
+
+def initialize_gazelle_api(site):
+    """Initialize GazelleAPI for a given site."""
+    config_data = load_config()
     site_config = config_data.get(site.upper())
     if not site_config or not site_config.get('API_KEY'):
         message = f'API_KEY for {site.upper()} must be set in the config file under {site.upper()}.'
         logger.error(message)
         click.echo(message)
-        return None, None, None
+        return None
 
     api_key = site_config.get('API_KEY')
     base_url = site_config.get('BASE_URL')
     rate_limit_config = site_config.get('RATE_LIMIT', {'calls': 10, 'seconds': 10})
     rate_limit = Rate(rate_limit_config['calls'], Duration.SECOND * rate_limit_config['seconds'])
 
-    plex_manager = PlexManager(plex_url, plex_token, section_name)
-    gazelle_api = GazelleAPI(base_url, api_key, rate_limit)
-    playlist_creator = PlaylistCreator(plex_manager, gazelle_api)
+    return GazelleAPI(base_url, api_key, rate_limit)
 
-    return plex_manager, gazelle_api, playlist_creator
+
+def initialize_playlist_creator(plex_manager, gazelle_api):
+    """Initialize PlaylistCreator using existing plex_manager and gazelle_api."""
+    return PlaylistCreator(plex_manager, gazelle_api)
 
 
 @click.group()
@@ -82,14 +88,23 @@ def convert(collage_ids, site):
         click.echo("Please provide at least one COLLAGE_ID.")
         return
 
-    plex_manager, gazelle_api, playlist_creator = initialize_managers(site)
-    if not all([plex_manager, gazelle_api, playlist_creator]):
+    plex_manager = initialize_plex_manager()
+    if not plex_manager:
         return
 
-    # Create playlists for each collage ID provided
+    # Populate album cache once after initializing plex_manager
+    plex_manager.populate_album_cache()
+
+    gazelle_api = initialize_gazelle_api(site)
+    if not gazelle_api:
+        return
+
+    playlist_creator = initialize_playlist_creator(plex_manager, gazelle_api)
+
     for collage_id in collage_ids:
         try:
-            playlist_creator.create_playlist_from_collage(collage_id)
+            playlist_creator.create_or_update_playlist_from_collage(
+                collage_id, site=site)
         except Exception as exc:  # pylint: disable=W0718
             logger.exception(
                 'Failed to create playlist for collage %s on site %s: %s',
@@ -195,23 +210,28 @@ def update_cache():
             return
 
         # Initialize & update cache using PlexManager
-        PlexManager(plex_url, plex_token, section_name)
+        plex_manager = PlexManager(plex_url, plex_token, section_name)
+        plex_manager.populate_album_cache()
         click.echo("Cache has been updated successfully.")
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cache: %s', exc)
         click.echo(f"An error occurred while updating the cache: {exc}")
 
 
-@cli.group('playlist-cache')
-def playlist_cache():
+@cli.group('playlists')
+def playlists():
+    """Manage playlists."""
+
+
+@playlists.group('cache')
+def playlists_cache():
     """Manage playlist cache."""
 
 
-@playlist_cache.command('show')
+@playlists_cache.command('show')
 def show_playlist_cache():
     """Shows the location of the playlist cache file if it exists."""
     try:
-        # pylint: disable=redefined-outer-name
         playlist_cache = PlaylistCache()
         cache_file = playlist_cache.csv_file
 
@@ -224,18 +244,58 @@ def show_playlist_cache():
         click.echo(f"An error occurred while showing the playlist cache: {exc}")
 
 
-@playlist_cache.command('reset')
+@playlists_cache.command('reset')
 def reset_playlist_cache():
     """Resets the saved playlist cache."""
     if click.confirm('Are you sure you want to reset the playlist cache?'):
         try:
-            # pylint: disable=redefined-outer-name
             playlist_cache = PlaylistCache()
             playlist_cache.reset_cache()
             click.echo("Playlist cache has been reset successfully.")
         except Exception as exc:  # pylint: disable=W0718
             logger.exception('Failed to reset playlist cache: %s', exc)
             click.echo(f"An error occurred while resetting the playlist cache: {exc}")
+
+
+@playlists.command('update')
+def update_playlists():
+    """Synchronize all cached playlists with their source collages."""
+    try:
+        pc = PlaylistCache()
+        all_playlists = pc.get_all_playlists()
+
+        if not all_playlists:
+            click.echo("No playlists found in the cache.")
+            return
+
+        # Initialize PlexManager once, populate its cache once
+        plex_manager = initialize_plex_manager()
+        if not plex_manager:
+            return
+        plex_manager.populate_album_cache()
+
+        # Loop through playlists
+        for pl in all_playlists:
+            site = pl['site']
+            collage_id = pl['collage_id']
+            playlist_name = pl['playlist_name']
+
+            gazelle_api = initialize_gazelle_api(site)
+            if not gazelle_api:
+                click.echo(f"Skipping playlist '{playlist_name}' due to initialization issues.")
+                continue
+
+            playlist_creator = initialize_playlist_creator(plex_manager, gazelle_api)
+
+            click.echo(
+                f"Updating playlist '{playlist_name}' (Collage ID: {collage_id}, Site: {site})...")
+            playlist_creator.create_or_update_playlist_from_collage(
+                collage_id, site=site, force_update=True)
+
+        click.echo("All cached playlists have been updated.")
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to update cached playlists: %s', exc)
+        click.echo(f"An error occurred while updating cached playlists: {exc}")
 
 
 @cli.group()
@@ -248,9 +308,16 @@ def bookmarks():
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 def create_playlist_from_bookmarks(site):
     """Create a Plex playlist based on your site bookmarks."""
-    plex_manager, gazelle_api, playlist_creator = initialize_managers(site)
-    if not all([plex_manager, gazelle_api, playlist_creator]):
+    plex_manager = initialize_plex_manager()
+    if not plex_manager:
         return
+    plex_manager.populate_album_cache()
+
+    gazelle_api = initialize_gazelle_api(site)
+    if not gazelle_api:
+        return
+
+    playlist_creator = initialize_playlist_creator(plex_manager, gazelle_api)
 
     try:
         bookmarks_data = gazelle_api.get_bookmarks()

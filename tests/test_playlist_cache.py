@@ -5,83 +5,103 @@ import unittest
 import tempfile
 from plex_playlist_creator.playlist_cache import PlaylistCache
 
-# pylint: disable=consider-using-with, duplicate-code
 class TestPlaylistCache(unittest.TestCase):
     """Test cases for the PlaylistCache class."""
 
     def setUp(self):
         """Set up a temporary file for testing."""
-        # Create a temporary directory
         self.test_dir = tempfile.TemporaryDirectory()
-        # Path to a temporary CSV file
         self.csv_file = os.path.join(self.test_dir.name, 'playlist_cache.csv')
-        # Instantiate the PlaylistCache with the temporary file
         self.cache = PlaylistCache(csv_file=self.csv_file)
 
     def tearDown(self):
         """Clean up the temporary file."""
-        # Close and remove the temporary directory and its contents
         self.test_dir.cleanup()
 
     def test_save_and_load_playlist(self):
         """Test saving and loading playlists."""
-        # Define test data
         playlist_id = 12345
         playlist_name = 'Test Playlist'
         torrent_group_ids = [1, 2, 3, 4, 5]
 
-        # Save the playlist
-        self.cache.save_playlist(playlist_id, playlist_name, torrent_group_ids)
+        # Save the playlist with dummy site and collage_id
+        self.cache.save_playlist(
+            rating_key=playlist_id,
+            playlist_name=playlist_name,
+            site='red',
+            collage_id=9999,
+            torrent_group_ids=torrent_group_ids
+        )
 
-        # Load the cache and verify contents
-        loaded_cache = self.cache.load_cache()
-        self.assertIn(playlist_id, loaded_cache)
-        self.assertEqual(loaded_cache[playlist_id]['name'], playlist_name)
-        self.assertEqual(loaded_cache[playlist_id]['torrent_group_ids'], torrent_group_ids)
+        all_playlists = self.cache.get_all_playlists()
+        # Find the playlist by rating_key
+        found = next((p for p in all_playlists if p['rating_key'] == playlist_id), None)
+        self.assertIsNotNone(found)
+        self.assertEqual(found['playlist_name'], playlist_name)
+        self.assertEqual(found['torrent_group_ids'], torrent_group_ids)
 
     def test_get_playlist(self):
         """Test retrieving a playlist by ID."""
-        # Define test data
         playlist_id = 12345
         playlist_name = 'Test Playlist'
         torrent_group_ids = [1, 2, 3]
 
-        # Save the playlist
-        self.cache.save_playlist(playlist_id, playlist_name, torrent_group_ids)
+        self.cache.save_playlist(
+            rating_key=playlist_id,
+            playlist_name=playlist_name,
+            site='red',
+            collage_id=9999,
+            torrent_group_ids=torrent_group_ids
+        )
 
-        # Retrieve the playlist by ID
         playlist = self.cache.get_playlist(playlist_id)
         self.assertIsNotNone(playlist)
-        self.assertEqual(playlist['name'], playlist_name)
+        self.assertEqual(playlist['playlist_name'], playlist_name)
         self.assertEqual(playlist['torrent_group_ids'], torrent_group_ids)
 
     def test_get_playlist_by_name(self):
-        """Test retrieving a playlist by name."""
-        # Define test data
+        """Test retrieving a playlist by name (simulated by searching all)."""
         playlist_id = 67890
         playlist_name = 'Another Playlist'
         torrent_group_ids = [10, 20, 30]
 
-        # Save the playlist
-        self.cache.save_playlist(playlist_id, playlist_name, torrent_group_ids)
+        self.cache.save_playlist(
+            rating_key=playlist_id,
+            playlist_name=playlist_name,
+            site='red',
+            collage_id=9999,
+            torrent_group_ids=torrent_group_ids
+        )
 
-        # Retrieve the playlist by name
-        pid, playlist = self.cache.get_playlist_by_name(playlist_name)
-        self.assertIsNotNone(pid)
-        self.assertEqual(pid, playlist_id)
-        self.assertIsNotNone(playlist)
-        self.assertEqual(playlist['name'], playlist_name)
-        self.assertEqual(playlist['torrent_group_ids'], torrent_group_ids)
+        # Since get_playlist_by_name no longer exists, we simulate it:
+        all_playlists = self.cache.get_all_playlists()
+        found_entry = None
+        found_id = None
+        for p in all_playlists:
+            if p['playlist_name'] == playlist_name:
+                found_entry = p
+                found_id = p['rating_key']
+                break
+
+        self.assertIsNotNone(found_id)
+        self.assertEqual(found_id, playlist_id)
+        self.assertIsNotNone(found_entry)
+        self.assertEqual(found_entry['playlist_name'], playlist_name)
+        self.assertEqual(found_entry['torrent_group_ids'], torrent_group_ids)
 
     def test_reset_cache(self):
         """Test resetting the cache."""
-        # Define test data
         playlist_id = 11111
         playlist_name = 'Playlist to Reset'
         torrent_group_ids = [100, 200, 300]
 
-        # Save the playlist
-        self.cache.save_playlist(playlist_id, playlist_name, torrent_group_ids)
+        self.cache.save_playlist(
+            rating_key=playlist_id,
+            playlist_name=playlist_name,
+            site='red',
+            collage_id=9999,
+            torrent_group_ids=torrent_group_ids
+        )
 
         # Ensure the cache file exists
         self.assertTrue(os.path.exists(self.csv_file))
@@ -92,13 +112,12 @@ class TestPlaylistCache(unittest.TestCase):
         # Verify the cache file is deleted
         self.assertFalse(os.path.exists(self.csv_file))
 
-        # Load the cache and verify it's empty
-        loaded_cache = self.cache.load_cache()
-        self.assertEqual(len(loaded_cache), 0)
+        # After reset, no playlists should be found
+        all_playlists = self.cache.get_all_playlists()
+        self.assertEqual(len(all_playlists), 0)
 
     def test_multiple_playlists(self):
         """Test saving and loading multiple playlists."""
-        # Define test data
         playlists = [
             (123, 'Playlist One', [1, 2, 3]),
             (456, 'Playlist Two', [4, 5, 6]),
@@ -107,25 +126,34 @@ class TestPlaylistCache(unittest.TestCase):
 
         # Save all playlists
         for pid, name, group_ids in playlists:
-            self.cache.save_playlist(pid, name, group_ids)
+            self.cache.save_playlist(
+                rating_key=pid,
+                playlist_name=name,
+                site='red',
+                collage_id=9999,
+                torrent_group_ids=group_ids
+            )
 
-        # Load the cache and verify contents
-        loaded_cache = self.cache.load_cache()
-        self.assertEqual(len(loaded_cache), 3)
+        all_playlists = self.cache.get_all_playlists()
+        self.assertEqual(len(all_playlists), 3)
+        # Check each one
         for pid, name, group_ids in playlists:
-            self.assertIn(pid, loaded_cache)
-            self.assertEqual(loaded_cache[pid]['name'], name)
-            self.assertEqual(loaded_cache[pid]['torrent_group_ids'], group_ids)
+            found = next((p for p in all_playlists if p['rating_key'] == pid), None)
+            self.assertIsNotNone(found)
+            self.assertEqual(found['playlist_name'], name)
+            self.assertEqual(found['torrent_group_ids'], group_ids)
 
     def test_playlist_not_found(self):
         """Test retrieving a non-existent playlist."""
-        # Attempt to retrieve a playlist that doesn't exist
+        # Attempt to retrieve a playlist that doesn't exist by ID
         playlist = self.cache.get_playlist(99999)
         self.assertIsNone(playlist)
 
-        pid, playlist = self.cache.get_playlist_by_name('Nonexistent Playlist')
-        self.assertIsNone(pid)
-        self.assertIsNone(playlist)
+        # Attempt to find by name (simulate as done before)
+        all_playlists = self.cache.get_all_playlists()
+        found = any(p for p in all_playlists if p['playlist_name'] == 'Nonexistent Playlist')
+        self.assertFalse(found)
+
 
 if __name__ == '__main__':
     unittest.main()
