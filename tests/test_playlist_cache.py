@@ -10,6 +10,7 @@ class TestPlaylistCache(unittest.TestCase):
 
     def setUp(self):
         """Set up a temporary file for testing."""
+        # pylint: disable=consider-using-with
         self.test_dir = tempfile.TemporaryDirectory()
         self.csv_file = os.path.join(self.test_dir.name, 'playlist_cache.csv')
         self.cache = PlaylistCache(csv_file=self.csv_file)
