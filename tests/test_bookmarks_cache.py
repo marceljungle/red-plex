@@ -112,7 +112,7 @@ class TestBookmarksCache(unittest.TestCase):
         bookmark = self.cache.get_bookmark(99999)
         self.assertIsNone(bookmark)
 
-        # Attempt to find non-existent bookmarks 
+        # Attempt to find non-existent bookmarks
         all_bookmarks = self.cache.get_all_bookmarks()
         found = any(b for b in all_bookmarks if b['site'] == 'Nonexistent Site')
         self.assertFalse(found)
