@@ -9,7 +9,7 @@ class TestCacheUtils(unittest.TestCase):
 
     @patch("os.name", "nt")
     @patch("os.getenv", return_value="AppData\\Local\\red-plex")
-    def test_get_cache_directory_windows(self):
+    def test_get_cache_directory_windows(self, _):
         """Test get_cache_directory on Windows."""
         cache_dir = get_cache_directory()
         self.assertIn("AppData\\Local\\red-plex", cache_dir)

@@ -130,7 +130,7 @@ class GazelleAPI:
         logger.info('Retrieved user bookmarks')
         return bookmarks
 
-    def get_file_paths_from_bookmarks(self, bookmarks):
+    def get_group_ids_from_bookmarks(self, bookmarks):
         """Extracts file paths from user bookmarks."""
         logger.debug('Extracting file paths from bookmarks response.')
         try:
@@ -138,23 +138,9 @@ class GazelleAPI:
             bookmarked_group_ids = [bookmark.get('id')
                                     for bookmark in bookmarks.get('bookmarks', [])]
             logger.debug('Bookmarked group IDs: %s', bookmarked_group_ids)
-
-            # Retrieve torrent groups for each bookmarked group ID
-            bookmarked_torrent_groups = [self.get_torrent_group(group_id)
-                                         for group_id in bookmarked_group_ids]
-            # Extract file paths from each torrent group
-            bookmarked_group_file_paths = [
-                self.get_file_paths_from_torrent_group(group) for group in bookmarked_torrent_groups
-            ]
-            # Flatten the list of lists
-            flat_mapped_file_paths = [
-                file_path for group_file_paths in bookmarked_group_file_paths
-                for file_path in group_file_paths
-            ]
-            logger.info('Extracted file paths from bookmarks: %s', flat_mapped_file_paths)
-            return flat_mapped_file_paths
+            return bookmarked_group_ids
         except Exception as e:
-            logger.exception('Error extracting file paths from bookmarks: %s', e)
+            logger.exception('Error extracting group ids from bookmarks: %s', e)
             return []
 
     def normalize(self, text):
