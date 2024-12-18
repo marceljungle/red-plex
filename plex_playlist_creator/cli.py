@@ -16,6 +16,7 @@ from plex_playlist_creator.plex_manager import PlexManager
 from plex_playlist_creator.gazelle_api import GazelleAPI
 from plex_playlist_creator.album_cache import AlbumCache
 from plex_playlist_creator.playlist_cache import PlaylistCache
+from plex_playlist_creator.bookmarks_cache import BookmarksCache
 from plex_playlist_creator.playlist_creator import PlaylistCreator
 from plex_playlist_creator.logger import logger, configure_logger
 
@@ -302,6 +303,43 @@ def update_playlists():
 def bookmarks():
     """Manage playlists based on your site bookmarks."""
 
+@bookmarks.command('update')
+def update_bookmarks():
+    """Synchronize all cached bookmarks with their source collages."""
+    try:
+        pc = BookmarksCache()
+        all_bookmarks = pc.get_all_bookmarks()
+
+        if not all_bookmarks:
+            click.echo("No bookmarks found in the cache.")
+            return
+
+        plex_manager = initialize_plex_manager()
+        if not plex_manager:
+            return
+        plex_manager.populate_album_cache()
+
+        # Loop through bookmarks
+        for bookmrk in all_bookmarks:
+            site = bookmrk['site']
+
+            gazelle_api = initialize_gazelle_api(site)
+            if not gazelle_api:
+                click.echo(f"Skipping '{site.upper()}' bookmarks due to initialization issues.")
+                continue
+            site_bookmarks = gazelle_api.get_bookmarks()
+
+            playlist_creator = initialize_playlist_creator(plex_manager, gazelle_api)
+
+            click.echo(
+                f"Updating '{site.upper()}' bookmarks...")
+            playlist_creator.create_or_update_playlist_from_bookmarks(
+                site_bookmarks, site, force_update=True)
+
+        click.echo("All cached playlists have been updated.")
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to update cached playlists: %s', exc)
+        click.echo(f"An error occurred while updating cached playlists: {exc}")
 
 @bookmarks.command('create-playlist')
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
@@ -321,13 +359,42 @@ def create_playlist_from_bookmarks(site):
 
     try:
         bookmarks_data = gazelle_api.get_bookmarks()
-        file_paths = gazelle_api.get_file_paths_from_bookmarks(bookmarks_data)
-        playlist_creator.create_playlist_from_bookmarks(file_paths, site.upper())
+        playlist_creator.create_or_update_playlist_from_bookmarks(bookmarks_data, site.upper())
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to create playlist from bookmarks on site %s: %s',
                          site.upper(), exc)
         click.echo(f'Failed to create playlist from bookmarks on site {site.upper()}: {exc}')
 
+@bookmarks.group('cache')
+def bookmarks_cache():
+    """Manage bookmarks cache."""
+
+@bookmarks_cache.command('show')
+def show_bookmarks_cache():
+    """Shows the location of the bookmarks cache file if it exists."""
+    try:
+        bookmarks_cache_manager = BookmarksCache()
+        cache_file = bookmarks_cache_manager.csv_file
+
+        if os.path.exists(cache_file):
+            click.echo(f"Bookmarks cache file exists at: {os.path.abspath(cache_file)}")
+        else:
+            click.echo("Bookmarks cache file does not exist.")
+    except Exception as exc: # pylint: disable=W0718
+        logger.exception('Failed to show bookmarks cache: %s', exc)
+        click.echo(f"An error occurred while showing the bookmarks cache: {exc}")
+
+@bookmarks_cache.command('reset')
+def reset_bookmarks_cache():
+    """Resets the saved bookmarks cache."""
+    if click.confirm('Are you sure you want to reset the bookmarks cache?'):
+        try:
+            bookmarks_cache_manager = BookmarksCache()
+            bookmarks_cache_manager.reset_cache()
+            click.echo("Bookmarks cache has been reset successfully.")
+        except Exception as exc: # pylint: disable=W0718
+            logger.exception('Failed to reset bookmarks cache: %s', exc)
+            click.echo(f"An error occurred while resetting the bookmarks cache: {exc}")
 
 if __name__ == '__main__':
     configure_logger()
