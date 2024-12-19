@@ -195,7 +195,7 @@ requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected(
 You can use the following method to retrieve the secure `https` URL for local access without additional configuration:
 
 Use the following API call, replacing `{TOKEN}` with your Plex token:
-```bash
+```text
 https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={TOKEN}
 ```
 
