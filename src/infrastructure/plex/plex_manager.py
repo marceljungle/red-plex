@@ -3,8 +3,8 @@
 import os
 from datetime import datetime, timezone
 from plexapi.server import PlexServer
-from plex_playlist_creator.logger import logger
-from plex_playlist_creator.album_cache import AlbumCache
+from src.infrastructure.logger.logger import logger
+from src.infrastructure.cache.album_cache import AlbumCache
 
 class PlexManager:
     """Handles operations related to Plex."""
@@ -14,6 +14,7 @@ class PlexManager:
         self.token = token
         self.section_name = section_name
         self.plex = PlexServer(self.url, self.token)
+        self.library_section = self.plex.library.section(self.section_name)
 
         # Initialize the album cache
         self.album_cache = AlbumCache(csv_file)
@@ -22,7 +23,6 @@ class PlexManager:
     def populate_album_cache(self):
         """Fetches new albums from Plex and updates the cache."""
         logger.info('Updating album cache...')
-        music_library = self.plex.library.section(self.section_name)
 
         # Determine the latest addedAt date from the existing cache
         if self.album_data:
@@ -34,7 +34,7 @@ class PlexManager:
 
         # Fetch albums added after the latest date in cache
         filters = {"addedAt>>": latest_added_at}
-        new_albums = music_library.searchAlbums(filters=filters)
+        new_albums = self.library_section.searchAlbums(filters=filters)
         logger.info('Found %d new albums added after %s.', len(new_albums), latest_added_at)
 
         # Update the album_data dictionary with new albums
@@ -76,6 +76,12 @@ class PlexManager:
         logger.info('Creating playlist with name "%s" and %d albums.', name, len(albums))
         playlist = self.plex.createPlaylist(name, self.section_name, albums)
         return playlist
+    
+    def create_collection(self, name, albums):
+        """Creates a collection in Plex."""
+        logger.info('Creating collection with name "%s" and %d albums.', name, len(albums))
+        collection = self.library_section.createCollection(name, items=albums)
+        return collection
 
     def get_playlist_by_name(self, name):
         """Finds a playlist by name."""
@@ -87,7 +93,22 @@ class PlexManager:
         logger.info('No existing playlist found with name "%s".', name)
         return None
 
+    def get_collection_by_name(self, name):
+        """Finds a collection by name."""
+        collections = self.library_section.collections()
+        for collection in collections:
+            if collection.title == name:
+                logger.info('Found existing collection with name "%s".', name)
+                return collection
+        logger.info('No existing collection found with name "%s".', name)
+        return None
+
     def add_items_to_playlist(self, playlist, albums):
         """Adds albums to an existing playlist."""
         logger.info('Adding %d albums to playlist "%s".', len(albums), playlist.title)
         playlist.addItems(albums)
+
+    def add_items_to_collection(self, collection, albums):
+        """Adds albums to an existing collection."""
+        logger.info('Adding %d albums to collection "%s".', len(albums), collection.title)
+        collection.addItems(albums)

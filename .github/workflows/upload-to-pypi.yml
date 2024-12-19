@@ -29,7 +29,7 @@ jobs:
 
       - name: Update __init__.py with Version
         run: |
-          echo "__version__ = '${VERSION}'" > plex_playlist_creator/__init__.py
+          echo "__version__ = '${VERSION}'" > src/__init__.py
 
       - name: Set up Python
         uses: actions/setup-python@v4

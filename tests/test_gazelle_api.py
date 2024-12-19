@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock, patch
-from plex_playlist_creator.gazelle_api import GazelleAPI
+from src.infrastructure.rest.gazelle_api import GazelleAPI
 
 class TestGazelleAPI(unittest.TestCase):
     """Test cases for the GazelleAPI class."""
@@ -13,7 +13,7 @@ class TestGazelleAPI(unittest.TestCase):
         self.base_url = 'https://example.com'
         self.gazelle_api = GazelleAPI(self.base_url, self.api_key)
 
-    @patch('plex_playlist_creator.gazelle_api.requests.get')
+    @patch('src.gazelle_api.requests.get')
     def test_api_call(self, mock_get):
         """Test making an API call to the Gazelle-based service."""
         # Mock response
@@ -50,7 +50,7 @@ class TestGazelleAPI(unittest.TestCase):
         mock_api_call.assert_called_with('collage', {'id': '123', 'showonlygroups': 'true'})
         self.assertEqual(result, {'response': 'collage_data'})
 
-    @patch('plex_playlist_creator.gazelle_api.GazelleAPI.api_call')
+    @patch('src.gazelle_api.GazelleAPI.api_call')
     def test_get_torrent_group(self, mock_api_call):
         """Test retrieving a torrent group from the Gazelle-based service."""
         mock_api_call.return_value = {'response': {'group': 'group data'}}

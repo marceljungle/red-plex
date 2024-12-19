@@ -3,7 +3,7 @@
 import os
 import unittest
 import tempfile
-from plex_playlist_creator.playlist_cache import PlaylistCache
+from src.infrastructure.cache.collage_playlist_cache import CollagePlaylistCache
 
 class TestPlaylistCache(unittest.TestCase):
     """Test cases for the PlaylistCache class."""
@@ -13,7 +13,7 @@ class TestPlaylistCache(unittest.TestCase):
         # pylint: disable=consider-using-with
         self.test_dir = tempfile.TemporaryDirectory()
         self.csv_file = os.path.join(self.test_dir.name, 'playlist_cache.csv')
-        self.cache = PlaylistCache(csv_file=self.csv_file)
+        self.cache = CollagePlaylistCache(csv_file=self.csv_file)
 
     def tearDown(self):
         """Clean up the temporary file."""

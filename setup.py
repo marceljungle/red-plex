@@ -8,7 +8,7 @@ here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text(encoding="utf-8")
 
 # Read the version from the package's __init__.py
-with open('plex_playlist_creator/__init__.py', 'r', encoding="utf-8") as f:
+with open('src/__init__.py', 'r', encoding="utf-8") as f:
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M)
     if version_match:
         version = version_match.group(1)
@@ -18,7 +18,7 @@ with open('plex_playlist_creator/__init__.py', 'r', encoding="utf-8") as f:
 setup(
     name='red-plex',
     version=version,
-    description='A tool for creating Plex playlists from RED collages',
+    description='A tool for creating Plex playlists or collections from RED collages',
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='marceljungle',
@@ -36,7 +36,7 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        red-plex=plex_playlist_creator.cli:cli
+        red-plex=src.infrastructure.cli.cli:cli
     ''',
     classifiers=[
         'Programming Language :: Python :: 3',

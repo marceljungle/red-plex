@@ -3,11 +3,11 @@
 import os
 import csv
 import logging
-from .cache_utils import get_cache_directory, ensure_directory_exists
+from .utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
 
-class PlaylistCache:
+class CollagePlaylistCache:
     """Manages playlist cache using a CSV file.
     
     CSV format (one playlist per row):

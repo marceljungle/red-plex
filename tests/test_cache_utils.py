@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import patch
-from plex_playlist_creator.cache_utils import get_cache_directory
+from src.infrastructure.cache.utils.cache_utils import get_cache_directory
 
 class TestCacheUtils(unittest.TestCase):
     """Test cases for the cache_utils module."""
