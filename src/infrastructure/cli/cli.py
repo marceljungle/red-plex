@@ -20,6 +20,7 @@ from src.infrastructure.cache.collage_collection_cache import CollageCollectionC
 from src.infrastructure.cache.bookmarks_playlist_cache import BookmarksPlaylistCache
 from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
 from src.playlist_creator import PlaylistCreator
+from src.collection_creator import CollectionCreator
 from src.infrastructure.logger.logger import logger, configure_logger
 
 
@@ -61,6 +62,10 @@ def initialize_playlist_creator(plex_manager, gazelle_api):
     """Initialize PlaylistCreator using existing plex_manager and gazelle_api."""
     return PlaylistCreator(plex_manager, gazelle_api)
 
+def initialize_collection_creator(plex_manager, gazelle_api):
+    """Initialize CollectionCreator using existing plex_manager and gazelle_api."""
+    return CollectionCreator(plex_manager, gazelle_api)
+
 
 @click.group()
 def cli():
@@ -80,11 +85,12 @@ def cli():
     # Configure logger
     configure_logger(log_level)
 
-
+# convert
 @cli.group()
 def convert():
     """Conversion methods."""
 
+# convert playlist
 @convert.command()
 @click.argument('collage_ids', nargs=-1)
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
@@ -120,6 +126,7 @@ def playlist(collage_ids, site):
                 f'Failed to create playlist for collage {collage_id} on site {site.upper()}: {exc}'
             )
 
+# convert collection
 @convert.command()
 @click.argument('collage_ids', nargs=-1)
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
@@ -141,25 +148,26 @@ def collection(collage_ids, site):
     if not gazelle_api:
         return
 
-    playlist_creator = initialize_playlist_creator(plex_manager, gazelle_api)
+    collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
 
     for collage_id in collage_ids:
         try:
-            playlist_creator.create_or_update_playlist_from_collage(
+            collection_creator.create_or_update_collection_from_collage(
                 collage_id, site=site)
         except Exception as exc:  # pylint: disable=W0718
             logger.exception(
-                'Failed to create playlist for collage %s on site %s: %s',
+                'Failed to create collection for collage %s on site %s: %s',
                 collage_id, site.upper(), exc)
             click.echo(
-                f'Failed to create playlist for collage {collage_id} on site {site.upper()}: {exc}'
+                f'Failed to create collection for collage {collage_id} on site {site.upper()}: {exc}'
             )
 
+# config
 @cli.group()
 def config():
     """View or edit configuration settings."""
 
-
+# config show
 @config.command('show')
 def show_config():
     """Display the current configuration."""
@@ -170,7 +178,7 @@ def show_config():
     )
     click.echo(path_with_config)
 
-
+# config edit
 @config.command('edit')
 def edit_config():
     """Open the configuration file in the default editor."""
@@ -191,7 +199,7 @@ def edit_config():
         logger.exception('Failed to open editor: %s', exc)
         click.echo(f"An error occurred while opening the editor: {exc}")
 
-
+# config reset
 @config.command('reset')
 def reset_config():
     """Reset the configuration to default values."""
@@ -199,13 +207,13 @@ def reset_config():
         save_config(DEFAULT_CONFIG)
         click.echo(f"Configuration reset to default values at {CONFIG_FILE_PATH}")
 
-
+# album-cache
 @cli.group()
-def cache():
+def album_cache():
     """Manage saved albums cache."""
 
-
-@cache.command('show')
+# album-cache show
+@album_cache.command('show')
 def show_cache():
     """Show the location of the cache file if it exists."""
     try:
@@ -220,8 +228,8 @@ def show_cache():
         logger.exception('Failed to show cache: %s', exc)
         click.echo(f"An error occurred while showing the cache: {exc}")
 
-
-@cache.command('reset')
+# album-cache reset
+@album_cache.command('reset')
 def reset_cache():
     """Reset the saved albums cache."""
     if click.confirm('Are you sure you want to reset the cache?'):
@@ -233,8 +241,8 @@ def reset_cache():
             logger.exception('Failed to reset cache: %s', exc)
             click.echo(f"An error occurred while resetting the cache: {exc}")
 
-
-@cache.command('update')
+# album-cache update
+@album_cache.command('update')
 def update_cache():
     """Update the saved albums cache with the latest albums from Plex."""
     try:
@@ -258,17 +266,17 @@ def update_cache():
         logger.exception('Failed to update cache: %s', exc)
         click.echo(f"An error occurred while updating the cache: {exc}")
 
-
+# playlists
 @cli.group('playlists')
 def playlists():
     """Manage playlists."""
 
-
+# playlists cache
 @playlists.group('cache')
 def playlists_cache():
     """Manage playlist cache."""
 
-
+# playlists cache show
 @playlists_cache.command('show')
 def show_playlist_cache():
     """Shows the location of the playlist cache file if it exists."""
@@ -284,7 +292,7 @@ def show_playlist_cache():
         logger.exception('Failed to show playlist cache: %s', exc)
         click.echo(f"An error occurred while showing the playlist cache: {exc}")
 
-
+# playlists cache reset
 @playlists_cache.command('reset')
 def reset_playlist_cache():
     """Resets the saved playlist cache."""
@@ -297,7 +305,7 @@ def reset_playlist_cache():
             logger.exception('Failed to reset playlist cache: %s', exc)
             click.echo(f"An error occurred while resetting the playlist cache: {exc}")
 
-
+# playlists update
 @playlists.command('update')
 def update_playlists():
     """Synchronize all cached playlists with their source collages."""
@@ -338,13 +346,100 @@ def update_playlists():
         logger.exception('Failed to update cached playlists: %s', exc)
         click.echo(f"An error occurred while updating cached playlists: {exc}")
 
+# collections
+@cli.group('collections')
+def collections():
+    """Manage collections."""
 
+# collections cache
+@collections.group('cache')
+def collections_cache():
+    """Manage collections cache."""
+
+# collections cache show
+@collections_cache.command('show')
+def show_collection_cache():
+    """Shows the location of the collection cache file if it exists."""
+    try:
+        collection_cache = CollageCollectionCache()
+        cache_file = collection_cache.csv_file
+
+        if os.path.exists(cache_file):
+            click.echo(f"Collection cache file exists at: {os.path.abspath(cache_file)}")
+        else:
+            click.echo("Collection cache file does not exist.")
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to show collection cache: %s', exc)
+        click.echo(f"An error occurred while showing the collection cache: {exc}")
+
+# collections cache reset
+@collections_cache.command('reset')
+def reset_collection_cache():
+    """Resets the saved collection cache."""
+    if click.confirm('Are you sure you want to reset the collection cache?'):
+        try:
+            collection_cache = CollageCollectionCache()
+            collection_cache.reset_cache()
+            click.echo("Collage collection cache has been reset successfully.")
+        except Exception as exc:  # pylint: disable=W0718
+            logger.exception('Failed to reset collage collection cache: %s', exc)
+            click.echo(
+                f"An error occurred while resetting the collage collection cache: {exc}")
+
+# collections update
+@collections.command('update')
+def update_collections():
+    """Synchronize all cached collections with their source collages."""
+    try:
+        ccc = CollageCollectionCache()
+        all_collages = ccc.get_all_collections()
+
+        if not all_collages:
+            click.echo("No collages found in the cache.")
+            return
+
+        # Initialize PlexManager once, populate its cache once
+        plex_manager = initialize_plex_manager()
+        if not plex_manager:
+            return
+        plex_manager.populate_album_cache()
+
+        # Loop through playlists
+        for coll in all_collages:
+            site = coll['site']
+            collage_id = coll['collage_id']
+            collection_name = coll['collection_name']
+
+            gazelle_api = initialize_gazelle_api(site)
+            if not gazelle_api:
+                click.echo(f"Skipping collection '{collection_name}' due to initialization issues.")
+                continue
+
+            collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
+
+            click.echo(
+                f"Updating collection '{collection_name}' (Collage ID: {collage_id}, Site: {site})...")
+            collection_creator.create_or_update_collection_from_collage(
+                collage_id, site=site, force_update=True)
+
+        click.echo("All cached collections have been updated.")
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to update cached collections: %s', exc)
+        click.echo(f"An error occurred while updating cached collections: {exc}")
+
+# bookmarks
 @cli.group()
 def bookmarks():
     """Manage playlists based on your site bookmarks."""
 
-@bookmarks.command('update')
+# bookmarks update
+@bookmarks.group('update')
 def update_bookmarks():
+    """Update playlists/collections based on your site bookmarks."""
+
+# bookmarks update playlist
+@update_bookmarks.command('playlist')
+def update_bookmarks_playlist():
     """Synchronize all cached bookmarks with their source collages."""
     try:
         pc = BookmarksPlaylistCache()
@@ -381,7 +476,52 @@ def update_bookmarks():
         logger.exception('Failed to update cached playlists: %s', exc)
         click.echo(f"An error occurred while updating cached playlists: {exc}")
 
-@bookmarks.command('create-playlist')
+# bookmarks update collection
+@update_bookmarks.command('collection')
+def update_bookmarks_collection():
+    """Synchronize all cached bookmarks with their source collages."""
+    try:
+        ccc = BookmarksCollectionCache()
+        all_bookmarks = ccc.get_all_bookmarks()
+
+        if not all_bookmarks:
+            click.echo("No bookmarks found in the cache.")
+            return
+
+        plex_manager = initialize_plex_manager()
+        if not plex_manager:
+            return
+        plex_manager.populate_album_cache()
+
+        # Loop through bookmarks
+        for bookmrk in all_bookmarks:
+            site = bookmrk['site']
+
+            gazelle_api = initialize_gazelle_api(site)
+            if not gazelle_api:
+                click.echo(f"Skipping '{site.upper()}' bookmarks due to initialization issues.")
+                continue
+            site_bookmarks = gazelle_api.get_bookmarks()
+
+            collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
+
+            click.echo(
+                f"Updating '{site.upper()}' bookmarks...")
+            collection_creator.create_or_update_collection_from_bookmarks(
+                site_bookmarks, site, force_update=True)
+
+        click.echo("All cached collections have been updated.")
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to update cached collections: %s', exc)
+        click.echo(f"An error occurred while updating cached collections: {exc}")
+
+# bookmarks create
+@bookmarks.group('create')
+def create():
+    """Create playlists/collections based on your site bookmarks."""
+
+# bookmarks create playlist
+@create.command('playlist')
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 def create_playlist_from_bookmarks(site):
@@ -405,36 +545,103 @@ def create_playlist_from_bookmarks(site):
                          site.upper(), exc)
         click.echo(f'Failed to create playlist from bookmarks on site {site.upper()}: {exc}')
 
+# bookmarks create collection
+@create.command('collection')
+@click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
+              help='Specify the site: red (Redacted) or ops (Orpheus).')
+def create_collection_from_bookmarks(site):
+    """Create a Plex collection based on your site bookmarks."""
+    plex_manager = initialize_plex_manager()
+    if not plex_manager:
+        return
+    plex_manager.populate_album_cache()
+
+    gazelle_api = initialize_gazelle_api(site)
+    if not gazelle_api:
+        return
+
+    collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
+
+    try:
+        bookmarks_data = gazelle_api.get_bookmarks()
+        collection_creator.create_or_update_collection_from_bookmarks(bookmarks_data, site.upper())
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to create collection from bookmarks on site %s: %s',
+                         site.upper(), exc)
+        click.echo(f'Failed to create collection from bookmarks on site {site.upper()}: {exc}')
+
+# bookmarks cache
 @bookmarks.group('cache')
 def bookmarks_cache():
     """Manage bookmarks cache."""
 
-@bookmarks_cache.command('show')
-def show_bookmarks_cache():
+# bookmarks cache playlist
+@bookmarks_cache.group('playlist')
+def bookmarks_cache_playlist():
+    """Manage playlist bookmarks cache."""
+
+# bookmarks cache playlist show
+@bookmarks_cache_playlist.command('show')
+def show_bookmarks_cache_playlist():
     """Shows the location of the bookmarks cache file if it exists."""
     try:
         bookmarks_cache_manager = BookmarksPlaylistCache()
         cache_file = bookmarks_cache_manager.csv_file
 
         if os.path.exists(cache_file):
-            click.echo(f"Bookmarks cache file exists at: {os.path.abspath(cache_file)}")
+            click.echo(f"Playlist bookmarks cache file exists at: {os.path.abspath(cache_file)}")
         else:
-            click.echo("Bookmarks cache file does not exist.")
+            click.echo("Playlist bookmarks cache file does not exist.")
     except Exception as exc: # pylint: disable=W0718
-        logger.exception('Failed to show bookmarks cache: %s', exc)
-        click.echo(f"An error occurred while showing the bookmarks cache: {exc}")
+        logger.exception('Failed to show the playlist bookmarks cache: %s', exc)
+        click.echo(f"An error occurred while showing the playlist bookmarks cache: {exc}")
 
-@bookmarks_cache.command('reset')
-def reset_bookmarks_cache():
+# bookmarks cache playlist reset
+@bookmarks_cache_playlist.command('reset')
+def reset_bookmarks_cache_playlist():
     """Resets the saved bookmarks cache."""
-    if click.confirm('Are you sure you want to reset the bookmarks cache?'):
+    if click.confirm('Are you sure you want to reset the playlist bookmarks cache?'):
         try:
             bookmarks_cache_manager = BookmarksPlaylistCache()
             bookmarks_cache_manager.reset_cache()
-            click.echo("Bookmarks cache has been reset successfully.")
+            click.echo("Playlist bookmarks cache has been reset successfully.")
         except Exception as exc: # pylint: disable=W0718
-            logger.exception('Failed to reset bookmarks cache: %s', exc)
-            click.echo(f"An error occurred while resetting the bookmarks cache: {exc}")
+            logger.exception('Failed to reset playlist bookmarks cache: %s', exc)
+            click.echo(f"An error occurred while resetting the playlist bookmarks cache: {exc}")
+
+ # bookmarks cache collection
+@bookmarks_cache.group('collection')
+def bookmarks_cache_collection():
+    """Manage collection bookmarks cache."""
+
+# bookmarks cache collection show
+@bookmarks_cache_collection.command('show')
+def show_bookmarks_cache_collection():
+    """Shows the location of the bookmarks cache file if it exists."""
+    try:
+        bookmarks_cache_manager = BookmarksCollectionCache()
+        cache_file = bookmarks_cache_manager.csv_file
+
+        if os.path.exists(cache_file):
+            click.echo(f"Collection bookmarks cache file exists at: {os.path.abspath(cache_file)}")
+        else:
+            click.echo("Collection bookmarks cache file does not exist.")
+    except Exception as exc: # pylint: disable=W0718
+        logger.exception('Failed to show collection bookmarks cache: %s', exc)
+        click.echo(f"An error occurred while showing the collection bookmarks cache: {exc}")
+
+# bookmarks cache collection reset
+@bookmarks_cache_collection.command('reset')
+def reset_bookmarks_cache_collection():
+    """Resets the saved bookmarks cache."""
+    if click.confirm('Are you sure you want to reset the collection bookmarks cache?'):
+        try:
+            bookmarks_cache_manager = BookmarksCollectionCache()
+            bookmarks_cache_manager.reset_cache()
+            click.echo("Collection bookmarks cache has been reset successfully.")
+        except Exception as exc: # pylint: disable=W0718
+            logger.exception('Failed to reset collection bookmarks cache: %s', exc)
+            click.echo(f"An error occurred while resetting the collection bookmarks cache: {exc}")
 
 if __name__ == '__main__':
     configure_logger()

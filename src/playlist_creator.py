@@ -197,6 +197,6 @@ class PlaylistCreator:
                     f'Playlist "{bookmarks_playlist_name}" created with {len(albums)} albums.')
         else:
             message = (
-                f'No matching albums found fornew items in collage "{bookmarks_playlist_name}".')
+                f'No matching albums found for new items in collage "{bookmarks_playlist_name}".')
             logger.warning(message)
             click.echo(message)

@@ -197,6 +197,6 @@ class CollectionCreator:
                     f'Collection "{bookmarks_collection_name}" created with {len(albums)} albums.')
         else:
             message = (
-                f'No matching albums found fornew items in collage "{bookmarks_collection_name}".')
+                f'No matching albums found for new items in collage "{bookmarks_collection_name}".')
             logger.warning(message)
             click.echo(message)
