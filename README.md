@@ -199,6 +199,7 @@ Use the following API call, replacing `{TOKEN}` with your Plex token:
 https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={TOKEN}
 ```
 
+This will return an XML response, including the full https URL:
 ```xml
 <MediaContainer size="5">
   <Device name="Your Server Name" product="Plex Media Server" ...>
