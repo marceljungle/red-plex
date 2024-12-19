@@ -2,14 +2,14 @@
 
 import unittest
 from unittest.mock import patch
-from plex_playlist_creator.cache_utils import get_cache_directory
+from src.infrastructure.cache.utils.cache_utils import get_cache_directory
 
 class TestCacheUtils(unittest.TestCase):
     """Test cases for the cache_utils module."""
 
     @patch("os.name", "nt")
     @patch("os.getenv", return_value="AppData\\Local\\red-plex")
-    def test_get_cache_directory_windows(self):
+    def test_get_cache_directory_windows(self, _):
         """Test get_cache_directory on Windows."""
         cache_dir = get_cache_directory()
         self.assertIn("AppData\\Local\\red-plex", cache_dir)
