@@ -5,20 +5,22 @@ import subprocess
 import yaml
 import click
 from pyrate_limiter import Rate, Duration
-from plex_playlist_creator.config import (
+from src.infrastructure.config.config import (
     CONFIG_FILE_PATH,
     DEFAULT_CONFIG,
     load_config,
     save_config,
     ensure_config_exists
 )
-from plex_playlist_creator.plex_manager import PlexManager
-from plex_playlist_creator.gazelle_api import GazelleAPI
-from plex_playlist_creator.album_cache import AlbumCache
-from plex_playlist_creator.playlist_cache import PlaylistCache
-from plex_playlist_creator.bookmarks_cache import BookmarksCache
-from plex_playlist_creator.playlist_creator import PlaylistCreator
-from plex_playlist_creator.logger import logger, configure_logger
+from src.infrastructure.plex.plex_manager import PlexManager
+from src.infrastructure.rest.gazelle_api import GazelleAPI
+from src.infrastructure.cache.album_cache import AlbumCache
+from src.infrastructure.cache.collage_playlist_cache import CollagePlaylistCache
+from src.infrastructure.cache.collage_collection_cache import CollageCollectionCache
+from src.infrastructure.cache.bookmarks_playlist_cache import BookmarksPlaylistCache
+from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
+from src.playlist_creator import PlaylistCreator
+from src.infrastructure.logger.logger import logger, configure_logger
 
 
 def initialize_plex_manager():
@@ -79,11 +81,15 @@ def cli():
     configure_logger(log_level)
 
 
-@cli.command()
+@cli.group()
+def convert():
+    """Conversion methods."""
+
+@convert.command()
 @click.argument('collage_ids', nargs=-1)
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
-def convert(collage_ids, site):
+def playlist(collage_ids, site):
     """Create Plex playlists from given COLLAGE_IDS."""
     if not collage_ids:
         click.echo("Please provide at least one COLLAGE_ID.")
@@ -114,6 +120,40 @@ def convert(collage_ids, site):
                 f'Failed to create playlist for collage {collage_id} on site {site.upper()}: {exc}'
             )
 
+@convert.command()
+@click.argument('collage_ids', nargs=-1)
+@click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
+              help='Specify the site: red (Redacted) or ops (Orpheus).')
+def collection(collage_ids, site):
+    """Create Plex collections from given COLLAGE_IDS."""
+    if not collage_ids:
+        click.echo("Please provide at least one COLLAGE_ID.")
+        return
+
+    plex_manager = initialize_plex_manager()
+    if not plex_manager:
+        return
+
+    # Populate album cache once after initializing plex_manager
+    plex_manager.populate_album_cache()
+
+    gazelle_api = initialize_gazelle_api(site)
+    if not gazelle_api:
+        return
+
+    playlist_creator = initialize_playlist_creator(plex_manager, gazelle_api)
+
+    for collage_id in collage_ids:
+        try:
+            playlist_creator.create_or_update_playlist_from_collage(
+                collage_id, site=site)
+        except Exception as exc:  # pylint: disable=W0718
+            logger.exception(
+                'Failed to create playlist for collage %s on site %s: %s',
+                collage_id, site.upper(), exc)
+            click.echo(
+                f'Failed to create playlist for collage {collage_id} on site {site.upper()}: {exc}'
+            )
 
 @cli.group()
 def config():
@@ -233,7 +273,7 @@ def playlists_cache():
 def show_playlist_cache():
     """Shows the location of the playlist cache file if it exists."""
     try:
-        playlist_cache = PlaylistCache()
+        playlist_cache = CollagePlaylistCache()
         cache_file = playlist_cache.csv_file
 
         if os.path.exists(cache_file):
@@ -250,7 +290,7 @@ def reset_playlist_cache():
     """Resets the saved playlist cache."""
     if click.confirm('Are you sure you want to reset the playlist cache?'):
         try:
-            playlist_cache = PlaylistCache()
+            playlist_cache = CollagePlaylistCache()
             playlist_cache.reset_cache()
             click.echo("Playlist cache has been reset successfully.")
         except Exception as exc:  # pylint: disable=W0718
@@ -262,7 +302,7 @@ def reset_playlist_cache():
 def update_playlists():
     """Synchronize all cached playlists with their source collages."""
     try:
-        pc = PlaylistCache()
+        pc = CollagePlaylistCache()
         all_playlists = pc.get_all_playlists()
 
         if not all_playlists:
@@ -307,7 +347,7 @@ def bookmarks():
 def update_bookmarks():
     """Synchronize all cached bookmarks with their source collages."""
     try:
-        pc = BookmarksCache()
+        pc = BookmarksPlaylistCache()
         all_bookmarks = pc.get_all_bookmarks()
 
         if not all_bookmarks:
@@ -373,7 +413,7 @@ def bookmarks_cache():
 def show_bookmarks_cache():
     """Shows the location of the bookmarks cache file if it exists."""
     try:
-        bookmarks_cache_manager = BookmarksCache()
+        bookmarks_cache_manager = BookmarksPlaylistCache()
         cache_file = bookmarks_cache_manager.csv_file
 
         if os.path.exists(cache_file):
@@ -389,7 +429,7 @@ def reset_bookmarks_cache():
     """Resets the saved bookmarks cache."""
     if click.confirm('Are you sure you want to reset the bookmarks cache?'):
         try:
-            bookmarks_cache_manager = BookmarksCache()
+            bookmarks_cache_manager = BookmarksPlaylistCache()
             bookmarks_cache_manager.reset_cache()
             click.echo("Bookmarks cache has been reset successfully.")
         except Exception as exc: # pylint: disable=W0718

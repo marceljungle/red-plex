@@ -2,8 +2,8 @@
 
 import unittest
 from unittest.mock import MagicMock, patch
-from plex_playlist_creator.plex_manager import PlexManager
-from plex_playlist_creator.album_cache import AlbumCache
+from src.infrastructure.plex.plex_manager import PlexManager
+from src.infrastructure.cache.album_cache import AlbumCache
 
 # pylint: disable=duplicate-code
 class TestPlexManager(unittest.TestCase):
@@ -12,8 +12,8 @@ class TestPlexManager(unittest.TestCase):
     def setUp(self):
         """Set up the test environment."""
         # Patch PlexServer and AlbumCache
-        patcher1 = patch('plex_playlist_creator.plex_manager.PlexServer')
-        patcher2 = patch('plex_playlist_creator.plex_manager.AlbumCache')
+        patcher1 = patch('src.plex_manager.PlexServer')
+        patcher2 = patch('src.plex_manager.AlbumCache')
         self.addCleanup(patcher1.stop)
         self.addCleanup(patcher2.stop)
         mock_plex_server_class = patcher1.start()
@@ -35,7 +35,7 @@ class TestPlexManager(unittest.TestCase):
 
     def test_populate_album_cache(self):
         """Test populating the album cache."""
-        with patch('plex_playlist_creator.plex_manager.os.listdir') as mock_listdir:
+        with patch('src.plex_manager.os.listdir') as mock_listdir:
             # Mock the return value of os.listdir
             mock_listdir.return_value = ['file1.mp3', 'file2.mp3']
 

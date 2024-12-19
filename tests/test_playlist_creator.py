@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock
 import tempfile
 import os
-from plex_playlist_creator.playlist_creator import PlaylistCreator
+from src.playlist_creator import PlaylistCreator
 
 # pylint: disable=duplicate-code
 class TestPlaylistCreator(unittest.TestCase):

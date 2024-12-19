@@ -4,7 +4,7 @@ import os
 import csv
 import logging
 from datetime import datetime
-from .cache_utils import get_cache_directory, ensure_directory_exists
+from .utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
 

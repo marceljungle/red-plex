@@ -8,7 +8,7 @@ from inspect import isawaitable
 import requests
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
-from plex_playlist_creator.logger import logger
+from src.infrastructure.logger.logger import logger
 
 # pylint: disable=W0718
 class GazelleAPI:
