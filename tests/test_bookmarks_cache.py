@@ -3,7 +3,7 @@
 import os
 import unittest
 import tempfile
-from plex_playlist_creator.bookmarks_cache import BookmarksCache
+from src.infrastructure.cache.bookmarks_playlist_cache import BookmarksPlaylistCache
 
 class TestBookmarksCache(unittest.TestCase):
     """Test cases for the BookmarksCache class."""
@@ -13,7 +13,7 @@ class TestBookmarksCache(unittest.TestCase):
         # pylint: disable=consider-using-with
         self.test_dir = tempfile.TemporaryDirectory()
         self.csv_file = os.path.join(self.test_dir.name, 'bookmarks_cache.csv')
-        self.cache = BookmarksCache(csv_file=self.csv_file)
+        self.cache = BookmarksPlaylistCache(csv_file=self.csv_file)
 
     def tearDown(self):
         """Clean up the temporary file."""
