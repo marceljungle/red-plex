@@ -12,11 +12,11 @@
   - [Collection Management](#collection-management)
   - [Bookmark Management](#bookmark-management)
   - [Album Cache Management](#album-cache-management)
-  - [Configuration](#command-configuration)
+  - [Configuration](#configuration-commands)
 - [Examples](#examples)
   - [Creating Playlists and Collections](#creating-playlists-and-collections)
   - [Updating Existing Items](#updating-existing-items)
-- [Configuration](#root-configuration)
+- [Configuration](#configuration-root)
   - [Configuration Tips](#configuration-tips)
 - [Considerations](#considerations)
 
@@ -116,7 +116,7 @@ red-plex album-cache reset
 red-plex album-cache update
 ```
 
-### Configuration {#command-configuration}
+### Configuration (Commands)
 ```bash
 # Show current configuration
 red-plex config show
@@ -160,7 +160,7 @@ red-plex bookmarks update playlist
 red-plex bookmarks update collection
 ```
 
-## Configuration {#root-configuration}
+## Configuration (Root)
 
 The configuration file (`~/.config/red-plex/config.yml`) should contain:
 
