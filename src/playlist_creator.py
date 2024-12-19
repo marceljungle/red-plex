@@ -9,6 +9,7 @@ from src.infrastructure.cache.bookmarks_playlist_cache import BookmarksPlaylistC
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=R0801
 class PlaylistCreator:
     """
     Handles the creation and updating of Plex playlists

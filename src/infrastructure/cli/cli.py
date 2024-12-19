@@ -159,7 +159,8 @@ def collection(collage_ids, site):
                 'Failed to create collection for collage %s on site %s: %s',
                 collage_id, site.upper(), exc)
             click.echo(
-                f'Failed to create collection for collage {collage_id} on site {site.upper()}: {exc}'
+                f'Failed to create collection for collage\
+                      {collage_id} on site {site.upper()}: {exc}'
             )
 
 # config
@@ -217,8 +218,8 @@ def album_cache():
 def show_cache():
     """Show the location of the cache file if it exists."""
     try:
-        album_cache = AlbumCache()
-        cache_file = album_cache.csv_file
+        album_cache_instance = AlbumCache()
+        cache_file = album_cache_instance.csv_file
 
         if os.path.exists(cache_file):
             click.echo(f"Cache file exists at: {os.path.abspath(cache_file)}")
@@ -234,8 +235,8 @@ def reset_cache():
     """Reset the saved albums cache."""
     if click.confirm('Are you sure you want to reset the cache?'):
         try:
-            album_cache = AlbumCache()
-            album_cache.reset_cache()
+            album_cache_instance = AlbumCache()
+            album_cache_instance.reset_cache()
             click.echo("Cache has been reset successfully.")
         except Exception as exc:  # pylint: disable=W0718
             logger.exception('Failed to reset cache: %s', exc)
@@ -418,7 +419,8 @@ def update_collections():
             collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
 
             click.echo(
-                f"Updating collection '{collection_name}' (Collage ID: {collage_id}, Site: {site})...")
+                f"Updating collection '{collection_name}'\
+                     (Collage ID: {collage_id}, Site: {site})...")
             collection_creator.create_or_update_collection_from_collage(
                 collage_id, site=site, force_update=True)
 

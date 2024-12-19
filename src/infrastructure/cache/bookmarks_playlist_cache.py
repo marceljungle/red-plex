@@ -7,8 +7,9 @@ from .utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=R0801
 class BookmarksPlaylistCache:
-    """Manages bookmarks cache using a CSV file.
+    """Manages playlist bookmarks cache using a CSV file.
     
     CSV format (one bookmark per row):
     rating_key,site,torrent_group_ids (comma-separated)
@@ -49,7 +50,7 @@ class BookmarksPlaylistCache:
                     bookmrk['site'],
                     ','.join(map(str, bookmrk['torrent_group_ids']))
                 ])
-        logger.info('%s bookmarks saved to cache.', site.upper())
+        logger.info('%s bookmarks saved to playlist cache.', site.upper())
 
     def get_bookmark(self, rating_key):
         """Retrieve a bookmark by rating_key."""
@@ -60,7 +61,7 @@ class BookmarksPlaylistCache:
         return None
 
     def get_all_bookmarks(self):
-        """Retrieve all bookmarks from the cache."""
+        """Retrieve all bookmarks from the playlist cache."""
         bookmarks = []
         if os.path.exists(self.csv_file):
             with open(self.csv_file, newline='', encoding='utf-8') as f:
@@ -81,9 +82,9 @@ class BookmarksPlaylistCache:
         return bookmarks
 
     def reset_cache(self):
-        """Deletes the bookmarks cache file if it exists."""
+        """Deletes the bookmarks playlist cache file if it exists."""
         if os.path.exists(self.csv_file):
             os.remove(self.csv_file)
-            logger.info('Bookmarks cache file deleted: %s', self.csv_file)
+            logger.info('Bookmarks playlist cache file deleted: %s', self.csv_file)
         else:
-            logger.info('No bookmarks cache file found to delete.')
+            logger.info('No bookmarks playlist cache file found to delete.')

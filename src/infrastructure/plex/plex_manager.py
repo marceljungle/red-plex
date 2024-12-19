@@ -76,7 +76,7 @@ class PlexManager:
         logger.info('Creating playlist with name "%s" and %d albums.', name, len(albums))
         playlist = self.plex.createPlaylist(name, self.section_name, albums)
         return playlist
-    
+
     def create_collection(self, name, albums):
         """Creates a collection in Plex."""
         logger.info('Creating collection with name "%s" and %d albums.', name, len(albums))

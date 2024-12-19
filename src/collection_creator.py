@@ -9,6 +9,7 @@ from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollect
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=R0801
 class CollectionCreator:
     """
     Handles the creation and updating of Plex collections
@@ -38,7 +39,8 @@ class CollectionCreator:
         existing_collection = self.plex_manager.get_collection_by_name(collage_name)
         if existing_collection:
             collection_rating_key = existing_collection.ratingKey
-            cached_collage_collection = self.collage_collection_cache.get_collection(collection_rating_key)
+            cached_collage_collection = self.collage_collection_cache.get_collection(
+                collection_rating_key)
             if cached_collage_collection:
                 cached_group_ids = set(cached_collage_collection['torrent_group_ids'])
             else:
@@ -91,7 +93,8 @@ class CollectionCreator:
             if existing_collection:
                 # Update existing collection
                 self.plex_manager.add_items_to_collection(existing_collection, albums)
-                logger.info('Collection "%s" updated with %d new albums.', collage_name, len(albums))
+                logger.info(
+                    'Collection "%s" updated with %d new albums.', collage_name, len(albums))
                 # Update cache
                 updated_group_ids = cached_group_ids.union(processed_group_ids)
                 self.collage_collection_cache.save_collection(
@@ -183,12 +186,15 @@ class CollectionCreator:
                         updated_group_ids)
                 )
                 click.echo(
-                    f'Collection "{bookmarks_collection_name}" updated with {len(albums)} new albums.')
+                    f'Collection "{bookmarks_collection_name}"\
+                          updated with {len(albums)} new albums.')
             else:
                 # Create new collection
-                collection = self.plex_manager.create_collection(bookmarks_collection_name, albums)
+                collection = self.plex_manager.create_collection(
+                    bookmarks_collection_name, albums)
                 logger.info(
-                    'Collection "%s" created with %d albums.', bookmarks_collection_name, len(albums))
+                    'Collection "%s" created with %d albums.',
+                      bookmarks_collection_name, len(albums))
                 # Save to cache
                 self.bookmarks_collection_cache.save_bookmarks(
                     collection.ratingKey, site, list(processed_group_ids)
