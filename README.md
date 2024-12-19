@@ -12,11 +12,11 @@
   - [Collection Management](#collection-management)
   - [Bookmark Management](#bookmark-management)
   - [Album Cache Management](#album-cache-management)
-  - [Configuration](#configuration-1)
+  - [Configuration](#command-configuration)
 - [Examples](#examples)
   - [Creating Playlists and Collections](#creating-playlists-and-collections)
   - [Updating Existing Items](#updating-existing-items)
-- [Configuration](#configuration)
+- [Configuration](#root-configuration)
   - [Configuration Tips](#configuration-tips)
 - [Considerations](#considerations)
 
@@ -116,7 +116,7 @@ red-plex album-cache reset
 red-plex album-cache update
 ```
 
-### Configuration
+### Configuration {#command-configuration}
 ```bash
 # Show current configuration
 red-plex config show
@@ -127,31 +127,6 @@ red-plex config edit
 # Reset configuration
 red-plex config reset
 ```
-#### Configuration Tips
-If you encounter issues accessing your Plex server via `http`, like this exception:
-
-```xml
-requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
-```
-
-You can use the following method to retrieve the secure `https` URL for local access without additional configuration:
-
-Use the following API call, replacing `{TOKEN}` with your Plex token:
-```bash
-https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={TOKEN}
-```
-
-```xml
-<MediaContainer size="5">
-  <Device name="Your Server Name" product="Plex Media Server" ...>
-    <Connection protocol="https" address="192.168.x.x" port="32400" 
-      uri="https://192-168-x-x.0123456789abcdef0123456789abcdef.plex.direct:32400" local="1"/>
-    ...
-  </Device>
-  ...
-</MediaContainer>
-```
-Thanks anonysmussi for pointing this out!
 
 ## Examples
 
@@ -185,7 +160,7 @@ red-plex bookmarks update playlist
 red-plex bookmarks update collection
 ```
 
-## Configuration
+## Configuration {#root-configuration}
 
 The configuration file (`~/.config/red-plex/config.yml`) should contain:
 
@@ -209,6 +184,32 @@ OPS:
     calls: 4
     seconds: 15
 ```
+
+### Configuration Tips
+If you encounter issues accessing your Plex server via `http`, like this exception:
+
+```xml
+requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+```
+
+You can use the following method to retrieve the secure `https` URL for local access without additional configuration:
+
+Use the following API call, replacing `{TOKEN}` with your Plex token:
+```bash
+https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={TOKEN}
+```
+
+```xml
+<MediaContainer size="5">
+  <Device name="Your Server Name" product="Plex Media Server" ...>
+    <Connection protocol="https" address="192.168.x.x" port="32400" 
+      uri="https://192-168-x-x.0123456789abcdef0123456789abcdef.plex.direct:32400" local="1"/>
+    ...
+  </Device>
+  ...
+</MediaContainer>
+```
+Thanks anonysmussi for pointing this out!
 
 ## Considerations
 
