@@ -3,19 +3,20 @@
 import os
 import csv
 import logging
-from .cache_utils import get_cache_directory, ensure_directory_exists
+from .utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
 
-class BookmarksCache:
-    """Manages bookmarks cache using a CSV file.
+# pylint: disable=R0801
+class BookmarksCollectionCache:
+    """Manages bookmarks collection cache using a CSV file.
     
     CSV format (one bookmark per row):
     rating_key,site,torrent_group_ids (comma-separated)
     """
 
     def __init__(self, csv_file=None):
-        default_csv_path = os.path.join(get_cache_directory(), 'bookmarks_cache.csv')
+        default_csv_path = os.path.join(get_cache_directory(), 'bookmarks_collection_cache.csv')
         self.csv_file = csv_file if csv_file else default_csv_path
         ensure_directory_exists(os.path.dirname(self.csv_file))
 

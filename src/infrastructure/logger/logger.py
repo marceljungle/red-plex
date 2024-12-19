@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # Create the logger
-logger = logging.getLogger('plex_playlist_creator')
+logger = logging.getLogger('src')
 
 def configure_logger(log_level='INFO'):
     """Configures the logger with the specified log level."""

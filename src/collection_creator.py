@@ -1,29 +1,30 @@
-"""Module for creating Plex playlists from Gazelle collages or bookmarks."""
+"""Module for creating Plex collections from Gazelle collages or bookmarks."""
 
 import html
 import logging
 import click
 import requests
-from plex_playlist_creator.playlist_cache import PlaylistCache
-from plex_playlist_creator.bookmarks_cache import BookmarksCache
+from src.infrastructure.cache.collage_collection_cache import CollageCollectionCache
+from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
 
 logger = logging.getLogger(__name__)
 
-class PlaylistCreator:
+# pylint: disable=R0801
+class CollectionCreator:
     """
-    Handles the creation and updating of Plex playlists
+    Handles the creation and updating of Plex collections
     based on Gazelle collages or bookmarks.
     """
 
     def __init__(self, plex_manager, gazelle_api, cache_file=None):
         self.plex_manager = plex_manager
         self.gazelle_api = gazelle_api
-        self.playlist_cache = PlaylistCache(cache_file)
-        self.bookmarks_cache = BookmarksCache(cache_file)
+        self.collage_collection_cache = CollageCollectionCache(cache_file)
+        self.bookmarks_collection_cache = BookmarksCollectionCache(cache_file)
 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
-    def create_or_update_playlist_from_collage(self, collage_id, site=None, force_update=False):
-        """Creates or updates a Plex playlist based on a Gazelle collage."""
+    def create_or_update_collection_from_collage(self, collage_id, site=None, force_update=False):
+        """Creates or updates a Plex collection based on a Gazelle collage."""
         try:
             collage_data = self.gazelle_api.get_collage(collage_id)
         except requests.exceptions.RequestException as exc:
@@ -35,32 +36,33 @@ class PlaylistCreator:
         )
         group_ids = collage_data.get('response', {}).get('torrentGroupIDList', [])
 
-        existing_playlist = self.plex_manager.get_playlist_by_name(collage_name)
-        if existing_playlist:
-            playlist_rating_key = existing_playlist.ratingKey
-            cached_playlist = self.playlist_cache.get_playlist(playlist_rating_key)
-            if cached_playlist:
-                cached_group_ids = set(cached_playlist['torrent_group_ids'])
+        existing_collection = self.plex_manager.get_collection_by_name(collage_name)
+        if existing_collection:
+            collection_rating_key = existing_collection.ratingKey
+            cached_collage_collection = self.collage_collection_cache.get_collection(
+                collection_rating_key)
+            if cached_collage_collection:
+                cached_group_ids = set(cached_collage_collection['torrent_group_ids'])
             else:
                 cached_group_ids = set()
 
             if not force_update:
                 # Ask for confirmation if not forced
                 response = click.confirm(
-                    f'Playlist "{collage_name}" already exists. '
+                    f'Collection "{collage_name}" already exists. '
                     'Do you want to update it with new items?',
                     default=True
                 )
                 if not response:
-                    click.echo('Skipping playlist update.')
+                    click.echo('Skipping collection update.')
                     return
         else:
-            existing_playlist = None
+            existing_collection = None
             cached_group_ids = set()
 
         new_group_ids = set(map(int, group_ids)) - cached_group_ids
         if not new_group_ids:
-            click.echo(f'No new items to add to playlist "{collage_name}".')
+            click.echo(f'No new items to add to collection "{collage_name}".')
             return
 
         matched_rating_keys = set()
@@ -88,61 +90,62 @@ class PlaylistCreator:
 
         if matched_rating_keys:
             albums = self.plex_manager.fetch_albums_by_keys(list(matched_rating_keys))
-            if existing_playlist:
-                # Update existing playlist
-                self.plex_manager.add_items_to_playlist(existing_playlist, albums)
-                logger.info('Playlist "%s" updated with %d new albums.', collage_name, len(albums))
+            if existing_collection:
+                # Update existing collection
+                self.plex_manager.add_items_to_collection(existing_collection, albums)
+                logger.info(
+                    'Collection "%s" updated with %d new albums.', collage_name, len(albums))
                 # Update cache
                 updated_group_ids = cached_group_ids.union(processed_group_ids)
-                self.playlist_cache.save_playlist(
-                    existing_playlist.ratingKey, collage_name, site, collage_id, list(
+                self.collage_collection_cache.save_collection(
+                    existing_collection.ratingKey, collage_name, site, collage_id, list(
                         updated_group_ids)
                 )
-                click.echo(f'Playlist "{collage_name}" updated with {len(albums)} new albums.')
+                click.echo(f'Collection "{collage_name}" updated with {len(albums)} new albums.')
             else:
-                # Create new playlist
-                playlist = self.plex_manager.create_playlist(collage_name, albums)
-                logger.info('Playlist "%s" created with %d albums.', collage_name, len(albums))
+                # Create new collection
+                collection = self.plex_manager.create_collection(collage_name, albums)
+                logger.info('Collection "%s" created with %d albums.', collage_name, len(albums))
                 # Save to cache
-                self.playlist_cache.save_playlist(
-                    playlist.ratingKey, collage_name, site, collage_id, list(processed_group_ids)
+                self.collage_collection_cache.save_collection(
+                    collection.ratingKey, collage_name, site, collage_id, list(processed_group_ids)
                 )
-                click.echo(f'Playlist "{collage_name}" created with {len(albums)} albums.')
+                click.echo(f'Collection "{collage_name}" created with {len(albums)} albums.')
         else:
             message = f'No matching albums found for new items in collage "{collage_name}".'
             logger.warning(message)
             click.echo(message)
 
-    def create_or_update_playlist_from_bookmarks(self, bookmarks, site, force_update=False):
-        """Creates a Plex playlist based on the user's bookmarks from a Gazelle-based site."""
-        bookmarks_playlist_name = f"{site.upper()} Bookmarks"
+    def create_or_update_collection_from_bookmarks(self, bookmarks, site, force_update=False):
+        """Creates a Plex collection based on the user's bookmarks from a Gazelle-based site."""
+        bookmarks_collection_name = f"{site.upper()} Bookmarks"
         bookmarks_group_ids = self.gazelle_api.get_group_ids_from_bookmarks(bookmarks)
-        existing_playlist = self.plex_manager.get_playlist_by_name(bookmarks_playlist_name)
-        if existing_playlist:
-            playlist_rating_key = existing_playlist.ratingKey
-            cached_playlist = self.bookmarks_cache.get_bookmark(playlist_rating_key)
-            if cached_playlist:
-                cached_group_ids = set(cached_playlist['torrent_group_ids'])
+        existing_collection = self.plex_manager.get_collection_by_name(bookmarks_collection_name)
+        if existing_collection:
+            collection_rating_key = existing_collection.ratingKey
+            cached_collection = self.bookmarks_collection_cache.get_bookmark(collection_rating_key)
+            if cached_collection:
+                cached_group_ids = set(cached_collection['torrent_group_ids'])
             else:
                 cached_group_ids = set()
 
             if not force_update:
                 # Ask for confirmation if not forced
                 response = click.confirm(
-                    f'Playlist "{bookmarks_playlist_name}" already exists. '
+                    f'Collection "{bookmarks_collection_name}" already exists. '
                     'Do you want to update it with new items?',
                     default=True
                 )
                 if not response:
-                    click.echo('Skipping playlist update.')
+                    click.echo('Skipping collection update.')
                     return
         else:
-            existing_playlist = None
+            existing_collection = None
             cached_group_ids = set()
 
         new_group_ids = set(map(int, bookmarks_group_ids)) - cached_group_ids
         if not new_group_ids:
-            click.echo(f'No new items to add to playlist "{bookmarks_playlist_name}".')
+            click.echo(f'No new items to add to collection "{bookmarks_collection_name}".')
             return
 
         matched_rating_keys = set()
@@ -170,33 +173,36 @@ class PlaylistCreator:
 
         if matched_rating_keys:
             albums = self.plex_manager.fetch_albums_by_keys(list(matched_rating_keys))
-            if existing_playlist:
-                # Update existing playlist
-                self.plex_manager.add_items_to_playlist(existing_playlist, albums)
+            if existing_collection:
+                # Update existing collection
+                self.plex_manager.add_items_to_collection(existing_collection, albums)
                 logger.info(
-                    'Playlist "%s" updated with %d new albums.',
-                        bookmarks_playlist_name, len(albums))
+                    'Collection "%s" updated with %d new albums.',
+                        bookmarks_collection_name, len(albums))
                 # Update cache
                 updated_group_ids = cached_group_ids.union(processed_group_ids)
-                self.bookmarks_cache.save_bookmarks(
-                    existing_playlist.ratingKey, site, list(
+                self.bookmarks_collection_cache.save_bookmarks(
+                    existing_collection.ratingKey, site, list(
                         updated_group_ids)
                 )
                 click.echo(
-                    f'Playlist "{bookmarks_playlist_name}" updated with {len(albums)} new albums.')
+                    f'Collection "{bookmarks_collection_name}"\
+                          updated with {len(albums)} new albums.')
             else:
-                # Create new playlist
-                playlist = self.plex_manager.create_playlist(bookmarks_playlist_name, albums)
+                # Create new collection
+                collection = self.plex_manager.create_collection(
+                    bookmarks_collection_name, albums)
                 logger.info(
-                    'Playlist "%s" created with %d albums.', bookmarks_playlist_name, len(albums))
+                    'Collection "%s" created with %d albums.',
+                      bookmarks_collection_name, len(albums))
                 # Save to cache
-                self.bookmarks_cache.save_bookmarks(
-                    playlist.ratingKey, site, list(processed_group_ids)
+                self.bookmarks_collection_cache.save_bookmarks(
+                    collection.ratingKey, site, list(processed_group_ids)
                 )
                 click.echo(
-                    f'Playlist "{bookmarks_playlist_name}" created with {len(albums)} albums.')
+                    f'Collection "{bookmarks_collection_name}" created with {len(albums)} albums.')
         else:
             message = (
-                f'No matching albums found fornew items in collage "{bookmarks_playlist_name}".')
+                f'No matching albums found for new items in collage "{bookmarks_collection_name}".')
             logger.warning(message)
             click.echo(message)
