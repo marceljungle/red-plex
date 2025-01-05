@@ -6,6 +6,7 @@
 
 - [Overview](#overview)
 - [Features](#features)
+- [Installation](#installation)
 - [Commands](#commands)
   - [Convert Commands](#convert-commands)
   - [Playlist Management](#playlist-management)
@@ -41,6 +42,18 @@
 - **Command-Line Interface**: User-friendly CLI with comprehensive commands
 - **Rate Limiting and Retries**: Handles API rate limiting with retries for failed calls
 - **Python 3 Compatible**: Works with Python 3.7 and above
+
+## Installation
+
+You can install **red-plex** using pip:
+```
+pip install red-plex
+```
+
+Alternatively, you can install it using pipx to isolate the package and its dependencies:
+```
+pipx install red-plex
+```
 
 ## Commands
 
