@@ -93,13 +93,16 @@ class PlexManager:
         # Ask the user to choose which matches to keep
         while True:
             choice = click.prompt(
-                "Select the numbers of the matches you want to keep, \
-                    separated by commas (or enter 'A' to select all)",
+                "Select the numbers of the matches you want to keep, separated by commas "
+                "(or enter 'A' to select all, 'N' to select none)",
                 default="A",
             )
 
             if choice.strip().upper() == "A":
                 return list(rating_keys.keys())  # Return all matches
+
+            if choice.strip().upper() == "N":
+                return []  # Return an empty list if the user selects none
 
             # Validate the user's input
             try:
@@ -111,8 +114,9 @@ class PlexManager:
             except ValueError:
                 pass
 
-            logger.error("Invalid input. Please enter valid\
-                          numbers separated by commas or 'A' for all.")
+            logger.error(
+                "Invalid input. Please enter valid "
+                "numbers separated by commas or 'A' for all, 'N' to select none.")
 
     def fetch_albums_by_keys(self, rating_keys):
         """Fetches album objects from Plex using their rating keys."""
