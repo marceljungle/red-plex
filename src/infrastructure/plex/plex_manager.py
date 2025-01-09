@@ -1,8 +1,8 @@
 """Module for managing Plex albums and playlists."""
 
 import os
-import click
 from datetime import datetime, timezone
+import click
 from plexapi.server import PlexServer
 from src.infrastructure.logger.logger import logger
 from src.infrastructure.cache.album_cache import AlbumCache
@@ -78,7 +78,7 @@ class PlexManager:
 
         # No matches found
         if not rating_keys:
-            logger.debug(f"No matches found for path: {path}")
+            logger.debug("No matches found for path: %s", path)
             return []
 
         # Single match found
@@ -93,7 +93,8 @@ class PlexManager:
         # Ask the user to choose which matches to keep
         while True:
             choice = click.prompt(
-                "Select the numbers of the matches you want to keep, separated by commas (or enter 'A' to select all)",
+                "Select the numbers of the matches you want to keep, \
+                    separated by commas (or enter 'A' to select all)",
                 default="A",
             )
 
@@ -110,7 +111,8 @@ class PlexManager:
             except ValueError:
                 pass
 
-            logger.error("Invalid input. Please enter valid numbers separated by commas or 'A' for all.")
+            logger.error("Invalid input. Please enter valid\
+                          numbers separated by commas or 'A' for all.")
 
     def fetch_albums_by_keys(self, rating_keys):
         """Fetches album objects from Plex using their rating keys."""
