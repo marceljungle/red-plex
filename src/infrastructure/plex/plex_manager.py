@@ -1,6 +1,7 @@
 """Module for managing Plex albums and playlists."""
 
 import os
+import click
 from datetime import datetime, timezone
 from plexapi.server import PlexServer
 from src.infrastructure.logger.logger import logger
@@ -58,13 +59,58 @@ class PlexManager:
         logger.info('Album cache has been reset.')
 
     def get_rating_keys(self, path):
-        """Returns the rating keys if the path matches an album folder."""
-        rating_keys = [key for key, (folder_path, _)
-                       in self.album_data.items() if path in folder_path]
-        if rating_keys:
-            logger.info('Matched album folder name: %s, returning rating keys %s...', path,
-                        rating_keys)
-        return rating_keys
+        """Returns the rating keys if the path matches part of an album folder."""
+        # Validate the input path
+        if not self.validate_path(path):
+            logger.warning("The provided path is either empty or too short to be valid.")
+            return []
+
+        rating_keys = {}
+
+        # Iterate over album_data and find matches
+        for key, (folder_path, _) in self.album_data.items():
+            normalized_folder_path = os.path.normpath(folder_path)  # Normalize path
+            folder_parts = normalized_folder_path.split(os.sep)  # Split path into parts
+
+            # Check if the path matches any part of folder_path
+            if path in folder_parts:
+                rating_keys[key] = folder_path
+
+        # No matches found
+        if not rating_keys:
+            logger.debug(f"No matches found for path: {path}")
+            return []
+
+        # Single match found
+        if len(rating_keys) == 1:
+            return list(rating_keys.keys())
+
+        # Multiple matches found, prompt the user
+        print(f"Multiple matches found for path: {path}")
+        for i, (key, folder_path) in enumerate(rating_keys.items(), 1):
+            print(f"{i}. {folder_path}")
+
+        # Ask the user to choose which matches to keep
+        while True:
+            choice = click.prompt(
+                "Select the numbers of the matches you want to keep, separated by commas (or enter 'A' to select all)",
+                default="A",
+            )
+
+            if choice.strip().upper() == "A":
+                return list(rating_keys.keys())  # Return all matches
+
+            # Validate the user's input
+            try:
+                selected_indices = [int(x) for x in choice.split(",")]
+                if all(1 <= idx <= len(rating_keys) for idx in selected_indices):
+                    return [
+                        list(rating_keys.keys())[idx - 1] for idx in selected_indices
+                    ]  # Return selected matches
+            except ValueError:
+                pass
+
+            logger.error("Invalid input. Please enter valid numbers separated by commas or 'A' for all.")
 
     def fetch_albums_by_keys(self, rating_keys):
         """Fetches album objects from Plex using their rating keys."""
@@ -112,3 +158,9 @@ class PlexManager:
         """Adds albums to an existing collection."""
         logger.info('Adding %d albums to collection "%s".', len(albums), collection.title)
         collection.addItems(albums)
+
+    def validate_path(self, path):
+        """Validates that the path is correct."""
+        if (not path) or (len(path) == 1):
+            return False
+        return True
