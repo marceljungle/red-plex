@@ -3,6 +3,8 @@
 import os
 import csv
 import logging
+from typing import List
+from src.domain.models import TorrentGroup, Collage, Collection
 from .utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
@@ -21,52 +23,50 @@ class CollageCollectionCache:
         ensure_directory_exists(os.path.dirname(self.csv_file))
 
     # pylint: disable=too-many-arguments, R0917
-    def save_collection(self, rating_key, collection_name, site, collage_id, torrent_group_ids):
+    def save_collection(self, rating_key, collection_name, site, collage_id, torrent_group_list) -> None:
         """Saves or updates a single collection entry in the cache."""
+        torrent_group_list: list[TorrentGroup]
+        
         collections = self.get_all_collections()
 
         # Check if this collection is already in the cache
         updated = False
         for coll in collections:
-            if coll['rating_key'] == rating_key:
-                coll['collection_name'] = collection_name
-                coll['site'] = site
-                coll['collage_id'] = collage_id
-                coll['torrent_group_ids'] = torrent_group_ids
+            if coll.rating_key == rating_key:
+                coll.name = collection_name
+                coll.site = site
+                coll.collage.id = collage_id
+                coll.torrent_groups = torrent_group_list
                 updated = True
                 break
 
         if not updated:
-            collections.append({
-                'rating_key': rating_key,
-                'collection_name': collection_name,
-                'site': site,
-                'collage_id': collage_id,
-                'torrent_group_ids': torrent_group_ids
-            })
+            collections.append(Collection(
+                collection_name,
+                rating_key,
+                site,
+                Collage(id=collage_id),
+                torrent_group_list
+            ))
 
         # Write back to CSV
         with open(self.csv_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             for coll in collections:
                 writer.writerow([
-                    coll['rating_key'],
-                    coll['collection_name'],
-                    coll['site'],
-                    coll['collage_id'],
-                    ','.join(map(str, coll['torrent_group_ids']))
+                    coll.rating_key,
+                    coll.name,
+                    coll.site,
+                    coll.collage.id,
+                    ','.join(map(str, [group.id for group in coll.torrent_groups])),
                 ])
         logger.info('Collections saved to cache.')
 
-    def get_collection(self, rating_key):
+    def get_collection(self, rating_key) -> Collection:
         """Retrieve a single collection by rating_key."""
-        collections = self.get_all_collections()
-        for coll in collections:
-            if coll['rating_key'] == rating_key:
-                return coll
-        return None
+        return next((coll for coll in self.get_all_collections() if coll.rating_key == rating_key), None)
 
-    def get_all_collections(self):
+    def get_all_collections(self) -> List[Collection]:
         """Retrieve all collections from the cache."""
         collections = []
         if os.path.exists(self.csv_file):
@@ -84,16 +84,17 @@ class CollageCollectionCache:
                         except ValueError:
                             collage_id = None
                         group_ids = [int(g.strip()) for g in group_ids_str.split(',') if g.strip()]
-                        collections.append({
-                            'rating_key': rating_key,
-                            'collection_name': collection_name,
-                            'site': site,
-                            'collage_id': collage_id,
-                            'torrent_group_ids': group_ids
-                        })
+                        
+                        collections.append(Collection(
+                            collection_name,
+                            rating_key,
+                            site,
+                            Collage(id=collage_id),
+                            [TorrentGroup(id=gid) for gid in group_ids]
+                            ))
         return collections
 
-    def reset_cache(self):
+    def reset_cache(self) -> None:
         """Deletes the collection cache file if it exists."""
         if os.path.exists(self.csv_file):
             os.remove(self.csv_file)

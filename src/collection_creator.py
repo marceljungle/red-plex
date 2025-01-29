@@ -4,6 +4,7 @@ import html
 import logging
 import click
 import requests
+from src.domain.models import TorrentGroup, Collage
 from src.infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
 
@@ -26,17 +27,13 @@ class CollectionCreator:
     def create_or_update_collection_from_collage(self, collage_id, site=None, force_update=False):
         """Creates or updates a Plex collection based on a Gazelle collage."""
         try:
+            collage_data: Collage
             collage_data = self.gazelle_api.get_collage(collage_id)
         except requests.exceptions.RequestException as exc:
             logger.exception('Failed to retrieve collage %s: %s', collage_id, exc)
             return
 
-        collage_name = html.unescape(
-            collage_data.get('response', {}).get('name', f'Collage {collage_id}')
-        )
-        group_ids = collage_data.get('response', {}).get('torrentGroupIDList', [])
-
-        existing_collection = self.plex_manager.get_collection_by_name(collage_name)
+        existing_collection = self.plex_manager.get_collection_by_name(collage_data.name)
         if existing_collection:
             collection_rating_key = existing_collection.ratingKey
             cached_collage_collection = self.collage_collection_cache.get_collection(
@@ -49,7 +46,7 @@ class CollectionCreator:
             if not force_update:
                 # Ask for confirmation if not forced
                 response = click.confirm(
-                    f'Collection "{collage_name}" already exists. '
+                    f'Collection "{collage_data.name}" already exists. '
                     'Do you want to update it with new items?',
                     default=True
                 )
@@ -62,21 +59,22 @@ class CollectionCreator:
 
         new_group_ids = set(map(int, group_ids)) - cached_group_ids
         if not new_group_ids:
-            click.echo(f'No new items to add to collection "{collage_name}".')
+            click.echo(f'No new items to add to collection "{collage_data.name}".')
             return
 
         matched_rating_keys = set()
         processed_group_ids = set()
+        torrent_group: TorrentGroup
+
         for gid in new_group_ids:
             try:
                 torrent_group = self.gazelle_api.get_torrent_group(gid)
-                file_paths = self.gazelle_api.get_file_paths_from_torrent_group(torrent_group)
             except requests.exceptions.RequestException as exc:
                 logger.exception('Failed to retrieve torrent group %s: %s', gid, exc)
                 continue
 
             group_matched = False
-            for path in file_paths:
+            for path in torrent_group.file_paths:
                 rating_keys = self.plex_manager.get_rating_keys(path) or []
                 if rating_keys:
                     group_matched = True
@@ -94,25 +92,25 @@ class CollectionCreator:
                 # Update existing collection
                 self.plex_manager.add_items_to_collection(existing_collection, albums)
                 logger.info(
-                    'Collection "%s" updated with %d new albums.', collage_name, len(albums))
+                    'Collection "%s" updated with %d new albums.', collage_data.name, len(albums))
                 # Update cache
                 updated_group_ids = cached_group_ids.union(processed_group_ids)
                 self.collage_collection_cache.save_collection(
-                    existing_collection.ratingKey, collage_name, site, collage_id, list(
+                    existing_collection.ratingKey, collage_data.name, site, collage_id, list(
                         updated_group_ids)
                 )
-                click.echo(f'Collection "{collage_name}" updated with {len(albums)} new albums.')
+                click.echo(f'Collection "{collage_data.name}" updated with {len(albums)} new albums.')
             else:
                 # Create new collection
-                collection = self.plex_manager.create_collection(collage_name, albums)
-                logger.info('Collection "%s" created with %d albums.', collage_name, len(albums))
+                collection = self.plex_manager.create_collection(collage_data.name, albums)
+                logger.info('Collection "%s" created with %d albums.', collage_data.name, len(albums))
                 # Save to cache
                 self.collage_collection_cache.save_collection(
-                    collection.ratingKey, collage_name, site, collage_id, list(processed_group_ids)
+                    collection.ratingKey, collage_data.name, site, collage_id, list(processed_group_ids)
                 )
-                click.echo(f'Collection "{collage_name}" created with {len(albums)} albums.')
+                click.echo(f'Collection "{collage_data.name}" created with {len(albums)} albums.')
         else:
-            message = f'No matching albums found for new items in collage "{collage_name}".'
+            message = f'No matching albums found for new items in collage "{collage_data.name}".'
             logger.warning(message)
             click.echo(message)
 
@@ -150,16 +148,17 @@ class CollectionCreator:
 
         matched_rating_keys = set()
         processed_group_ids = set()
+        torrent_group: TorrentGroup
+
         for gid in new_group_ids:
             try:
                 torrent_group = self.gazelle_api.get_torrent_group(gid)
-                file_paths = self.gazelle_api.get_file_paths_from_torrent_group(torrent_group)
             except requests.exceptions.RequestException as exc:
                 logger.exception('Failed to retrieve torrent group %s: %s', gid, exc)
                 continue
 
             group_matched = False
-            for path in file_paths:
+            for path in torrent_group.file_paths:
                 rating_keys = self.plex_manager.get_rating_keys(path) or []
                 if rating_keys:
                     group_matched = True

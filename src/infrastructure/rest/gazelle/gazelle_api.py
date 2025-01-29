@@ -9,6 +9,8 @@ import requests
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 from src.infrastructure.logger.logger import logger
+from src.domain.models import Collage, TorrentGroup, Bookmarks
+from src.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
 # pylint: disable=W0718
 class GazelleAPI:
@@ -88,47 +90,27 @@ class GazelleAPI:
         # If no items in the bucket, no need to wait
         return 0
 
-    def get_collage(self, collage_id):
-        """Retrieves collage data."""
+    def get_collage(self, collage_id: str) -> Collage:
+        """Retrieves collage data as domain object"""
         params = {'id': str(collage_id), 'showonlygroups': 'true'}
         json_data = self.api_call('collage', params)
         logger.info('Retrieved collage data for collage_id %s', collage_id)
-        return json_data
+        return GazelleMapper.map_collage(json_data)
 
-    def get_torrent(self, torrent_id):
-        """Retrieves full torrent entity."""
-        params = {'id': str(torrent_id)}
-        json_data = self.api_call('torrent', params)
-        logger.info('Retrieved full torrent data for torrent id %s', torrent_id)
-        return json_data
-
-    def get_torrent_group(self, torrent_group_id):
+    def get_torrent_group(self, torrent_group_id: str) -> TorrentGroup:
         """Retrieves torrent group data."""
         params = {'id': str(torrent_group_id)}
         json_data = self.api_call('torrentgroup', params)
         logger.info('Retrieved torrent group information for group_id %s', torrent_group_id)
-        return json_data
+        return GazelleMapper.map_torrent_group(json_data)
 
-    def get_file_paths_from_torrent_group(self, torrent_group):
-        """Extracts file paths from a torrent group."""
-        logger.debug('Extracting file paths from torrent group response.')
-        try:
-            torrents = torrent_group.get('response', {}).get('torrents', [])
-            file_paths = [torrent.get('filePath') for torrent in torrents if 'filePath' in torrent]
-            normalized_file_paths = [self.normalize(path) for path in file_paths if path]
-            logger.info('Extracted file paths: %s', normalized_file_paths)
-            return normalized_file_paths
-        except Exception as e:
-            logger.exception('Error extracting file paths from torrent group: %s', e)
-            return []
-
-    def get_bookmarks(self):
+    def get_bookmarks(self, site: str) -> Bookmarks:
         """Retrieves user bookmarks."""
         logger.debug('Retrieving user bookmarks...')
         bookmarks_response = self.api_call('bookmarks', {})
-        bookmarks = bookmarks_response.get('response', {})
         logger.info('Retrieved user bookmarks')
-        return bookmarks
+
+        return GazelleMapper.map_bookmarks(bookmarks_response, site)
 
     def get_group_ids_from_bookmarks(self, bookmarks):
         """Extracts file paths from user bookmarks."""

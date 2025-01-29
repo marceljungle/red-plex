@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock, patch
-from src.infrastructure.rest.gazelle_api import GazelleAPI
+from src.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 
 class TestGazelleAPI(unittest.TestCase):
     """Test cases for the GazelleAPI class."""

@@ -1,0 +1,98 @@
+# src/infrastructure/mappers/gazelle_mapper.py
+import html
+import re
+from datetime import datetime
+from typing import Dict, Any, Union, List
+from src.infrastructure.logger.logger import logger
+from src.domain.models import Collage, TorrentGroup, Bookmarks
+
+class GazelleMapper:
+    """Maps Gazelle API responses to domain models"""
+
+    @staticmethod
+    def map_collage(response: Dict[str, Any]) -> Collage:
+        """Convert raw API response to Collage domain object"""
+        collage_data = response.get('response', {})
+        collage_id = collage_data.get('id')
+        return Collage(
+            id=str(collage_id),
+            name=GazelleMapper._clean_text(collage_data.get('name', f'Collage {collage_id}')),
+            torrent_groups=[
+                GazelleMapper.map_torrent_group(tg)
+                for tg in collage_data.get('torrentGroupIDList', [])
+            ],
+            site=''  # To be filled by repository
+        )
+    
+    @staticmethod
+    def map_bookmarks(response: Dict[str, Any], site: str) -> Bookmarks:
+        """Convert raw API response to Collage domain object"""
+        bookmarks_data = response.get('response', {})
+        return Bookmarks(
+            name=f"{site.upper()} Bookmarks",
+            torrent_groups=[
+                GazelleMapper.map_torrent_group(tg)
+                for tg in bookmarks_data.get('torrentGroupIDList', [])
+            ],
+            site=''  # To be filled by repository
+        )
+
+    @staticmethod
+    def get_torrent_groups_from_bookmarks(response: Dict[str, Any]) -> List[TorrentGroup]:
+        """Extracts file paths from user bookmarks."""
+        logger.debug('Extracting file paths from bookmarks response.')
+        try:
+            # Bookmarks are at the group level
+            bookmarked_group_ids = [bookmark.get('id')
+                                    for bookmark in response.get('bookmarks', [])]
+            logger.debug('Bookmarked group IDs: %s', bookmarked_group_ids)
+            return [TorrentGroup(id=group_id, file_paths=[]) for group_id in bookmarked_group_ids]
+        except Exception as e:
+            logger.exception('Error extracting group ids from bookmarks: %s', e)
+            return []
+    
+    @staticmethod
+    def map_torrent_group(data: Union[Dict[str, Any], str]) -> TorrentGroup:
+        """Map individual torrent group data"""
+        if isinstance(data, dict):
+            # Handle case where data is a dictionary
+            return TorrentGroup(
+                id=data.get('id'),
+                file_paths=GazelleMapper._map_torrent_group_file_paths(data)
+            )
+        elif isinstance(data, str):
+            # Handle case where data is a string (ID only)
+            return TorrentGroup(
+                id=data,
+                file_paths=[]
+            )
+        else:
+            raise TypeError(f"Unsupported type for data: {type(data)}")
+    
+    @staticmethod
+    def map_torrent_group(id: str) -> TorrentGroup:
+        """Map individual torrent group data"""
+        return TorrentGroup(
+            id=id,
+            file_paths = []
+        )
+    
+    @staticmethod
+    def _map_torrent_group_file_paths(torrent_group: Dict[str, Any]) -> List[str]:
+        """Extracts file paths from a torrent group."""
+        logger.debug('Extracting file paths from torrent group response.')
+        try:
+            torrents = torrent_group.get('response', {}).get('torrents', [])
+            file_paths = [torrent.get('filePath') for torrent in torrents if 'filePath' in torrent]
+            normalized_file_paths = [GazelleMapper._clean_text(path) for path in file_paths if path]
+            logger.info('Extracted file paths: %s', normalized_file_paths)
+            return normalized_file_paths
+        except Exception as e:
+            logger.exception('Error extracting file paths from torrent group: %s', e)
+            return []
+
+    @staticmethod
+    def _clean_text(text: str) -> str:
+        """Sanitize text from API response"""
+        unescaped = html.unescape(text)
+        return re.sub(r'[\u200e\u200f\u202a-\u202e]', '', unescaped)
