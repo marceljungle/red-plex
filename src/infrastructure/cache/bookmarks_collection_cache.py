@@ -3,6 +3,8 @@
 import os
 import csv
 import logging
+from typing import List
+from src.domain.models import Bookmarks, TorrentGroup
 from .utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
@@ -21,7 +23,7 @@ class BookmarksCollectionCache:
         ensure_directory_exists(os.path.dirname(self.csv_file))
 
     # pylint: disable=too-many-arguments, R0917
-    def save_bookmarks(self, rating_key, site, torrent_group_ids):
+    def save_bookmarks(self, rating_key, site, torrent_group_ids) -> None:
         """Saves or updates a single bookmark entry in the cache."""
         bookmarks = self.get_all_bookmarks()
 
@@ -60,7 +62,7 @@ class BookmarksCollectionCache:
                 return bookmrk
         return None
 
-    def get_all_bookmarks(self):
+    def get_all_bookmarks(self) -> List[Bookmarks]:
         """Retrieve all bookmarks from the cache."""
         bookmarks = []
         if os.path.exists(self.csv_file):
@@ -79,6 +81,10 @@ class BookmarksCollectionCache:
                             'site': site,
                             'torrent_group_ids': group_ids
                         })
+                        bookmarks.append(Bookmarks(
+                            f"{site.upper()} Bookmarks",
+                            torrent_groups=[TorrentGroup(id=gid) for gid in group_ids]
+                        ))
         return bookmarks
 
     def reset_cache(self):

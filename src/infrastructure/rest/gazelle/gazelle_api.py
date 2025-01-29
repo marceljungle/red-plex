@@ -1,11 +1,10 @@
 """Module for interacting with Gazelle-based APIs."""
 
-import html
 import time
-import re
 import asyncio
 from inspect import isawaitable
 import requests
+from typing import Dict, Any, Optional
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 from src.infrastructure.logger.logger import logger
@@ -16,7 +15,7 @@ from src.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 class GazelleAPI:
     """Handles API interactions with Gazelle-based services."""
 
-    def __init__(self, base_url, api_key, rate_limit=None):
+    def __init__(self, base_url: str, api_key: str, rate_limit: Optional[Rate] = None):
         self.base_url = base_url.rstrip('/') + '/ajax.php?action='
         self.headers = {'Authorization': api_key}
 
@@ -30,7 +29,7 @@ class GazelleAPI:
         stop=stop_after_attempt(3),
         wait=wait_fixed(2)
     )
-    def api_call(self, action, params):
+    def api_call(self, action: str, params: Dict[str, str]) -> Dict[str, Any]:
         """Makes a rate-limited API call to the Gazelle-based service with retries."""
         formatted_params = '&' + '&'.join(f'{key}={value}' for key, value in params.items())
         formatted_url = f'{self.base_url}{action}{formatted_params}'
@@ -57,7 +56,7 @@ class GazelleAPI:
                 # Optionally, you can add a small sleep to prevent tight loop
                 time.sleep(0.001)  # Sleep for 1 millisecond to yield CPU
 
-    def get_retry_after(self):
+    def get_retry_after(self) -> int:
         """Calculates the time to wait until another request can be made."""
         buckets = self.limiter.bucket_factory.get_buckets()
         if not buckets:
@@ -94,40 +93,19 @@ class GazelleAPI:
         """Retrieves collage data as domain object"""
         params = {'id': str(collage_id), 'showonlygroups': 'true'}
         json_data = self.api_call('collage', params)
-        logger.info('Retrieved collage data for collage_id %s', collage_id)
+        logger.debug('Retrieved collage data for collage_id %s', collage_id)
         return GazelleMapper.map_collage(json_data)
 
     def get_torrent_group(self, torrent_group_id: str) -> TorrentGroup:
         """Retrieves torrent group data."""
         params = {'id': str(torrent_group_id)}
         json_data = self.api_call('torrentgroup', params)
-        logger.info('Retrieved torrent group information for group_id %s', torrent_group_id)
+        logger.debug('Retrieved torrent group information for group_id %s', torrent_group_id)
         return GazelleMapper.map_torrent_group(json_data)
 
     def get_bookmarks(self, site: str) -> Bookmarks:
         """Retrieves user bookmarks."""
         logger.debug('Retrieving user bookmarks...')
         bookmarks_response = self.api_call('bookmarks', {})
-        logger.info('Retrieved user bookmarks')
-
+        logger.debug('Retrieved user bookmarks')
         return GazelleMapper.map_bookmarks(bookmarks_response, site)
-
-    def get_group_ids_from_bookmarks(self, bookmarks):
-        """Extracts file paths from user bookmarks."""
-        logger.debug('Extracting file paths from bookmarks response.')
-        try:
-            # Bookmarks are at the group level
-            bookmarked_group_ids = [bookmark.get('id')
-                                    for bookmark in bookmarks.get('bookmarks', [])]
-            logger.debug('Bookmarked group IDs: %s', bookmarked_group_ids)
-            return bookmarked_group_ids
-        except Exception as e:
-            logger.exception('Error extracting group ids from bookmarks: %s', e)
-            return []
-
-    def normalize(self, text):
-        """Unescape text and remove direction control unicode characters."""
-        unescaped_text = html.unescape(text)
-        # Remove control characters
-        cleaned_text = re.sub(r'[\u200e\u200f\u202a-\u202e]', '', unescaped_text)
-        return cleaned_text

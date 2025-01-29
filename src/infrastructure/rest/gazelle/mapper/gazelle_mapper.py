@@ -1,7 +1,6 @@
 # src/infrastructure/mappers/gazelle_mapper.py
 import html
 import re
-from datetime import datetime
 from typing import Dict, Any, Union, List
 from src.infrastructure.logger.logger import logger
 from src.domain.models import Collage, TorrentGroup, Bookmarks
@@ -20,8 +19,7 @@ class GazelleMapper:
             torrent_groups=[
                 GazelleMapper.map_torrent_group(tg)
                 for tg in collage_data.get('torrentGroupIDList', [])
-            ],
-            site=''  # To be filled by repository
+            ]
         )
     
     @staticmethod
@@ -30,26 +28,8 @@ class GazelleMapper:
         bookmarks_data = response.get('response', {})
         return Bookmarks(
             name=f"{site.upper()} Bookmarks",
-            torrent_groups=[
-                GazelleMapper.map_torrent_group(tg)
-                for tg in bookmarks_data.get('torrentGroupIDList', [])
-            ],
-            site=''  # To be filled by repository
+            torrent_groups=GazelleMapper._get_torrent_groups_from_bookmarks(bookmarks_data)
         )
-
-    @staticmethod
-    def get_torrent_groups_from_bookmarks(response: Dict[str, Any]) -> List[TorrentGroup]:
-        """Extracts file paths from user bookmarks."""
-        logger.debug('Extracting file paths from bookmarks response.')
-        try:
-            # Bookmarks are at the group level
-            bookmarked_group_ids = [bookmark.get('id')
-                                    for bookmark in response.get('bookmarks', [])]
-            logger.debug('Bookmarked group IDs: %s', bookmarked_group_ids)
-            return [TorrentGroup(id=group_id, file_paths=[]) for group_id in bookmarked_group_ids]
-        except Exception as e:
-            logger.exception('Error extracting group ids from bookmarks: %s', e)
-            return []
     
     @staticmethod
     def map_torrent_group(data: Union[Dict[str, Any], str]) -> TorrentGroup:
@@ -85,10 +65,24 @@ class GazelleMapper:
             torrents = torrent_group.get('response', {}).get('torrents', [])
             file_paths = [torrent.get('filePath') for torrent in torrents if 'filePath' in torrent]
             normalized_file_paths = [GazelleMapper._clean_text(path) for path in file_paths if path]
-            logger.info('Extracted file paths: %s', normalized_file_paths)
+            logger.debug('Extracted file paths: %s', normalized_file_paths)
             return normalized_file_paths
         except Exception as e:
             logger.exception('Error extracting file paths from torrent group: %s', e)
+            return []
+        
+    @staticmethod
+    def _get_torrent_groups_from_bookmarks(response: Dict[str, Any]) -> List[TorrentGroup]:
+        """Extracts file paths from user bookmarks."""
+        logger.debug('Extracting file paths from bookmarks response.')
+        try:
+            # Bookmarks are at the group level
+            bookmarked_group_ids = [bookmark.get('id')
+                                    for bookmark in response.get('bookmarks', [])]
+            logger.debug('Bookmarked group IDs: %s', bookmarked_group_ids)
+            return [TorrentGroup(id=group_id, file_paths=[]) for group_id in bookmarked_group_ids]
+        except Exception as e:
+            logger.exception('Error extracting group ids from bookmarks: %s', e)
             return []
 
     @staticmethod
