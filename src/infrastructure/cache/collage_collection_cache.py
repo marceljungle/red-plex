@@ -4,7 +4,7 @@ import os
 import csv
 import logging
 from typing import List
-from src.domain.models import TorrentGroup, Collage, Collection
+from src.domain.models import TorrentGroup, Collection
 from .utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
@@ -32,21 +32,21 @@ class CollageCollectionCache:
         # Check if this collection is already in the cache
         updated = False
         for coll in collections:
-            if coll.rating_key == rating_key:
+            if coll.external_id == rating_key:
                 coll.name = collection_name
                 coll.site = site
-                coll.collage.id = collage_id
+                coll.external_id = collage_id
                 coll.torrent_groups = torrent_group_list
                 updated = True
                 break
 
         if not updated:
             collections.append(Collection(
-                collection_name,
                 rating_key,
-                site,
-                Collage(id=collage_id),
-                torrent_group_list
+                collage_id,
+                collection_name,
+                torrent_group_list,
+                site
             ))
 
         # Write back to CSV
@@ -54,17 +54,17 @@ class CollageCollectionCache:
             writer = csv.writer(f)
             for coll in collections:
                 writer.writerow([
-                    coll.rating_key,
+                    coll.id,
                     coll.name,
                     coll.site,
-                    coll.collage.id,
+                    coll.external_id,
                     ','.join(map(str, [group.id for group in coll.torrent_groups])),
                 ])
         logger.info('Collections saved to cache.')
 
     def get_collection(self, rating_key) -> Collection:
         """Retrieve a single collection by rating_key."""
-        return next((coll for coll in self.get_all_collections() if coll.rating_key == rating_key), None)
+        return next((coll for coll in self.get_all_collections() if coll.id == rating_key), None)
 
     def get_all_collections(self) -> List[Collection]:
         """Retrieve all collections from the cache."""
@@ -86,11 +86,11 @@ class CollageCollectionCache:
                         group_ids = [int(g.strip()) for g in group_ids_str.split(',') if g.strip()]
                         
                         collections.append(Collection(
-                            collection_name,
                             rating_key,
-                            site,
-                            Collage(id=collage_id),
-                            [TorrentGroup(id=gid) for gid in group_ids]
+                            collage_id,
+                            collection_name,
+                            [TorrentGroup(id=gid) for gid in group_ids],
+                            site
                             ))
         return collections
 

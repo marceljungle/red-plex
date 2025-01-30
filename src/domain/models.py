@@ -1,7 +1,13 @@
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
+
+@dataclass
+class Album:
+    id: str = ""
+    added_at: datetime = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    path: str = ""
 
 @dataclass
 class TorrentGroup:
@@ -9,20 +15,8 @@ class TorrentGroup:
     file_paths: List[str] = field(default_factory=list)
 
 @dataclass
-class Collage:
-    id: str
-    name: str = ""
-    torrent_groups: List[TorrentGroup] = field(default_factory=list)
-
-@dataclass
-class Bookmarks:
-    name: str
-    torrent_groups: List[TorrentGroup] = field(default_factory=list)
-
-@dataclass
 class Collection:
-    name: str
-    rating_key: str = ""
-    site: str = ""
-    collage: Collage = None
+    id: str = ""
+    external_id: str = ""
+    name: str = ""
     torrent_groups: List[TorrentGroup] = field(default_factory=list)

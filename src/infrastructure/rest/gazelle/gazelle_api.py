@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 from src.infrastructure.logger.logger import logger
-from src.domain.models import Collage, TorrentGroup, Bookmarks
+from src.domain.models import Collection, TorrentGroup
 from src.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
 # pylint: disable=W0718
@@ -89,7 +89,7 @@ class GazelleAPI:
         # If no items in the bucket, no need to wait
         return 0
 
-    def get_collage(self, collage_id: str) -> Collage:
+    def get_collage(self, collage_id: str) -> Collection:
         """Retrieves collage data as domain object"""
         params = {'id': str(collage_id), 'showonlygroups': 'true'}
         json_data = self.api_call('collage', params)
@@ -103,7 +103,7 @@ class GazelleAPI:
         logger.debug('Retrieved torrent group information for group_id %s', torrent_group_id)
         return GazelleMapper.map_torrent_group(json_data)
 
-    def get_bookmarks(self, site: str) -> Bookmarks:
+    def get_bookmarks(self, site: str) -> Collection:
         """Retrieves user bookmarks."""
         logger.debug('Retrieving user bookmarks...')
         bookmarks_response = self.api_call('bookmarks', {})

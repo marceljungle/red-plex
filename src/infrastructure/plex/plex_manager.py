@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from plexapi.server import PlexServer
 from src.infrastructure.logger.logger import logger
 from src.infrastructure.cache.album_cache import AlbumCache
+from src.domain.models import Collection
 
 class PlexManager:
     """Handles operations related to Plex."""
@@ -71,44 +72,26 @@ class PlexManager:
         logger.info('Fetching albums from Plex using rating keys: %s', rating_keys)
         return self.plex.fetchItems(rating_keys)
 
-    def create_playlist(self, name, albums):
-        """Creates a playlist in Plex."""
-        logger.info('Creating playlist with name "%s" and %d albums.', name, len(albums))
-        playlist = self.plex.createPlaylist(name, self.section_name, albums)
-        return playlist
-
     def create_collection(self, name, albums):
         """Creates a collection in Plex."""
         logger.info('Creating collection with name "%s" and %d albums.', name, len(albums))
         collection = self.library_section.createCollection(name, items=albums)
         return collection
 
-    def get_playlist_by_name(self, name):
-        """Finds a playlist by name."""
-        playlists = self.plex.playlists()
-        for playlist in playlists:
-            if playlist.title == name:
-                logger.info('Found existing playlist with name "%s".', name)
-                return playlist
-        logger.info('No existing playlist found with name "%s".', name)
-        return None
-
-    def get_collection_by_name(self, name):
+    def get_collection_by_name(self, name: str) -> Collection:
         """Finds a collection by name."""
         collections = self.library_section.collections()
         for collection in collections:
             if collection.title == name:
                 logger.info('Found existing collection with name "%s".', name)
-                return collection
+                return Collection(
+                    name=collection.title,
+                    id=collection.ratingKey
+                )
         logger.info('No existing collection found with name "%s".', name)
         return None
 
-    def add_items_to_playlist(self, playlist, albums):
-        """Adds albums to an existing playlist."""
-        logger.info('Adding %d albums to playlist "%s".', len(albums), playlist.title)
-        playlist.addItems(albums)
-
-    def add_items_to_collection(self, collection, albums):
+    def add_items_to_collection(self, collection, albums) -> None:
         """Adds albums to an existing collection."""
         logger.info('Adding %d albums to collection "%s".', len(albums), collection.title)
         collection.addItems(albums)

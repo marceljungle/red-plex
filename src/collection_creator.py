@@ -4,7 +4,7 @@ import html
 import logging
 import click
 import requests
-from src.domain.models import TorrentGroup, Collage
+from src.domain.models import TorrentGroup
 from src.infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
 

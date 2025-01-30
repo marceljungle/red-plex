@@ -3,17 +3,17 @@ import html
 import re
 from typing import Dict, Any, Union, List
 from src.infrastructure.logger.logger import logger
-from src.domain.models import Collage, TorrentGroup, Bookmarks
+from src.domain.models import Collection, TorrentGroup
 
 class GazelleMapper:
     """Maps Gazelle API responses to domain models"""
 
     @staticmethod
-    def map_collage(response: Dict[str, Any]) -> Collage:
+    def map_collage(response: Dict[str, Any]) -> Collection:
         """Convert raw API response to Collage domain object"""
         collage_data = response.get('response', {})
         collage_id = collage_data.get('id')
-        return Collage(
+        return Collection(
             id=str(collage_id),
             name=GazelleMapper._clean_text(collage_data.get('name', f'Collage {collage_id}')),
             torrent_groups=[
@@ -23,10 +23,10 @@ class GazelleMapper:
         )
     
     @staticmethod
-    def map_bookmarks(response: Dict[str, Any], site: str) -> Bookmarks:
+    def map_bookmarks(response: Dict[str, Any], site: str) -> Collection:
         """Convert raw API response to Collage domain object"""
         bookmarks_data = response.get('response', {})
-        return Bookmarks(
+        return Collection(
             name=f"{site.upper()} Bookmarks",
             torrent_groups=GazelleMapper._get_torrent_groups_from_bookmarks(bookmarks_data)
         )

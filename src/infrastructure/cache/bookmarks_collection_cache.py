@@ -4,7 +4,7 @@ import os
 import csv
 import logging
 from typing import List
-from src.domain.models import Bookmarks, TorrentGroup
+from src.domain.models import Collection, TorrentGroup
 from .utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
@@ -30,39 +30,39 @@ class BookmarksCollectionCache:
         # Check if this bookmark is already in the cache
         updated = False
         for bookmrk in bookmarks:
-            if bookmrk['rating_key'] == rating_key:
-                bookmrk['site'] = site
-                bookmrk['torrent_group_ids'] = torrent_group_ids
+            if bookmrk.id == rating_key:
+                bookmrk.site = site
+                bookmrk.torrent_groups = torrent_group_ids
                 updated = True
                 break
 
         if not updated:
-            bookmarks.append({
-                'rating_key': rating_key,
-                'site': site,
-                'torrent_group_ids': torrent_group_ids
-            })
+            bookmarks.append(Collection(
+                id = rating_key,
+                site = site,
+                torrent_groups = [TorrentGroup(id=gid) for gid in torrent_group_ids]
+            ))
 
         # Write back to CSV
         with open(self.csv_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             for bookmrk in bookmarks:
                 writer.writerow([
-                    bookmrk['rating_key'],
-                    bookmrk['site'],
-                    ','.join(map(str, bookmrk['torrent_group_ids']))
+                    bookmrk.id,
+                    bookmrk.site,
+                    ','.join(map(str, [group.id for group in bookmrk.torrent_groups]))
                 ])
         logger.info('%s bookmarks saved to cache.', site.upper())
 
-    def get_bookmark(self, rating_key):
+    def get_bookmark(self, rating_key) -> Collection:
         """Retrieve a bookmark by rating_key."""
         bookmarks = self.get_all_bookmarks()
         for bookmrk in bookmarks:
-            if bookmrk['rating_key'] == rating_key:
+            if bookmrk.id == rating_key:
                 return bookmrk
         return None
 
-    def get_all_bookmarks(self) -> List[Bookmarks]:
+    def get_all_bookmarks(self) -> List[Collection]:
         """Retrieve all bookmarks from the cache."""
         bookmarks = []
         if os.path.exists(self.csv_file):
@@ -76,18 +76,15 @@ class BookmarksCollectionCache:
                         except ValueError:
                             continue
                         group_ids = [int(g.strip()) for g in group_ids_str.split(',') if g.strip()]
-                        bookmarks.append({
-                            'rating_key': rating_key,
-                            'site': site,
-                            'torrent_group_ids': group_ids
-                        })
-                        bookmarks.append(Bookmarks(
-                            f"{site.upper()} Bookmarks",
-                            torrent_groups=[TorrentGroup(id=gid) for gid in group_ids]
+                        bookmarks.append(Collection(
+                            id = rating_key,
+                            name = f"{site.upper()} Bookmarks",
+                            site = site,
+                            torrent_groups = [TorrentGroup(id=gid) for gid in group_ids]
                         ))
         return bookmarks
 
-    def reset_cache(self):
+    def reset_cache(self) -> None:
         """Deletes the bookmarks cache file if it exists."""
         if os.path.exists(self.csv_file):
             os.remove(self.csv_file)
