@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 from plexapi.server import PlexServer
 from src.infrastructure.logger.logger import logger
 from src.infrastructure.cache.album_cache import AlbumCache
-from src.domain.models import Collection
+from src.domain.models import Collection, Album
+from typing import List
+from plexapi.base import MediaContainer
 
 class PlexManager:
     """Handles operations related to Plex."""
@@ -67,15 +69,18 @@ class PlexManager:
                         rating_keys)
         return rating_keys
 
-    def fetch_albums_by_keys(self, rating_keys):
+    def _fetch_albums_by_keys(self, albums: List[Album]) -> List[MediaContainer]:
         """Fetches album objects from Plex using their rating keys."""
-        logger.info('Fetching albums from Plex using rating keys: %s', rating_keys)
-        return self.plex.fetchItems(rating_keys)
+        logger.debug('Fetching albums from Plex: %s', albums)
+        rating_keys = [album.id for album in albums]
+        self.plex.fetchItems(rating_keys)
+        return 
 
-    def create_collection(self, name, albums):
+    def create_collection(self, name: str, albums: List[Album]) -> Collection:
         """Creates a collection in Plex."""
         logger.info('Creating collection with name "%s" and %d albums.', name, len(albums))
-        collection = self.library_section.createCollection(name, items=albums)
+        albums_media = self._fetch_albums_by_keys(albums)
+        collection = self.library_section.createCollection(name, items=albums_media)
         return collection
 
     def get_collection_by_name(self, name: str) -> Collection:
