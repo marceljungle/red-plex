@@ -9,15 +9,20 @@ from src.infrastructure.cache.album_cache import AlbumCache
 from src.domain.models import Collection, Album
 from typing import List
 from plexapi.base import MediaContainer
+from plexapi.library import LibrarySection
+from plexapi.collection import Collection as PlexCollection
+from src.infrastructure.plex.mapper.plex_mapper import PlexMapper
 
 class PlexManager:
     """Handles operations related to Plex."""
 
-    def __init__(self, url, token, section_name, csv_file=None):
+    def __init__(self, url: str, token: str, section_name: str, csv_file: str = None):
         self.url = url
         self.token = token
         self.section_name = section_name
         self.plex = PlexServer(self.url, self.token)
+
+        self.library_section: LibrarySection
         self.library_section = self.plex.library.section(self.section_name)
 
         # Initialize the album cache
@@ -55,13 +60,13 @@ class PlexManager:
         # Save the updated album data to the cache
         self.album_cache.save_albums(self.album_data)
 
-    def reset_album_cache(self):
+    def reset_album_cache(self) -> None:
         """Resets the album cache by deleting the cache file."""
         self.album_cache.reset_cache()
         self.album_data = {}
         logger.info('Album cache has been reset.')
 
-    def get_rating_keys(self, path):
+    def get_rating_keys(self, path: str) -> List[int]: #TODO adapt this one, it was outdated from the previous version
         """Returns the rating keys if the path matches part of an album folder."""
         # Validate the input path
         if not self.validate_path(path):
@@ -95,6 +100,7 @@ class PlexManager:
 
         # Ask the user to choose which matches to keep
         while True:
+            choice: str
             choice = click.prompt(
                 "Select the numbers of the matches you want to keep, separated by commas "
                 "(or enter 'A' to select all, 'N' to select none)",
@@ -114,6 +120,7 @@ class PlexManager:
                     return [
                         list(rating_keys.keys())[idx - 1] for idx in selected_indices
                     ]  # Return selected matches
+
             except ValueError:
                 pass
 
@@ -133,27 +140,32 @@ class PlexManager:
         logger.info('Creating collection with name "%s" and %d albums.', name, len(albums))
         albums_media = self._fetch_albums_by_keys(albums)
         collection = self.library_section.createCollection(name, items=albums_media)
-        return collection
+        return PlexMapper.map_plex_collection_to_domain(collection)
 
     def get_collection_by_name(self, name: str) -> Collection:
         """Finds a collection by name."""
-        collections = self.library_section.collections()
-        for collection in collections:
-            if collection.title == name:
-                logger.info('Found existing collection with name "%s".', name)
-                return Collection(
-                    name=collection.title,
-                    id=collection.ratingKey
-                )
+        collection: PlexCollection
+        collection = self.library_section.collection(name)
+        if collection:
+            return Collection(
+                name=collection.title,
+                id=collection.ratingKey
+            )
         logger.info('No existing collection found with name "%s".', name)
         return None
 
-    def add_items_to_collection(self, collection, albums) -> None:
+    def add_items_to_collection(self, collection: Collection, albums: List[Album]) -> None:
         """Adds albums to an existing collection."""
-        logger.info('Adding %d albums to collection "%s".', len(albums), collection.title)
-        collection.addItems(albums)
+        logger.debug('Adding %d albums to collection "%s".', len(albums), collection.title)
+        
+        collection_from_plex: PlexCollection
+        collection_from_plex = self.library_section.collection(collection.name)
+        if collection_from_plex:
+            collection_from_plex.addItems(self._fetch_albums_by_keys(albums))
+        else:
+            logger.warning('Collection "%s" not found.', collection.name)
 
-    def validate_path(self, path):
+    def validate_path(self, path: str) -> bool:
         """Validates that the path is correct."""
         if (not path) or (len(path) == 1):
             return False

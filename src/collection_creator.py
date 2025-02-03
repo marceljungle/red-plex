@@ -4,9 +4,11 @@ import html
 import logging
 import click
 import requests
-from src.domain.models import TorrentGroup
+from src.domain.models import TorrentGroup, Collection, Album
 from src.infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
+from src.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from src.infrastructure.plex.plex_manager import PlexManager
 
 logger = logging.getLogger(__name__)
 
@@ -17,29 +19,30 @@ class CollectionCreator:
     based on Gazelle collages or bookmarks.
     """
 
-    def __init__(self, plex_manager, gazelle_api, cache_file=None):
+    def __init__(self, plex_manager: PlexManager, gazelle_api: GazelleAPI, cache_file=None):
         self.plex_manager = plex_manager
         self.gazelle_api = gazelle_api
         self.collage_collection_cache = CollageCollectionCache(cache_file)
         self.bookmarks_collection_cache = BookmarksCollectionCache(cache_file)
 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
-    def create_or_update_collection_from_collage(self, collage_id, site=None, force_update=False):
+    def create_or_update_collection_from_collage(self, collage_id: str, site: str = None, force_update = False):
         """Creates or updates a Plex collection based on a Gazelle collage."""
         try:
-            collage_data: Collage
+            collage_data: Collection
             collage_data = self.gazelle_api.get_collage(collage_id)
         except requests.exceptions.RequestException as exc:
             logger.exception('Failed to retrieve collage %s: %s', collage_id, exc)
             return
-
+        
         existing_collection = self.plex_manager.get_collection_by_name(collage_data.name)
         if existing_collection:
-            collection_rating_key = existing_collection.ratingKey
             cached_collage_collection = self.collage_collection_cache.get_collection(
-                collection_rating_key)
+                existing_collection.id)
             if cached_collage_collection:
-                cached_group_ids = set(cached_collage_collection['torrent_group_ids'])
+                cached_group_ids = set([torrent_group.id
+                                        for torrent_group
+                                        in cached_collage_collection.torrent_groups])
             else:
                 cached_group_ids = set()
 
@@ -56,7 +59,7 @@ class CollectionCreator:
         else:
             existing_collection = None
             cached_group_ids = set()
-
+        group_ids = [torrent_group.id for torrent_group in collage_data.torrent_groups]
         new_group_ids = set(map(int, group_ids)) - cached_group_ids
         if not new_group_ids:
             click.echo(f'No new items to add to collection "{collage_data.name}".')
@@ -87,7 +90,7 @@ class CollectionCreator:
                 logger.info('No matching albums found for torrent group %s; skipping.', gid)
 
         if matched_rating_keys:
-            albums = self.plex_manager.fetch_albums_by_keys(list(matched_rating_keys))
+            albums = [Album(rating_key) for rating_key in list(matched_rating_keys)]
             if existing_collection:
                 # Update existing collection
                 self.plex_manager.add_items_to_collection(existing_collection, albums)
@@ -96,17 +99,16 @@ class CollectionCreator:
                 # Update cache
                 updated_group_ids = cached_group_ids.union(processed_group_ids)
                 self.collage_collection_cache.save_collection(
-                    existing_collection.ratingKey, collage_data.name, site, collage_id, list(
+                    existing_collection.id, collage_data.name, site, collage_id, list(
                         updated_group_ids)
                 )
-                click.echo(f'Collection "{collage_data.name}" updated with {len(albums)} new albums.')
             else:
                 # Create new collection
                 collection = self.plex_manager.create_collection(collage_data.name, albums)
                 logger.info('Collection "%s" created with %d albums.', collage_data.name, len(albums))
                 # Save to cache
                 self.collage_collection_cache.save_collection(
-                    collection.ratingKey, collage_data.name, site, collage_id, list(processed_group_ids)
+                    collection.id, collage_data.name, site, collage_id, list(processed_group_ids)
                 )
                 click.echo(f'Collection "{collage_data.name}" created with {len(albums)} albums.')
         else:
