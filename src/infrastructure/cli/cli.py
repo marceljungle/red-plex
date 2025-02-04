@@ -4,7 +4,6 @@ import os
 import subprocess
 import yaml
 import click
-from pyrate_limiter import Rate, Duration
 from src.infrastructure.config.config import (
     CONFIG_FILE_PATH,
     DEFAULT_CONFIG,
@@ -13,51 +12,13 @@ from src.infrastructure.config.config import (
     ensure_config_exists
 )
 from src.infrastructure.plex.plex_manager import PlexManager
-from src.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from src.infrastructure.cache.album_cache import AlbumCache
 from src.infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
-from src.collection_creator import CollectionCreator
+from src.infrastructure.plex.config import initialize_plex_manager
+from src.infrastructure.rest.gazelle.config import initialize_gazelle_api
+from src.infrastructure.services.config import initialize_collection_creator
 from src.infrastructure.logger.logger import logger, configure_logger
-
-
-def initialize_plex_manager():
-    """Initialize PlexManager without populating cache."""
-    config_data = load_config()
-    plex_token = config_data.get('PLEX_TOKEN')
-    plex_url = config_data.get('PLEX_URL', 'http://localhost:32400')
-    section_name = config_data.get('SECTION_NAME', 'Music')
-
-    if not plex_token:
-        message = 'PLEX_TOKEN must be set in the config file.'
-        logger.error(message)
-        click.echo(message)
-        return None
-
-    return PlexManager(plex_url, plex_token, section_name)
-
-
-def initialize_gazelle_api(site):
-    """Initialize GazelleAPI for a given site."""
-    config_data = load_config()
-    site_config = config_data.get(site.upper())
-    if not site_config or not site_config.get('API_KEY'):
-        message = f'API_KEY for {site.upper()} must be set in the config file under {site.upper()}.'
-        logger.error(message)
-        click.echo(message)
-        return None
-
-    api_key = site_config.get('API_KEY')
-    base_url = site_config.get('BASE_URL')
-    rate_limit_config = site_config.get('RATE_LIMIT', {'calls': 10, 'seconds': 10})
-    rate_limit = Rate(rate_limit_config['calls'], Duration.SECOND * rate_limit_config['seconds'])
-
-    return GazelleAPI(base_url, api_key, rate_limit)
-
-def initialize_collection_creator(plex_manager, gazelle_api):
-    """Initialize CollectionCreator using existing plex_manager and gazelle_api."""
-    return CollectionCreator(plex_manager, gazelle_api)
-
 
 @click.group()
 def cli():
@@ -105,19 +66,7 @@ def collection(collage_ids, site):
         return
 
     collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
-
-    for collage_id in collage_ids:
-        try:
-            collection_creator.create_or_update_collection_from_collage(
-                collage_id, site=site)
-        except Exception as exc:  # pylint: disable=W0718
-            logger.exception(
-                'Failed to create collection for collage %s on site %s: %s',
-                collage_id, site.upper(), exc)
-            click.echo(
-                f'Failed to create collection for collage\
-                      {collage_id} on site {site.upper()}: {exc}'
-            )
+    collection_creator.create_collections_from_collages(site, collage_ids)
 
 # config
 @cli.group()
@@ -281,26 +230,8 @@ def update_collections():
             return
         plex_manager.populate_album_cache()
 
-        # Loop through collections
-        for coll in all_collages:
-            site = coll['site']
-            collage_id = coll['collage_id']
-            collection_name = coll['collection_name']
-
-            gazelle_api = initialize_gazelle_api(site)
-            if not gazelle_api:
-                click.echo(f"Skipping collection '{collection_name}' due to initialization issues.")
-                continue
-
-            collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
-
-            click.echo(
-                f"Updating collection '{collection_name}'\
-                     (Collage ID: {collage_id}, Site: {site})...")
-            collection_creator.create_or_update_collection_from_collage(
-                collage_id, site=site, force_update=True)
-
-        click.echo("All cached collections have been updated.")
+        collection_creator = initialize_collection_creator(plex_manager, None)
+        collection_creator.update_collections_from_collages(all_collages)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cached collections: %s', exc)
         click.echo(f"An error occurred while updating cached collections: {exc}")
@@ -332,27 +263,12 @@ def update_bookmarks_collection():
             return
         plex_manager.populate_album_cache()
 
-        # Loop through bookmarks
-        for bookmrk in all_bookmarks:
-            site = bookmrk['site']
+        collection_creator = initialize_collection_creator(plex_manager, None)
+        collection_creator.update_collections_from_collages(all_bookmarks)
 
-            gazelle_api = initialize_gazelle_api(site)
-            if not gazelle_api:
-                click.echo(f"Skipping '{site.upper()}' bookmarks due to initialization issues.")
-                continue
-            site_bookmarks = gazelle_api.get_bookmarks()
-
-            collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
-
-            click.echo(
-                f"Updating '{site.upper()}' bookmarks...")
-            collection_creator.create_or_update_collection_from_bookmarks(
-                site_bookmarks, site, force_update=True)
-
-        click.echo("All cached collections have been updated.")
     except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to update cached collections: %s', exc)
-        click.echo(f"An error occurred while updating cached collections: {exc}")
+        logger.exception('Failed to update cached bookmarks: %s', exc)
+        click.echo(f"An error occurred while updating cached bookmarks: {exc}")
 
 # bookmarks create
 @bookmarks.group('create')
@@ -363,7 +279,7 @@ def create():
 @create.command('collection')
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
-def create_collection_from_bookmarks(site):
+def create_collection_from_bookmarks(site: str):
     """Create a Plex collection based on your site bookmarks."""
     plex_manager = initialize_plex_manager()
     if not plex_manager:
@@ -377,8 +293,7 @@ def create_collection_from_bookmarks(site):
     collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
 
     try:
-        bookmarks_data = gazelle_api.get_bookmarks()
-        collection_creator.create_or_update_collection_from_bookmarks(bookmarks_data, site.upper())
+        collection_creator.create_collections_from_collages(site = site.upper(), fetch_bookmarks=True)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to create collection from bookmarks on site %s: %s',
                          site.upper(), exc)

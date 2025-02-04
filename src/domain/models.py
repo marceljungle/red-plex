@@ -20,3 +20,4 @@ class Collection:
     external_id: str = ""
     name: str = ""
     torrent_groups: List[TorrentGroup] = field(default_factory=list)
+    site: str = ""

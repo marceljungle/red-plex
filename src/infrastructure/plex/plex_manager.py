@@ -9,7 +9,8 @@ from src.infrastructure.cache.album_cache import AlbumCache
 from src.domain.models import Collection, Album
 from typing import List
 from plexapi.base import MediaContainer
-from plexapi.library import LibrarySection
+from plexapi.audio import Album as PlexAlbum
+from plexapi.library import MusicSection
 from plexapi.collection import Collection as PlexCollection
 from src.infrastructure.plex.mapper.plex_mapper import PlexMapper
 
@@ -22,7 +23,7 @@ class PlexManager:
         self.section_name = section_name
         self.plex = PlexServer(self.url, self.token)
 
-        self.library_section: LibrarySection
+        self.library_section: MusicSection
         self.library_section = self.plex.library.section(self.section_name)
 
         # Initialize the album cache
@@ -35,7 +36,7 @@ class PlexManager:
 
         # Determine the latest addedAt date from the existing cache
         if self.album_data:
-            latest_added_at = max(added_at for _, added_at in self.album_data.values())
+            latest_added_at = max(album.added_at for album in self.album_data)
             logger.info('Latest album added at: %s', latest_added_at)
         else:
             latest_added_at = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -43,27 +44,33 @@ class PlexManager:
 
         # Fetch albums added after the latest date in cache
         filters = {"addedAt>>": latest_added_at}
-        new_albums = self.library_section.searchAlbums(filters=filters)
+        new_albums = self.get_albums_given_filter(filters)
         logger.info('Found %d new albums added after %s.', len(new_albums), latest_added_at)
 
         # Update the album_data dictionary with new albums
-        for album in new_albums:
-            tracks = album.tracks()
-            if tracks:
-                media_path = tracks[0].media[0].parts[0].file
-                album_folder_path = os.path.dirname(media_path)
-                added_at = album.addedAt
-                self.album_data[int(album.ratingKey)] = (album_folder_path, added_at)
-            else:
-                logger.warning('Skipping album with no tracks: %s', album.title)
+        self.album_data.extend(new_albums)
 
         # Save the updated album data to the cache
         self.album_cache.save_albums(self.album_data)
 
+    def get_albums_given_filter(self, filter: dict) -> List[Album]:
+        """Returns a list of albums that match the specified filter."""
+        albums: List[PlexAlbum]
+        albums = self.library_section.searchAlbums(filters=filter)
+        domain_albums: List[Album]
+        domain_albums = []
+        for album in albums:
+            tracks = album.tracks()
+            if tracks:
+                media_path = tracks[0].media[0].parts[0].file
+                album_folder_path = os.path.dirname(media_path)
+                domain_albums.append(Album(album.ratingKey, album.addedAt, album_folder_path))
+        return domain_albums
+
     def reset_album_cache(self) -> None:
         """Resets the album cache by deleting the cache file."""
         self.album_cache.reset_cache()
-        self.album_data = {}
+        self.album_data = []
         logger.info('Album cache has been reset.')
 
     def get_rating_keys(self, path: str) -> List[int]: #TODO adapt this one, it was outdated from the previous version
