@@ -4,21 +4,21 @@ import os
 import subprocess
 import yaml
 import click
-from src.infrastructure.config.config import (
+from infrastructure.config.config import (
     CONFIG_FILE_PATH,
     DEFAULT_CONFIG,
     load_config,
     save_config,
     ensure_config_exists
 )
-from src.infrastructure.plex.plex_manager import PlexManager
-from src.infrastructure.cache.album_cache import AlbumCache
-from src.infrastructure.cache.collage_collection_cache import CollageCollectionCache
-from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
-from src.infrastructure.plex.config import initialize_plex_manager
-from src.infrastructure.rest.gazelle.config import initialize_gazelle_api
-from src.infrastructure.services.config import initialize_collection_creator
-from src.infrastructure.logger.logger import logger, configure_logger
+from infrastructure.plex.plex_manager import PlexManager
+from infrastructure.cache.album_cache import AlbumCache
+from infrastructure.cache.collage_collection_cache import CollageCollectionCache
+from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
+from infrastructure.plex.config import initialize_plex_manager
+from infrastructure.rest.gazelle.config import initialize_gazelle_api
+from infrastructure.services.config import initialize_collection_creator
+from infrastructure.logger.logger import logger, configure_logger
 
 @click.group()
 def cli():
@@ -231,7 +231,7 @@ def update_collections():
         plex_manager.populate_album_cache()
 
         collection_creator = initialize_collection_creator(plex_manager, None)
-        collection_creator.update_collections_from_collages(all_collages)
+        collection_creator.update_collections_from_collages(all_collages, fetch_bookmarks=False)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cached collections: %s', exc)
         click.echo(f"An error occurred while updating cached collections: {exc}")
@@ -264,7 +264,7 @@ def update_bookmarks_collection():
         plex_manager.populate_album_cache()
 
         collection_creator = initialize_collection_creator(plex_manager, None)
-        collection_creator.update_collections_from_collages(all_bookmarks)
+        collection_creator.update_collections_from_collages(all_bookmarks, fetch_bookmarks=True)
 
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cached bookmarks: %s', exc)

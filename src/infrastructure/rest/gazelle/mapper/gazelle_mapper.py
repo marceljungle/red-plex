@@ -2,8 +2,8 @@
 import html
 import re
 from typing import Dict, Any, Union, List
-from src.infrastructure.logger.logger import logger
-from src.domain.models import Collection, TorrentGroup
+from infrastructure.logger.logger import logger
+from domain.models import Collection, TorrentGroup
 
 class GazelleMapper:
     """Maps Gazelle API responses to domain models"""

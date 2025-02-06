@@ -4,8 +4,8 @@ import os
 import csv
 import logging
 from typing import List
-from src.domain.models import TorrentGroup, Collection
-from .utils.cache_utils import get_cache_directory, ensure_directory_exists
+from domain.models import TorrentGroup, Collection
+from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
 

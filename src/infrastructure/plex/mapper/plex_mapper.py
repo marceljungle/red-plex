@@ -1,5 +1,5 @@
 
-from src.domain.models import Album, Collection
+from domain.models import Album, Collection
 from typing import List
 from plexapi.base import MediaContainer
 from plexapi.collection import Collection as PlexCollection

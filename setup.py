@@ -2,7 +2,7 @@
 
 import re
 import pathlib
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text(encoding="utf-8")
@@ -24,7 +24,8 @@ setup(
     author='marceljungle',
     author_email='gigi.dan2011@gmail.com',
     url='https://github.com/marceljungle/red-plex',
-    packages=find_packages(),
+    packages=find_namespace_packages(where="src"),
+    package_dir={"": "src"},
     include_package_data=True,
     install_requires=[
         'plexapi',
@@ -36,7 +37,7 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        red-plex=src.infrastructure.cli.cli:cli
+        red-plex=infrastructure.cli.cli:cli
     ''',
     classifiers=[
         'Programming Language :: Python :: 3',

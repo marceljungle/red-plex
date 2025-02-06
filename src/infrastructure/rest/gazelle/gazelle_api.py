@@ -7,9 +7,9 @@ import requests
 from typing import Dict, Any, Optional
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
-from src.infrastructure.logger.logger import logger
-from src.domain.models import Collection, TorrentGroup
-from src.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
+from infrastructure.logger.logger import logger
+from domain.models import Collection, TorrentGroup
+from infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
 # pylint: disable=W0718
 class GazelleAPI:

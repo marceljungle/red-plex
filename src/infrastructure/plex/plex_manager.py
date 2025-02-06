@@ -4,15 +4,15 @@ import os
 from datetime import datetime, timezone
 import click
 from plexapi.server import PlexServer
-from src.infrastructure.logger.logger import logger
-from src.infrastructure.cache.album_cache import AlbumCache
-from src.domain.models import Collection, Album
+from infrastructure.logger.logger import logger
+from infrastructure.cache.album_cache import AlbumCache
+from domain.models import Collection, Album
 from typing import List
 from plexapi.base import MediaContainer
 from plexapi.audio import Album as PlexAlbum
 from plexapi.library import MusicSection
 from plexapi.collection import Collection as PlexCollection
-from src.infrastructure.plex.mapper.plex_mapper import PlexMapper
+from infrastructure.plex.mapper.plex_mapper import PlexMapper
 
 class PlexManager:
     """Handles operations related to Plex."""
@@ -21,7 +21,7 @@ class PlexManager:
         self.url = url
         self.token = token
         self.section_name = section_name
-        self.plex = PlexServer(self.url, self.token)
+        self.plex = PlexServer(self.url, self.token, timeout=1200)
 
         self.library_section: MusicSection
         self.library_section = self.plex.library.section(self.section_name)

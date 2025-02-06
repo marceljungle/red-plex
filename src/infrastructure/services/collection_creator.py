@@ -1,16 +1,15 @@
 """Module for creating Plex collections from Gazelle collages or bookmarks."""
 
-import html
 import logging
 import click
 import requests
-from src.domain.models import TorrentGroup, Collection, Album
+from domain.models import TorrentGroup, Collection, Album
 from typing import List
-from src.infrastructure.cache.collage_collection_cache import CollageCollectionCache
-from src.infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
-from src.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
-from src.infrastructure.plex.plex_manager import PlexManager
-from src.infrastructure.rest.gazelle.config import initialize_gazelle_api
+from infrastructure.cache.collage_collection_cache import CollageCollectionCache
+from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
+from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from infrastructure.plex.plex_manager import PlexManager
+from infrastructure.rest.gazelle.config import initialize_gazelle_api
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ class CollectionCreator:
         self.collage_collection_cache = CollageCollectionCache(cache_file)
         self.bookmarks_collection_cache = BookmarksCollectionCache(cache_file)
 
-    def create_collections_from_collages(self, site: str, collage_ids: List[str]):
+    def create_collections_from_collages(self, site: str, collage_ids: List[str], fetch_bookmarks = False):
         if self.gazelle_api is None:
             logger.error('Gazelle API is not initialized!!')
             return
@@ -35,7 +34,7 @@ class CollectionCreator:
         for collage_id in collage_ids:
             try:
                 self._create_or_update_collection_from_collage(
-                    collage_id, site=site)
+                    collage_id, site=site, fetch_bookmarks=fetch_bookmarks)
             except Exception as exc:  # pylint: disable=W0718
                 logger.exception(
                     'Failed to create collection for collage %s on site %s: %s',
@@ -45,7 +44,7 @@ class CollectionCreator:
                         {collage_id} on site {site.upper()}: {exc}'
             )
                 
-    def update_collections_from_collages(self, collages: List[Collection]):
+    def update_collections_from_collages(self, collages: List[Collection], fetch_bookmarks = False):
         for collage in collages:
             self.gazelle_api = initialize_gazelle_api(collage.site)
             logger.info(
@@ -53,7 +52,7 @@ class CollectionCreator:
                      (Collage ID: {collage.id}, Site: {collage.site})...")
             try:
                 self._create_or_update_collection_from_collage(
-                    collage.id, site=collage.site)
+                    collage.id, site=collage.site, fetch_bookmarks=fetch_bookmarks, force_update=True)
             except Exception as exc:  # pylint: disable=W0718
                 logger.exception(
                     'Failed to create collection for collage %s on site %s: %s',
@@ -176,4 +175,3 @@ class CollectionCreator:
         else:
             message = f'No matching albums found for new items in collage "{collage_data.name}".'
             logger.warning(message)
-            click.echo(message)

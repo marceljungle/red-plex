@@ -5,8 +5,8 @@ import csv
 import logging
 from typing import List
 from datetime import datetime
-from src.domain.models import Album
-from .utils.cache_utils import get_cache_directory, ensure_directory_exists
+from domain.models import Album
+from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
 
