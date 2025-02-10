@@ -9,9 +9,8 @@ from infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from infrastructure.plex.plex_manager import PlexManager
+from infrastructure.logger.logger import logger
 from infrastructure.rest.gazelle.config import initialize_gazelle_api
-
-logger = logging.getLogger(__name__)
 
 # pylint: disable=R0801
 class CollectionCreator:
@@ -48,8 +47,9 @@ class CollectionCreator:
         for collage in collages:
             self.gazelle_api = initialize_gazelle_api(collage.site)
             logger.info(
-                f"Updating collection '{collage.name}'\
-                     (Collage ID: {collage.id}, Site: {collage.site})...")
+                f"Updating collection '{collage.name}' "
+                f"(Collage ID: {collage.id}, Site: {collage.site})..."
+                )
             try:
                 self._create_or_update_collection_from_collage(
                     collage.id, site=collage.site, fetch_bookmarks=fetch_bookmarks, force_update=True)
@@ -125,7 +125,9 @@ class CollectionCreator:
                 continue
 
             group_matched = False
+            logger.debug(f'Checking torrent group {torrent_group} file paths for matching albums.')
             for path in torrent_group.file_paths:
+                logger.debug('Checking if path corresponds to a rating key: %s', path)
                 rating_keys = self.plex_manager.get_rating_keys(path) or []
                 if rating_keys:
                     group_matched = True

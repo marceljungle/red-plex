@@ -4,10 +4,9 @@ import os
 import csv
 import logging
 from typing import List
+from infrastructure.logger.logger import logger
 from domain.models import TorrentGroup, Collection
 from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
-
-logger = logging.getLogger(__name__)
 
 # pylint: disable=R0801
 class CollageCollectionCache:
@@ -25,8 +24,6 @@ class CollageCollectionCache:
     # pylint: disable=too-many-arguments, R0917
     def save_collection(self, rating_key, collection_name, site, collage_id, torrent_group_list) -> None:
         """Saves or updates a single collection entry in the cache."""
-        torrent_group_list: List[TorrentGroup]
-        
         collections = self.get_all_collections()
 
         # Check if this collection is already in the cache
@@ -36,7 +33,7 @@ class CollageCollectionCache:
                 coll.name = collection_name
                 coll.site = site
                 coll.external_id = collage_id
-                coll.torrent_groups = torrent_group_list
+                coll.torrent_groups = [TorrentGroup(id=gid) for gid in torrent_group_list]
                 updated = True
                 break
 
@@ -45,7 +42,7 @@ class CollageCollectionCache:
                 rating_key,
                 collage_id,
                 collection_name,
-                torrent_group_list,
+                [TorrentGroup(id=gid) for gid in torrent_group_list],
                 site
             ))
 

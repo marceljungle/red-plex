@@ -37,7 +37,7 @@ class GazelleMapper:
         if isinstance(data, dict):
             # Handle case where data is a dictionary
             return TorrentGroup(
-                id=data.get('id'),
+                id=data.get('response', {}).get('group', {}).get('id'),
                 file_paths=GazelleMapper._map_torrent_group_file_paths(data)
             )
         elif isinstance(data, str):
@@ -48,14 +48,6 @@ class GazelleMapper:
             )
         else:
             raise TypeError(f"Unsupported type for data: {type(data)}")
-    
-    @staticmethod
-    def map_torrent_group(id: str) -> TorrentGroup:
-        """Map individual torrent group data"""
-        return TorrentGroup(
-            id=id,
-            file_paths = []
-        )
     
     @staticmethod
     def _map_torrent_group_file_paths(torrent_group: Dict[str, Any]) -> List[str]:

@@ -6,9 +6,8 @@ import logging
 from typing import List
 from datetime import datetime
 from domain.models import Album
+from infrastructure.logger.logger import logger
 from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
-
-logger = logging.getLogger(__name__)
 
 class AlbumCache:
     """Manages album cache using a CSV file."""

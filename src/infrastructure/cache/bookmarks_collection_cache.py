@@ -4,10 +4,9 @@ import os
 import csv
 import logging
 from typing import List
+from infrastructure.logger.logger import logger
 from domain.models import Collection, TorrentGroup
 from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
-
-logger = logging.getLogger(__name__)
 
 # pylint: disable=R0801
 class BookmarksCollectionCache:
@@ -32,7 +31,7 @@ class BookmarksCollectionCache:
         for bookmrk in bookmarks:
             if bookmrk.id == rating_key:
                 bookmrk.site = site
-                bookmrk.torrent_groups = torrent_group_ids
+                bookmrk.torrent_groups = [TorrentGroup(id=gid) for gid in torrent_group_ids]
                 updated = True
                 break
 

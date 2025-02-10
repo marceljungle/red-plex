@@ -83,13 +83,13 @@ class PlexManager:
         rating_keys = {}
 
         # Iterate over album_data and find matches
-        for key, (folder_path, _) in self.album_data.items():
-            normalized_folder_path = os.path.normpath(folder_path)  # Normalize path
+        for album in self.album_data:
+            normalized_folder_path = os.path.normpath(album.path)  # Normalize path
             folder_parts = normalized_folder_path.split(os.sep)  # Split path into parts
 
             # Check if the path matches any part of folder_path
             if path in folder_parts:
-                rating_keys[key] = folder_path
+                rating_keys[album.id] = path
 
         # No matches found
         if not rating_keys:
@@ -139,8 +139,7 @@ class PlexManager:
         """Fetches album objects from Plex using their rating keys."""
         logger.debug('Fetching albums from Plex: %s', albums)
         rating_keys = [album.id for album in albums]
-        self.plex.fetchItems(rating_keys)
-        return 
+        return self.plex.fetchItems(rating_keys)
 
     def create_collection(self, name: str, albums: List[Album]) -> Collection:
         """Creates a collection in Plex."""
@@ -163,7 +162,7 @@ class PlexManager:
 
     def add_items_to_collection(self, collection: Collection, albums: List[Album]) -> None:
         """Adds albums to an existing collection."""
-        logger.debug('Adding %d albums to collection "%s".', len(albums), collection.title)
+        logger.debug('Adding %d albums to collection "%s".', len(albums), collection.name)
         
         collection_from_plex: PlexCollection
         collection_from_plex = self.library_section.collection(collection.name)
