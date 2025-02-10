@@ -241,13 +241,8 @@ def update_collections():
 def bookmarks():
     """Manage collection based on your site bookmarks."""
 
-# bookmarks update
-@bookmarks.group('update')
-def update_bookmarks():
-    """Update collections based on your site bookmarks."""
-
 # bookmarks update collection
-@update_bookmarks.command('collection')
+@bookmarks.command('update')
 def update_bookmarks_collection():
     """Synchronize all cached bookmarks with their source collages."""
     try:
@@ -270,13 +265,8 @@ def update_bookmarks_collection():
         logger.exception('Failed to update cached bookmarks: %s', exc)
         click.echo(f"An error occurred while updating cached bookmarks: {exc}")
 
-# bookmarks create
-@bookmarks.group('create')
-def create():
-    """Create collections based on your site bookmarks."""
-
 # bookmarks create collection
-@create.command('collection')
+@bookmarks.command('create')
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 def create_collection_from_bookmarks(site: str):
@@ -304,13 +294,8 @@ def create_collection_from_bookmarks(site: str):
 def bookmarks_cache():
     """Manage bookmarks cache."""
 
- # bookmarks cache collection
-@bookmarks_cache.group('collection')
-def bookmarks_cache_collection():
-    """Manage collection bookmarks cache."""
-
-# bookmarks cache collection show
-@bookmarks_cache_collection.command('show')
+# bookmarks cache show
+@bookmarks_cache.command('show')
 def show_bookmarks_cache_collection():
     """Shows the location of the bookmarks cache file if it exists."""
     try:
@@ -325,8 +310,8 @@ def show_bookmarks_cache_collection():
         logger.exception('Failed to show collection bookmarks cache: %s', exc)
         click.echo(f"An error occurred while showing the collection bookmarks cache: {exc}")
 
-# bookmarks cache collection reset
-@bookmarks_cache_collection.command('reset')
+# bookmarks cache reset
+@bookmarks_cache.command('reset')
 def reset_bookmarks_cache_collection():
     """Resets the saved bookmarks cache."""
     if click.confirm('Are you sure you want to reset the collection bookmarks cache?'):
