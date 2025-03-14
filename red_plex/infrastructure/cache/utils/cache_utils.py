@@ -7,10 +7,10 @@ def get_cache_directory():
     """Return the cache directory path based on the OS."""
     if os.name == 'nt':  # Windows
         return os.path.join(os.getenv('LOCALAPPDATA',
-                                      os.path.expanduser('~\\AppData\\Local')), 'red-plex')
+                                      os.path.expanduser('~\\AppData\\Local')), 'red_plex')
     if os.uname().sysname == 'Darwin':  # macOS
-        return os.path.join(os.path.expanduser('~/Library/Caches'), 'red-plex')
-    return os.path.join(os.path.expanduser('~/.cache'), 'red-plex')  # Linux and others
+        return os.path.join(os.path.expanduser('~/Library/Caches'), 'red_plex')
+    return os.path.join(os.path.expanduser('~/.cache'), 'red_plex')  # Linux and others
 
 
 def ensure_directory_exists(directory):

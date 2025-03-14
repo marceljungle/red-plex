@@ -6,7 +6,7 @@ import yaml
 
 # Determine the path to the user's config directory based on OS
 home_dir = os.getenv('APPDATA') if os.name == 'nt' else os.path.expanduser('~/.config')
-CONFIG_DIR = os.path.join(home_dir, 'red-plex')
+CONFIG_DIR = os.path.join(home_dir, 'red_plex')
 CONFIG_FILE_PATH = os.path.join(CONFIG_DIR, 'config.yml')
 
 # Default configuration values

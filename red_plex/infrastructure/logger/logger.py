@@ -6,16 +6,16 @@ import sys
 from pathlib import Path
 
 # Create the logger
-logger = logging.getLogger('red-plex')
+logger = logging.getLogger('red_plex')
 
 
 def configure_logger(log_level='INFO'):
     """Configures the logger with the specified log level."""
     # Determine the log directory path based on the OS
     if os.name == 'nt':  # Windows
-        log_dir = os.path.join(os.getenv('APPDATA'), 'red-plex', 'logs')
+        log_dir = os.path.join(os.getenv('APPDATA'), 'red_plex', 'logs')
     else:  # Linux/macOS
-        log_dir = os.path.join(Path.home(), '.cache', 'red-plex', 'logs')
+        log_dir = os.path.join(Path.home(), '.cache', 'red_plex', 'logs')
 
     # Ensure the log directory exists
     os.makedirs(log_dir, exist_ok=True)
