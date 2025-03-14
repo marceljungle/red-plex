@@ -2,17 +2,20 @@
 
 import os
 from datetime import datetime, timezone
-import click
-from plexapi.server import PlexServer
-from infrastructure.logger.logger import logger
-from infrastructure.cache.album_cache import AlbumCache
-from domain.models import Collection, Album
 from typing import List
-from plexapi.base import MediaContainer
+
+import click
 from plexapi.audio import Album as PlexAlbum
-from plexapi.library import MusicSection
+from plexapi.base import MediaContainer
 from plexapi.collection import Collection as PlexCollection
+from plexapi.library import MusicSection
+from plexapi.server import PlexServer
+
+from domain.models import Collection, Album
+from infrastructure.cache.album_cache import AlbumCache
+from infrastructure.logger.logger import logger
 from infrastructure.plex.mapper.plex_mapper import PlexMapper
+
 
 class PlexManager:
     """Handles operations related to Plex."""
@@ -73,7 +76,7 @@ class PlexManager:
         self.album_data = []
         logger.info('Album cache has been reset.')
 
-    def get_rating_keys(self, path: str) -> List[int]: #TODO adapt this one, it was outdated from the previous version
+    def get_rating_keys(self, path: str) -> List[str]:
         """Returns the rating keys if the path matches part of an album folder."""
         # Validate the input path
         if not self.validate_path(path):
@@ -151,7 +154,12 @@ class PlexManager:
     def get_collection_by_name(self, name: str) -> Collection:
         """Finds a collection by name."""
         collection: PlexCollection
-        collection = self.library_section.collection(name)
+        collection = []
+        try:
+            collection = self.library_section.collection(name)
+        except Exception as e:  # pylint: disable=W0718
+            logger.warn('An error occurred while trying to fetch the collection: %s', e)
+            collection = None
         if collection:
             return Collection(
                 name=collection.title,
@@ -163,7 +171,7 @@ class PlexManager:
     def add_items_to_collection(self, collection: Collection, albums: List[Album]) -> None:
         """Adds albums to an existing collection."""
         logger.debug('Adding %d albums to collection "%s".', len(albums), collection.name)
-        
+
         collection_from_plex: PlexCollection
         collection_from_plex = self.library_section.collection(collection.name)
         if collection_from_plex:

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # Create the logger
-logger = logging.getLogger('src')
+logger = logging.getLogger('red-plex')
 
 def configure_logger(log_level='INFO'):
     """Configures the logger with the specified log level."""

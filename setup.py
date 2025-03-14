@@ -8,7 +8,7 @@ here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text(encoding="utf-8")
 
 # Read the version from the package's __init__.py
-with open('src/__init__.py', 'r', encoding="utf-8") as f:
+with open('red-plex/__init__.py', 'r', encoding="utf-8") as f:
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M)
     if version_match:
         version = version_match.group(1)
@@ -24,8 +24,8 @@ setup(
     author='marceljungle',
     author_email='gigi.dan2011@gmail.com',
     url='https://github.com/marceljungle/red-plex',
-    packages=find_namespace_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_namespace_packages(where="red-plex"),
+    package_dir={"": "red-plex"},
     include_package_data=True,
     install_requires=[
         'plexapi',

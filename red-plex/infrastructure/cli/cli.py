@@ -54,7 +54,10 @@ def convert():
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 def collection(collage_ids, site):
-    """Create Plex collections from given COLLAGE_IDS."""
+    """
+    Create Plex collections from given COLLAGE_IDS.
+    If the collection already exists, confirmation will be requested to update it.
+    """
     if not collage_ids:
         click.echo("Please provide at least one COLLAGE_ID.")
         return
@@ -63,7 +66,6 @@ def collection(collage_ids, site):
     if not plex_manager:
         return
 
-    # Populate album cache once after initializing plex_manager
     plex_manager.populate_album_cache()
 
     gazelle_api = initialize_gazelle_api(site)
@@ -71,7 +73,36 @@ def collection(collage_ids, site):
         return
 
     collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
-    collection_creator.create_collections_from_collages(site, collage_ids)
+
+    # Now the logic for each collage ID
+    for collage_id in collage_ids:
+        result = collection_creator.create_or_update_collection_from_collage(
+            collage_id=collage_id,
+            site=site,
+            fetch_bookmarks=False,
+            force_update=False  # Initial attempt without forcing
+        )
+
+        # The use case returns False if the collection already exists and the update was not forced
+        if result is False:
+            if click.confirm(
+                    f'Collection "{collage_id}" already exists. '
+                    'Do you want to update it with new items?',
+                    default=True
+            ):
+                # If the user confirms, repeat the operation with force_update=True
+                collection_creator.create_or_update_collection_from_collage(
+                    collage_id=collage_id,
+                    site=site,
+                    fetch_bookmarks=False,
+                    force_update=True
+                )
+            else:
+                click.echo(f'Skipping collection update for "{collage_id}".')
+        elif result is None:
+            click.echo(f'No valid data found for collage "{collage_id}".')
+        else:
+            click.echo(f'Collection for collage "{collage_id}" created/updated successfully.')
 
 
 # config
@@ -304,7 +335,7 @@ def create_collection_from_bookmarks(site: str):
     collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
 
     try:
-        collection_creator.create_collections_from_collages(site=site.upper(), fetch_bookmarks=True)
+        collection_creator.create_or_update_collection_from_collage(site=site.upper(), fetch_bookmarks=True)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to create collection from bookmarks on site %s: %s',
                          site.upper(), exc)

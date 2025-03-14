@@ -1,4 +1,4 @@
-# src/infrastructure/mappers/gazelle_mapper.py
+# red-plex/infrastructure/mappers/gazelle_mapper.py
 import html
 import re
 from typing import Dict, Any, Union, List
