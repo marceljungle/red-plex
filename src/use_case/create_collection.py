@@ -1,14 +1,16 @@
 """Module for creating Plex collections from Gazelle collages or bookmarks."""
 
-import click
-from domain.models import TorrentGroup, Collection, Album
 from typing import List
-from infrastructure.cache.collage_collection_cache import CollageCollectionCache
+
+import click
+
+from domain.models import TorrentGroup, Collection, Album
 from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
-from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from infrastructure.plex.plex_manager import PlexManager
-from infrastructure.logger.logger import logger
 from infrastructure.rest.gazelle.config import initialize_gazelle_api
+from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+
 
 # pylint: disable=R0801
 class CollectionCreator:
@@ -23,7 +25,7 @@ class CollectionCreator:
         self.collage_collection_cache = CollageCollectionCache(cache_file)
         self.bookmarks_collection_cache = BookmarksCollectionCache(cache_file)
 
-    def create_collections_from_collages(self, site: str, collage_ids: List[str], fetch_bookmarks = False):
+    def create_collections_from_collages(self, site: str, collage_ids: List[str], fetch_bookmarks=False):
         if self.gazelle_api is None:
             return
 
@@ -31,14 +33,15 @@ class CollectionCreator:
             self._create_or_update_collection_from_collage(
                 collage_id, site=site, fetch_bookmarks=fetch_bookmarks)
 
-    def update_collections_from_collages(self, collages: List[Collection], fetch_bookmarks = False):
+    def update_collections_from_collages(self, collages: List[Collection], fetch_bookmarks=False):
         for collage in collages:
             self.gazelle_api = initialize_gazelle_api(collage.site)
             self._create_or_update_collection_from_collage(
                 collage.id, site=collage.site, fetch_bookmarks=fetch_bookmarks, force_update=True)
 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
-    def _create_or_update_collection_from_collage(self, collage_id: str = "", site: str = None, fetch_bookmarks = False, force_update = False):
+    def _create_or_update_collection_from_collage(self, collage_id: str = "", site: str = None, fetch_bookmarks=False,
+                                                  force_update=False):
         """Creates or updates a Plex collection based on a Gazelle collage."""
         collage_data: Collection
 
@@ -46,7 +49,7 @@ class CollectionCreator:
             collage_data = self.gazelle_api.get_bookmarks(site)
         else:
             collage_data = self.gazelle_api.get_collage(collage_id)
-        
+
         existing_collection = None
         if collage_data:
             existing_collection = self.plex_manager.get_collection_by_name(collage_data.name)
@@ -101,7 +104,7 @@ class CollectionCreator:
             if existing_collection:
                 # Update existing collection
                 self.plex_manager.add_items_to_collection(existing_collection, albums)
-                
+
                 # Update cache
                 updated_group_ids = cached_group_ids.union(processed_group_ids)
                 if fetch_bookmarks:
@@ -117,7 +120,7 @@ class CollectionCreator:
             else:
                 # Create new collection
                 collection = self.plex_manager.create_collection(collage_data.name, albums)
-                
+
                 # Save to cache
                 if fetch_bookmarks:
                     self.bookmarks_collection_cache.save_bookmarks(
@@ -126,4 +129,4 @@ class CollectionCreator:
                 else:
                     self.collage_collection_cache.save_collection(
                         collection.id, collage_data.name, site, collage_id, list(processed_group_ids)
-                )
+                    )

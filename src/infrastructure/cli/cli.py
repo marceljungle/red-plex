@@ -2,8 +2,13 @@
 
 import os
 import subprocess
-import yaml
+
 import click
+import yaml
+
+from infrastructure.cache.album_cache import AlbumCache
+from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
+from infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from infrastructure.config.config import (
     CONFIG_FILE_PATH,
     DEFAULT_CONFIG,
@@ -11,14 +16,12 @@ from infrastructure.config.config import (
     save_config,
     ensure_config_exists
 )
-from infrastructure.plex.plex_manager import PlexManager
-from infrastructure.cache.album_cache import AlbumCache
-from infrastructure.cache.collage_collection_cache import CollageCollectionCache
-from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
-from infrastructure.plex.config import initialize_plex_manager
-from infrastructure.rest.gazelle.config import initialize_gazelle_api
-from infrastructure.services.config import initialize_collection_creator
 from infrastructure.logger.logger import logger, configure_logger
+from infrastructure.plex.config import initialize_plex_manager
+from infrastructure.plex.plex_manager import PlexManager
+from infrastructure.rest.gazelle.config import initialize_gazelle_api
+from use_case.create_collection import CollectionCreator
+
 
 @click.group()
 def cli():
@@ -38,10 +41,12 @@ def cli():
     # Configure logger
     configure_logger(log_level)
 
+
 # convert
 @cli.group()
 def convert():
     """Conversion methods."""
+
 
 # convert collection
 @convert.command()
@@ -68,10 +73,12 @@ def collection(collage_ids, site):
     collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
     collection_creator.create_collections_from_collages(site, collage_ids)
 
+
 # config
 @cli.group()
 def config():
     """View or edit configuration settings."""
+
 
 # config show
 @config.command('show')
@@ -79,10 +86,11 @@ def show_config():
     """Display the current configuration."""
     config_data = load_config()
     path_with_config = (
-        f"Configuration path: {CONFIG_FILE_PATH}\n\n" +
-        yaml.dump(config_data, default_flow_style=False)
+            f"Configuration path: {CONFIG_FILE_PATH}\n\n" +
+            yaml.dump(config_data, default_flow_style=False)
     )
     click.echo(path_with_config)
+
 
 # config edit
 @config.command('edit')
@@ -105,6 +113,7 @@ def edit_config():
         logger.exception('Failed to open editor: %s', exc)
         click.echo(f"An error occurred while opening the editor: {exc}")
 
+
 # config reset
 @config.command('reset')
 def reset_config():
@@ -113,10 +122,12 @@ def reset_config():
         save_config(DEFAULT_CONFIG)
         click.echo(f"Configuration reset to default values at {CONFIG_FILE_PATH}")
 
+
 # album-cache
 @cli.group()
 def album_cache():
     """Manage saved albums cache."""
+
 
 # album-cache show
 @album_cache.command('show')
@@ -134,6 +145,7 @@ def show_cache():
         logger.exception('Failed to show cache: %s', exc)
         click.echo(f"An error occurred while showing the cache: {exc}")
 
+
 # album-cache reset
 @album_cache.command('reset')
 def reset_cache():
@@ -146,6 +158,7 @@ def reset_cache():
         except Exception as exc:  # pylint: disable=W0718
             logger.exception('Failed to reset cache: %s', exc)
             click.echo(f"An error occurred while resetting the cache: {exc}")
+
 
 # album-cache update
 @album_cache.command('update')
@@ -172,15 +185,18 @@ def update_cache():
         logger.exception('Failed to update cache: %s', exc)
         click.echo(f"An error occurred while updating the cache: {exc}")
 
+
 # collections
 @cli.group('collections')
 def collections():
     """Manage collections."""
 
+
 # collections cache
 @collections.group('cache')
 def collections_cache():
     """Manage collections cache."""
+
 
 # collections cache show
 @collections_cache.command('show')
@@ -198,6 +214,7 @@ def show_collection_cache():
         logger.exception('Failed to show collection cache: %s', exc)
         click.echo(f"An error occurred while showing the collection cache: {exc}")
 
+
 # collections cache reset
 @collections_cache.command('reset')
 def reset_collection_cache():
@@ -211,6 +228,7 @@ def reset_collection_cache():
             logger.exception('Failed to reset collage collection cache: %s', exc)
             click.echo(
                 f"An error occurred while resetting the collage collection cache: {exc}")
+
 
 # collections update
 @collections.command('update')
@@ -236,10 +254,12 @@ def update_collections():
         logger.exception('Failed to update cached collections: %s', exc)
         click.echo(f"An error occurred while updating cached collections: {exc}")
 
+
 # bookmarks
 @cli.group()
 def bookmarks():
     """Manage collection based on your site bookmarks."""
+
 
 # bookmarks update collection
 @bookmarks.command('update')
@@ -265,6 +285,7 @@ def update_bookmarks_collection():
         logger.exception('Failed to update cached bookmarks: %s', exc)
         click.echo(f"An error occurred while updating cached bookmarks: {exc}")
 
+
 # bookmarks create collection
 @bookmarks.command('create')
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
@@ -283,16 +304,18 @@ def create_collection_from_bookmarks(site: str):
     collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
 
     try:
-        collection_creator.create_collections_from_collages(site = site.upper(), fetch_bookmarks=True)
+        collection_creator.create_collections_from_collages(site=site.upper(), fetch_bookmarks=True)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to create collection from bookmarks on site %s: %s',
                          site.upper(), exc)
         click.echo(f'Failed to create collection from bookmarks on site {site.upper()}: {exc}')
 
+
 # bookmarks cache
 @bookmarks.group('cache')
 def bookmarks_cache():
     """Manage bookmarks cache."""
+
 
 # bookmarks cache show
 @bookmarks_cache.command('show')
@@ -306,9 +329,10 @@ def show_bookmarks_cache_collection():
             click.echo(f"Collection bookmarks cache file exists at: {os.path.abspath(cache_file)}")
         else:
             click.echo("Collection bookmarks cache file does not exist.")
-    except Exception as exc: # pylint: disable=W0718
+    except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to show collection bookmarks cache: %s', exc)
         click.echo(f"An error occurred while showing the collection bookmarks cache: {exc}")
+
 
 # bookmarks cache reset
 @bookmarks_cache.command('reset')
@@ -319,9 +343,15 @@ def reset_bookmarks_cache_collection():
             bookmarks_cache_manager = BookmarksCollectionCache()
             bookmarks_cache_manager.reset_cache()
             click.echo("Collection bookmarks cache has been reset successfully.")
-        except Exception as exc: # pylint: disable=W0718
+        except Exception as exc:  # pylint: disable=W0718
             logger.exception('Failed to reset collection bookmarks cache: %s', exc)
             click.echo(f"An error occurred while resetting the collection bookmarks cache: {exc}")
+
+
+def initialize_collection_creator(plex_manager, gazelle_api):
+    """Initialize CollectionCreator using existing plex_manager and gazelle_api."""
+    return CollectionCreator(plex_manager, gazelle_api)
+
 
 if __name__ == '__main__':
     configure_logger()
