@@ -1,12 +1,13 @@
 """Module for collection cache management."""
 
-import os
 import csv
-import logging
+import os
 from typing import List
-from infrastructure.logger.logger import logger
+
 from domain.models import TorrentGroup, Collection
 from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
+from infrastructure.logger.logger import logger
+
 
 # pylint: disable=R0801
 class CollageCollectionCache:
@@ -81,14 +82,14 @@ class CollageCollectionCache:
                         except ValueError:
                             collage_id = None
                         group_ids = [int(g.strip()) for g in group_ids_str.split(',') if g.strip()]
-                        
+
                         collections.append(Collection(
                             rating_key,
                             collage_id,
                             collection_name,
                             [TorrentGroup(id=gid) for gid in group_ids],
                             site
-                            ))
+                        ))
         return collections
 
     def reset_cache(self) -> None:

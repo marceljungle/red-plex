@@ -2,8 +2,10 @@
 import html
 import re
 from typing import Dict, Any, Union, List
-from infrastructure.logger.logger import logger
+
 from domain.models import Collection, TorrentGroup
+from infrastructure.logger.logger import logger
+
 
 class GazelleMapper:
     """Maps Gazelle API responses to domain models"""
@@ -21,7 +23,7 @@ class GazelleMapper:
                 for tg in collage_data.get('torrentGroupIDList', [])
             ]
         )
-    
+
     @staticmethod
     def map_bookmarks(response: Dict[str, Any], site: str) -> Collection:
         """Convert raw API response to Collage domain object"""
@@ -30,7 +32,7 @@ class GazelleMapper:
             name=f"{site.upper()} Bookmarks",
             torrent_groups=GazelleMapper._get_torrent_groups_from_bookmarks(bookmarks_data)
         )
-    
+
     @staticmethod
     def map_torrent_group(data: Union[Dict[str, Any], str]) -> TorrentGroup:
         """Map individual torrent group data"""
@@ -48,7 +50,7 @@ class GazelleMapper:
             )
         else:
             raise TypeError(f"Unsupported type for data: {type(data)}")
-    
+
     @staticmethod
     def _map_torrent_group_file_paths(torrent_group: Dict[str, Any]) -> List[str]:
         """Extracts file paths from a torrent group."""
@@ -62,7 +64,7 @@ class GazelleMapper:
         except Exception as e:
             logger.exception('Error extracting file paths from torrent group: %s', e)
             return []
-        
+
     @staticmethod
     def _get_torrent_groups_from_bookmarks(response: Dict[str, Any]) -> List[TorrentGroup]:
         """Extracts file paths from user bookmarks."""

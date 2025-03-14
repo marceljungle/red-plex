@@ -2,6 +2,7 @@ from infrastructure.config.config import load_config
 from infrastructure.logger.logger import logger
 from infrastructure.plex.plex_manager import PlexManager
 
+
 def initialize_plex_manager():
     """Initialize PlexManager without populating cache."""
     config_data = load_config()

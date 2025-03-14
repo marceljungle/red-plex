@@ -1,6 +1,7 @@
 """Configuration class"""
 
 import os
+
 import yaml
 
 # Determine the path to the user's config directory based on OS
@@ -26,6 +27,7 @@ DEFAULT_CONFIG = {
     }
 }
 
+
 def load_config():
     """Load configuration from the config.yml file."""
     if not os.path.exists(CONFIG_FILE_PATH):
@@ -39,11 +41,13 @@ def load_config():
             config = DEFAULT_CONFIG
     return config
 
+
 def save_config(config):
     """Save configuration to the config.yml file."""
     os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CONFIG_FILE_PATH, 'w', encoding='utf-8') as config_file:
         yaml.dump(config, config_file, default_flow_style=False)
+
 
 def ensure_config_exists():
     """Ensure the configuration file exists, creating it with default values if it doesn't."""

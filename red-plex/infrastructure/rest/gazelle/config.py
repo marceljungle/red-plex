@@ -1,7 +1,9 @@
+from pyrate_limiter import Rate, Duration
+
 from infrastructure.config.config import load_config
 from infrastructure.logger.logger import logger
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
-from pyrate_limiter import Rate, Duration
+
 
 def initialize_gazelle_api(site: str):
     """Initialize GazelleAPI for a given site."""

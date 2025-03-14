@@ -1,12 +1,13 @@
 """Module for bookmarks cache management."""
 
-import os
 import csv
-import logging
+import os
 from typing import List
-from infrastructure.logger.logger import logger
+
 from domain.models import Collection, TorrentGroup
 from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
+from infrastructure.logger.logger import logger
+
 
 # pylint: disable=R0801
 class BookmarksCollectionCache:
@@ -37,9 +38,9 @@ class BookmarksCollectionCache:
 
         if not updated:
             bookmarks.append(Collection(
-                id = rating_key,
-                site = site,
-                torrent_groups = [TorrentGroup(id=gid) for gid in torrent_group_ids]
+                id=rating_key,
+                site=site,
+                torrent_groups=[TorrentGroup(id=gid) for gid in torrent_group_ids]
             ))
 
         # Write back to CSV
@@ -76,10 +77,10 @@ class BookmarksCollectionCache:
                             continue
                         group_ids = [int(g.strip()) for g in group_ids_str.split(',') if g.strip()]
                         bookmarks.append(Collection(
-                            id = rating_key,
-                            name = f"{site.upper()} Bookmarks",
-                            site = site,
-                            torrent_groups = [TorrentGroup(id=gid) for gid in group_ids]
+                            id=rating_key,
+                            name=f"{site.upper()} Bookmarks",
+                            site=site,
+                            torrent_groups=[TorrentGroup(id=gid) for gid in group_ids]
                         ))
         return bookmarks
 

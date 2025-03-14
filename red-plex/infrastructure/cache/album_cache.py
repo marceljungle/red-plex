@@ -1,13 +1,14 @@
 """Module for album cache managing."""
 
-import os
 import csv
-import logging
-from typing import List
+import os
 from datetime import datetime
+from typing import List
+
 from domain.models import Album
-from infrastructure.logger.logger import logger
 from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
+from infrastructure.logger.logger import logger
+
 
 class AlbumCache:
     """Manages album cache using a CSV file."""
@@ -47,10 +48,10 @@ class AlbumCache:
                         album_id, folder_name = row
                         added_at = datetime.min  # Assign a default date
                     albums.append(Album(
-                        id=album_id, 
-                        path=folder_name, 
+                        id=album_id,
+                        path=folder_name,
                         added_at=added_at
-                        ))
+                    ))
             logger.info('Albums loaded from cache.')
         else:
             logger.info('Cache file not found.')

@@ -1,7 +1,7 @@
-
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import List
+
 
 @dataclass
 class Album:
@@ -9,10 +9,12 @@ class Album:
     added_at: datetime = datetime(1970, 1, 1, tzinfo=timezone.utc)
     path: str = ""
 
+
 @dataclass
 class TorrentGroup:
     id: int
     file_paths: List[str] = field(default_factory=list)
+
 
 @dataclass
 class Collection:

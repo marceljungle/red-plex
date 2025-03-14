@@ -1,15 +1,18 @@
 """Module for interacting with Gazelle-based APIs."""
 
-import time
 import asyncio
+import time
 from inspect import isawaitable
-import requests
 from typing import Dict, Any, Optional
+
+import requests
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
-from infrastructure.logger.logger import logger
+
 from domain.models import Collection, TorrentGroup
+from infrastructure.logger.logger import logger
 from infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
+
 
 # pylint: disable=W0718
 class GazelleAPI:
