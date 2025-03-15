@@ -39,35 +39,33 @@ class GazelleAPI:
 
     @retry(
         retry=retry_if_exception_type(requests.exceptions.RequestException),
-        stop=stop_after_attempt(3),
-        wait=wait_fixed(2)
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(4),
+        reraise=True
     )
     def api_call(self, action: str, params: Dict[str, str]) -> Dict[str, Any]:
-        """Makes a rate-limited API call to the Gazelle-based service with retries."""
-        formatted_params = '&' + '&'.join(f'{key}={value}' for key, value in params.items())
+        """
+        Makes a rate-limited API call to the Gazelle-based service with retries.
+        Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
+        """
+        formatted_params = '&' + '&'.join(f'{k}={v}' for k, v in params.items()) if params else ''
         formatted_url = f'{self.base_url}{action}{formatted_params}'
         logger.info('Calling API: %s', formatted_url)
 
         while True:
-            # Try to acquire permission to make the API call
             did_acquire = self.limiter.try_acquire('api_call')
             if did_acquire:
-                # Permission acquired; make the API call
                 response = requests.get(formatted_url, headers=self.headers, timeout=10)
                 response.raise_for_status()
                 return response.json()
-
-            # Rate limit exceeded; calculate delay and retry
-            delay_ms = self.get_retry_after()
-            delay_seconds = delay_ms / 1000.0
-
-            if delay_seconds > 0.001:  # Only sleep if delay is more than 1 millisecond
-                logger.warning('Rate limit exceeded. Sleeping for %.2f seconds.', delay_seconds)
-                time.sleep(delay_seconds)
             else:
-                # Delay is zero or negligible; retry immediately
-                # Optionally, you can add a small sleep to prevent tight loop
-                time.sleep(0.001)  # Sleep for 1 millisecond to yield CPU
+                delay_ms = self.get_retry_after()
+                delay_seconds = delay_ms / 1000.0
+                if delay_seconds > 0.001:
+                    logger.warning('Rate limit exceeded. Sleeping for %.2f seconds.', delay_seconds)
+                    time.sleep(delay_seconds)
+                else:
+                    time.sleep(0.001)
 
     def get_retry_after(self) -> int:
         """Calculates the time to wait until another request can be made."""

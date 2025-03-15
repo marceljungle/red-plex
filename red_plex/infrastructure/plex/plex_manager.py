@@ -63,7 +63,11 @@ class PlexManager:
     def get_albums_given_filter(self, plex_filter: dict) -> List[Album]:
         """Returns a list of albums that match the specified filter."""
         albums: List[PlexAlbum]
-        albums = self.library_section.searchAlbums(filters=plex_filter)
+        try:
+            albums = self.library_section.searchAlbums(filters=plex_filter)
+        except Exception as e:  # pylint: disable=W0718
+            logger.warning('An error occurred while fetching albums given filter: %s', e)
+            return []
         domain_albums: List[Album]
         domain_albums = []
         for album in albums:
@@ -146,19 +150,28 @@ class PlexManager:
         """Fetches album objects from Plex using their rating keys."""
         logger.debug('Fetching albums from Plex: %s', albums)
         rating_keys = [album.id for album in albums]
-        return self.plex.fetchItems(rating_keys)
+        try:
+            fetched_albums = self.plex.fetchItems(rating_keys)
+        except Exception as e:  # pylint: disable=W0718
+            logger.warning('An error occurred while fetching albums: %s', e)
+            return []
+        return fetched_albums
 
-    def create_collection(self, name: str, albums: List[Album]) -> Collection:
+    def create_collection(self, name: str, albums: List[Album]) -> Collection | None:
         """Creates a collection in Plex."""
         logger.info('Creating collection with name "%s" and %d albums.', name, len(albums))
         albums_media = self._fetch_albums_by_keys(albums)
-        collection = self.library_section.createCollection(name, items=albums_media)
+
+        try:
+            collection = self.library_section.createCollection(name, items=albums_media)
+        except Exception as e:
+            logger.warning('An error occurred while creating the collection: %s', e)
+            return None
         return PlexMapper.map_plex_collection_to_domain(collection)
 
-    def get_collection_by_name(self, name: str) -> Collection:
+    def get_collection_by_name(self, name: str) -> Collection | None:
         """Finds a collection by name."""
-        collection: PlexCollection
-        collection = []
+        collection: PlexCollection | None
         try:
             collection = self.library_section.collection(name)
         except Exception as e:  # pylint: disable=W0718
@@ -176,14 +189,19 @@ class PlexManager:
         """Adds albums to an existing collection."""
         logger.debug('Adding %d albums to collection "%s".', len(albums), collection.name)
 
-        collection_from_plex: PlexCollection
-        collection_from_plex = self.library_section.collection(collection.name)
+        collection_from_plex: PlexCollection | None
+        try:
+            collection_from_plex = self.library_section.collection(collection.name)
+        except Exception as e:  # pylint: disable=W0718
+            logger.warning('An error occurred while trying to fetch the collection: %s', e)
+            collection_from_plex = None
         if collection_from_plex:
             collection_from_plex.addItems(self._fetch_albums_by_keys(albums))
         else:
             logger.warning('Collection "%s" not found.', collection.name)
 
-    def validate_path(self, path: str) -> bool:
+    @staticmethod
+    def validate_path(path: str) -> bool:
         """Validates that the path is correct."""
         if (not path) or (len(path) == 1):
             return False
