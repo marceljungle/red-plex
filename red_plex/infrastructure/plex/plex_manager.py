@@ -10,6 +10,7 @@ from plexapi.base import MediaContainer
 from plexapi.collection import Collection as PlexCollection
 from plexapi.library import MusicSection
 from plexapi.server import PlexServer
+from typing import Optional
 
 from domain.models import Collection, Album
 from infrastructure.cache.album_cache import AlbumCache
@@ -157,21 +158,21 @@ class PlexManager:
             return []
         return fetched_albums
 
-    def create_collection(self, name: str, albums: List[Album]) -> Collection | None:
+    def create_collection(self, name: str, albums: List[Album]) -> Optional[Collection]:
         """Creates a collection in Plex."""
         logger.info('Creating collection with name "%s" and %d albums.', name, len(albums))
         albums_media = self._fetch_albums_by_keys(albums)
 
         try:
             collection = self.library_section.createCollection(name, items=albums_media)
-        except Exception as e: # pylint: disable=W0718
+        except Exception as e:  # pylint: disable=W0718
             logger.warning('An error occurred while creating the collection: %s', e)
             return None
         return PlexMapper.map_plex_collection_to_domain(collection)
 
-    def get_collection_by_name(self, name: str) -> Collection | None:
+    def get_collection_by_name(self, name: str) -> Optional[Collection]:
         """Finds a collection by name."""
-        collection: PlexCollection | None
+        collection: Optional[PlexCollection]
         try:
             collection = self.library_section.collection(name)
         except Exception as e:  # pylint: disable=W0718
@@ -189,7 +190,7 @@ class PlexManager:
         """Adds albums to an existing collection."""
         logger.debug('Adding %d albums to collection "%s".', len(albums), collection.name)
 
-        collection_from_plex: PlexCollection | None
+        collection_from_plex: Optional[PlexCollection]
         try:
             collection_from_plex = self.library_section.collection(collection.name)
         except Exception as e:  # pylint: disable=W0718
