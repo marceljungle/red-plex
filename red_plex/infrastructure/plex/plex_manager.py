@@ -3,6 +3,7 @@
 import os
 from datetime import datetime, timezone
 from typing import List
+from typing import Optional
 
 import click
 from plexapi.audio import Album as PlexAlbum
@@ -10,7 +11,6 @@ from plexapi.base import MediaContainer
 from plexapi.collection import Collection as PlexCollection
 from plexapi.library import MusicSection
 from plexapi.server import PlexServer
-from typing import Optional
 
 from domain.models import Collection, Album
 from infrastructure.cache.album_cache import AlbumCache
