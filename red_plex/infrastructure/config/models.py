@@ -1,6 +1,7 @@
 """ This module contains the configuration models used in the project. """
 
 from dataclasses import dataclass, field
+from typing import Dict
 
 
 @dataclass
@@ -31,7 +32,7 @@ class Configuration:
     plex_token: str = ""
     section_name: str = ""
     log_level: str = ""
-    site_configurations: dict[str, SiteConfiguration] = field(default_factory=dict)
+    site_configurations: Dict[str, SiteConfiguration] = field(default_factory=dict)
 
     @classmethod
     def default(cls) -> "Configuration":
