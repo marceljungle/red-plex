@@ -25,9 +25,9 @@ class PlexManager:
         # Load configuration
         config_data = load_config()
 
-        self.url = config_data.get('PLEX_URL', 'http://localhost:32400')
-        self.token = config_data.get('PLEX_TOKEN')
-        self.section_name = config_data.get('SECTION_NAME', 'Music')
+        self.url = config_data.plex_url
+        self.token = config_data.plex_token
+        self.section_name = config_data.section_name
         self.plex = PlexServer(self.url, self.token, timeout=1200)
 
         self.library_section: MusicSection

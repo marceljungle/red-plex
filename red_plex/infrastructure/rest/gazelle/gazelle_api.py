@@ -21,13 +21,13 @@ class GazelleAPI:
 
     def __init__(self, site: str):
         config_data = load_config()
-        site_config = config_data.get(site.upper())
+        site_config = config_data.site_configurations.get(site)
 
-        api_key = site_config.get('API_KEY')
-        base_url = site_config.get('BASE_URL')
-        rate_limit_config = site_config.get('RATE_LIMIT', {'calls': 10, 'seconds': 10})
+        api_key = site_config.api_key
+        base_url = site_config.base_url
+        rate_limit_config = site_config.rate_limit
         rate_limit = Rate(
-            rate_limit_config['calls'], Duration.SECOND * rate_limit_config['seconds'])
+            rate_limit_config.calls, Duration.SECOND * rate_limit_config.seconds)
 
         self.base_url = base_url.rstrip('/') + '/ajax.php?action='
         self.headers = {'Authorization': api_key}

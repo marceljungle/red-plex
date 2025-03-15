@@ -4,53 +4,34 @@ import os
 
 import yaml
 
+from infrastructure.config.models import Configuration
+
 # Determine the path to the user's config directory based on OS
 home_dir = os.getenv('APPDATA') if os.name == 'nt' else os.path.expanduser('~/.config')
-CONFIG_DIR = os.path.join(home_dir, 'red_plex')
+CONFIG_DIR = os.path.join(home_dir, 'red-plex')
 CONFIG_FILE_PATH = os.path.join(CONFIG_DIR, 'config.yml')
 
-# Default configuration values
-DEFAULT_CONFIG = {
-    'PLEX_URL': 'http://localhost:32400',
-    'PLEX_TOKEN': '',
-    'SECTION_NAME': 'Music',
-    'LOG_LEVEL': 'INFO',
-    'RED': {
-        'API_KEY': '',
-        'BASE_URL': 'https://redacted.sh',
-        'RATE_LIMIT': {'calls': 10, 'seconds': 10}
-    },
-    'OPS': {
-        'API_KEY': '',
-        'BASE_URL': 'https://orpheus.network',
-        'RATE_LIMIT': {'calls': 4, 'seconds': 15}
-    }
-}
 
-
-def load_config():
-    """Load configuration from the config.yml file."""
+def load_config() -> Configuration:
+    """Load config from file (YAML), returning a Configuration object."""
     if not os.path.exists(CONFIG_FILE_PATH):
-        # If the config file doesn't exist, create it with default values
-        save_config(DEFAULT_CONFIG)
-        return DEFAULT_CONFIG
+        cfg = Configuration.default()
+        save_config(cfg)
+        return cfg
 
-    with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as config_file:
-        config = yaml.safe_load(config_file)
-        if not config:
-            config = DEFAULT_CONFIG
-    return config
+    with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
+        raw_dict = yaml.safe_load(f) or {}
+        return Configuration.from_dict(raw_dict)
 
 
-def save_config(config):
-    """Save configuration to the config.yml file."""
+def save_config(cfg: Configuration) -> None:
+    """Save the given Configuration to YAML."""
     os.makedirs(CONFIG_DIR, exist_ok=True)
-    with open(CONFIG_FILE_PATH, 'w', encoding='utf-8') as config_file:
-        yaml.dump(config, config_file, default_flow_style=False)
+    with open(CONFIG_FILE_PATH, 'w', encoding='utf-8') as f:
+        yaml.dump(cfg.to_dict(), f, default_flow_style=False)
 
 
 def ensure_config_exists():
-    """Ensure the configuration file exists, creating it with default values if it doesn't."""
+    """Ensure the config file exists, creating it with default values if not."""
     if not os.path.exists(CONFIG_FILE_PATH):
-        os.makedirs(CONFIG_DIR, exist_ok=True)
-        save_config(DEFAULT_CONFIG)
+        save_config(Configuration.default())

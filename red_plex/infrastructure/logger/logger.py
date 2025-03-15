@@ -17,7 +17,7 @@ def configure_logger():
     config_data = load_config()
 
     # Get log level from configuration, default to 'INFO' if not set
-    log_level = config_data.get('LOG_LEVEL', 'INFO').upper()
+    log_level = config_data.log_level.upper()
 
     # Validate log level
     valid_log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']

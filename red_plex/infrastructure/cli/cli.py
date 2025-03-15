@@ -11,11 +11,11 @@ from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionC
 from infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from infrastructure.config.config import (
     CONFIG_FILE_PATH,
-    DEFAULT_CONFIG,
     load_config,
     save_config,
     ensure_config_exists
 )
+from infrastructure.config.models import Configuration
 from infrastructure.logger.logger import logger, configure_logger
 from infrastructure.plex.plex_manager import PlexManager
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
@@ -103,7 +103,7 @@ def show_config():
     config_data = load_config()
     path_with_config = (
             f"Configuration path: {CONFIG_FILE_PATH}\n\n" +
-            yaml.dump(config_data, default_flow_style=False)
+            yaml.dump(config_data.to_dict(), default_flow_style=False)
     )
     click.echo(path_with_config)
 
@@ -135,7 +135,7 @@ def edit_config():
 def reset_config():
     """Reset the configuration to default values."""
     if click.confirm('Are you sure you want to reset the configuration to default values?'):
-        save_config(DEFAULT_CONFIG)
+        save_config(Configuration.default())
         click.echo(f"Configuration reset to default values at {CONFIG_FILE_PATH}")
 
 
