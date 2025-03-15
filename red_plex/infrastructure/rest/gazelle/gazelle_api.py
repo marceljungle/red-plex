@@ -3,13 +3,14 @@
 import asyncio
 import time
 from inspect import isawaitable
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 import requests
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from domain.models import Collection, TorrentGroup
+from infrastructure.config.config import load_config
 from infrastructure.logger.logger import logger
 from infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
@@ -18,7 +19,16 @@ from infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 class GazelleAPI:
     """Handles API interactions with Gazelle-based services."""
 
-    def __init__(self, base_url: str, api_key: str, rate_limit: Optional[Rate] = None):
+    def __init__(self, site: str):
+        config_data = load_config()
+        site_config = config_data.get(site.upper())
+
+        api_key = site_config.get('API_KEY')
+        base_url = site_config.get('BASE_URL')
+        rate_limit_config = site_config.get('RATE_LIMIT', {'calls': 10, 'seconds': 10})
+        rate_limit = Rate(
+            rate_limit_config['calls'], Duration.SECOND * rate_limit_config['seconds'])
+
         self.base_url = base_url.rstrip('/') + '/ajax.php?action='
         self.headers = {'Authorization': api_key}
 

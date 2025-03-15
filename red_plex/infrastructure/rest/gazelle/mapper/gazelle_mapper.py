@@ -1,4 +1,5 @@
-# red_plex/infrastructure/mappers/gazelle_mapper.py
+"""Module for mapping Gazelle API responses to domain models and vice versa."""
+
 import html
 import re
 from typing import Dict, Any, Union, List
@@ -42,14 +43,13 @@ class GazelleMapper:
                 id=data.get('response', {}).get('group', {}).get('id'),
                 file_paths=GazelleMapper._map_torrent_group_file_paths(data)
             )
-        elif isinstance(data, str):
+        if isinstance(data, str):
             # Handle case where data is a string (ID only)
             return TorrentGroup(
-                id=data,
+                id=int(data),
                 file_paths=[]
             )
-        else:
-            raise TypeError(f"Unsupported type for data: {type(data)}")
+        raise TypeError(f"Unsupported type for data: {type(data)}")
 
     @staticmethod
     def _map_torrent_group_file_paths(torrent_group: Dict[str, Any]) -> List[str]:
@@ -61,7 +61,7 @@ class GazelleMapper:
             normalized_file_paths = [GazelleMapper._clean_text(path) for path in file_paths if path]
             logger.debug('Extracted file paths: %s', normalized_file_paths)
             return normalized_file_paths
-        except Exception as e:
+        except Exception as e: # pylint: disable=W0718
             logger.exception('Error extracting file paths from torrent group: %s', e)
             return []
 
@@ -75,7 +75,7 @@ class GazelleMapper:
                                     for bookmark in response.get('bookmarks', [])]
             logger.debug('Bookmarked group IDs: %s', bookmarked_group_ids)
             return [TorrentGroup(id=group_id, file_paths=[]) for group_id in bookmarked_group_ids]
-        except Exception as e:
+        except Exception as e: # pylint: disable=W0718
             logger.exception('Error extracting group ids from bookmarks: %s', e)
             return []
 

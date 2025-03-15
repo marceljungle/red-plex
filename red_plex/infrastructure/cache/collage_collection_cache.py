@@ -23,7 +23,8 @@ class CollageCollectionCache:
         ensure_directory_exists(os.path.dirname(self.csv_file))
 
     # pylint: disable=too-many-arguments, R0917
-    def save_collection(self, rating_key, collection_name, site, collage_id, torrent_group_list) -> None:
+    def save_collection(self, rating_key, collection_name, site,
+                        collage_id, torrent_group_list) -> None:
         """Saves or updates a single collection entry in the cache."""
         collections = self.get_all_collections()
 

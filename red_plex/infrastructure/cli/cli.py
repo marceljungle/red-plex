@@ -17,29 +17,14 @@ from infrastructure.config.config import (
     ensure_config_exists
 )
 from infrastructure.logger.logger import logger, configure_logger
-from infrastructure.plex.config import initialize_plex_manager
 from infrastructure.plex.plex_manager import PlexManager
-from infrastructure.rest.gazelle.config import initialize_gazelle_api
+from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from use_case.create_collection import CollectionCreator
 
 
 @click.group()
 def cli():
     """A CLI tool for creating Plex collections from RED and OPS collages."""
-    # Load configuration
-    config_data = load_config()
-
-    # Get log level from configuration, default to 'INFO' if not set
-    log_level = config_data.get('LOG_LEVEL', 'INFO').upper()
-
-    # Validate log level
-    valid_log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
-    if log_level not in valid_log_levels:
-        print(f"Invalid LOG_LEVEL '{log_level}' in configuration. Defaulting to 'INFO'.")
-        log_level = 'INFO'
-
-    # Configure logger
-    configure_logger(log_level)
 
 
 # convert
@@ -62,13 +47,13 @@ def collection(collage_ids, site):
         click.echo("Please provide at least one COLLAGE_ID.")
         return
 
-    plex_manager = initialize_plex_manager()
+    plex_manager = PlexManager()
     if not plex_manager:
         return
 
     plex_manager.populate_album_cache()
 
-    gazelle_api = initialize_gazelle_api(site)
+    gazelle_api = GazelleAPI(site)
     if not gazelle_api:
         return
 
@@ -196,20 +181,8 @@ def reset_cache():
 def update_cache():
     """Update the saved albums cache with the latest albums from Plex."""
     try:
-        # Load configuration
-        config_data = load_config()
-        plex_token = config_data.get('PLEX_TOKEN')
-        plex_url = config_data.get('PLEX_URL', 'http://localhost:32400')
-        section_name = config_data.get('SECTION_NAME', 'Music')
-
-        if not plex_token:
-            message = 'PLEX_TOKEN must be set in the config file.'
-            logger.error(message)
-            click.echo(message)
-            return
-
         # Initialize & update cache using PlexManager
-        plex_manager = PlexManager(plex_url, plex_token, section_name)
+        plex_manager = PlexManager()
         plex_manager.populate_album_cache()
         click.echo("Cache has been updated successfully.")
     except Exception as exc:  # pylint: disable=W0718
@@ -274,7 +247,7 @@ def update_collections():
             return
 
         # Initialize PlexManager once, populate its cache once
-        plex_manager = initialize_plex_manager()
+        plex_manager = PlexManager()
         if not plex_manager:
             return
         plex_manager.populate_album_cache()
@@ -304,7 +277,7 @@ def update_bookmarks_collection():
             click.echo("No bookmarks found in the cache.")
             return
 
-        plex_manager = initialize_plex_manager()
+        plex_manager = PlexManager()
         if not plex_manager:
             return
         plex_manager.populate_album_cache()
@@ -323,19 +296,20 @@ def update_bookmarks_collection():
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 def create_collection_from_bookmarks(site: str):
     """Create a Plex collection based on your site bookmarks."""
-    plex_manager = initialize_plex_manager()
+    plex_manager = PlexManager()
     if not plex_manager:
         return
     plex_manager.populate_album_cache()
 
-    gazelle_api = initialize_gazelle_api(site)
+    gazelle_api = GazelleAPI(site)
     if not gazelle_api:
         return
 
     collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
 
     try:
-        collection_creator.create_or_update_collection_from_collage(site=site.upper(), fetch_bookmarks=True)
+        collection_creator.create_or_update_collection_from_collage(
+            site=site.upper(), fetch_bookmarks=True)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to create collection from bookmarks on site %s: %s',
                          site.upper(), exc)

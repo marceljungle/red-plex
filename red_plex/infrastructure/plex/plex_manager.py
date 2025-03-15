@@ -13,6 +13,7 @@ from plexapi.server import PlexServer
 
 from domain.models import Collection, Album
 from infrastructure.cache.album_cache import AlbumCache
+from infrastructure.config.config import load_config
 from infrastructure.logger.logger import logger
 from infrastructure.plex.mapper.plex_mapper import PlexMapper
 
@@ -20,17 +21,20 @@ from infrastructure.plex.mapper.plex_mapper import PlexMapper
 class PlexManager:
     """Handles operations related to Plex."""
 
-    def __init__(self, url: str, token: str, section_name: str, csv_file: str = None):
-        self.url = url
-        self.token = token
-        self.section_name = section_name
+    def __init__(self):
+        # Load configuration
+        config_data = load_config()
+
+        self.url = config_data.get('PLEX_URL', 'http://localhost:32400')
+        self.token = config_data.get('PLEX_TOKEN')
+        self.section_name = config_data.get('SECTION_NAME', 'Music')
         self.plex = PlexServer(self.url, self.token, timeout=1200)
 
         self.library_section: MusicSection
         self.library_section = self.plex.library.section(self.section_name)
 
         # Initialize the album cache
-        self.album_cache = AlbumCache(csv_file)
+        self.album_cache = AlbumCache()
         self.album_data = self.album_cache.load_albums()
 
     def populate_album_cache(self):
@@ -56,10 +60,10 @@ class PlexManager:
         # Save the updated album data to the cache
         self.album_cache.save_albums(self.album_data)
 
-    def get_albums_given_filter(self, filter: dict) -> List[Album]:
+    def get_albums_given_filter(self, plex_filter: dict) -> List[Album]:
         """Returns a list of albums that match the specified filter."""
         albums: List[PlexAlbum]
-        albums = self.library_section.searchAlbums(filters=filter)
+        albums = self.library_section.searchAlbums(filters=plex_filter)
         domain_albums: List[Album]
         domain_albums = []
         for album in albums:
@@ -105,7 +109,7 @@ class PlexManager:
 
         # Multiple matches found, prompt the user
         print(f"Multiple matches found for path: {path}")
-        for i, (key, folder_path) in enumerate(rating_keys.items(), 1):
+        for i, (_, folder_path) in enumerate(rating_keys.items(), 1):
             print(f"{i}. {folder_path}")
 
         # Ask the user to choose which matches to keep
@@ -158,7 +162,7 @@ class PlexManager:
         try:
             collection = self.library_section.collection(name)
         except Exception as e:  # pylint: disable=W0718
-            logger.warn('An error occurred while trying to fetch the collection: %s', e)
+            logger.warning('An error occurred while trying to fetch the collection: %s', e)
             collection = None
         if collection:
             return Collection(

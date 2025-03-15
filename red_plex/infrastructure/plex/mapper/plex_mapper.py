@@ -1,3 +1,5 @@
+"""Module for mapping Plex API responses to domain models and vice versa."""
+
 from typing import List
 
 from plexapi.base import MediaContainer
@@ -13,7 +15,8 @@ class PlexMapper:
     def map_plex_collections_to_domain(collections: List[PlexCollection]) -> List[Collection]:
         """Convert Plex collections objects to domain collections"""
         if collections:
-            return [PlexMapper.map_plex_collection_to_domain(collection) for collection in collections]
+            return [PlexMapper.map_plex_collection_to_domain(collection)
+                    for collection in collections]
         return None
 
     @staticmethod

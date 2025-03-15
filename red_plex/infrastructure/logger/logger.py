@@ -4,13 +4,26 @@ import logging
 import os
 import sys
 from pathlib import Path
+from infrastructure.config.config import load_config
 
 # Create the logger
 logger = logging.getLogger('red_plex')
 
 
-def configure_logger(log_level='INFO'):
+def configure_logger():
     """Configures the logger with the specified log level."""
+
+    # Load configuration
+    config_data = load_config()
+
+    # Get log level from configuration, default to 'INFO' if not set
+    log_level = config_data.get('LOG_LEVEL', 'INFO').upper()
+
+    # Validate log level
+    valid_log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+    if log_level not in valid_log_levels:
+        print(f"Invalid LOG_LEVEL '{log_level}' in configuration. Defaulting to 'INFO'.")
+
     # Determine the log directory path based on the OS
     if os.name == 'nt':  # Windows
         log_dir = os.path.join(os.getenv('APPDATA'), 'red_plex', 'logs')

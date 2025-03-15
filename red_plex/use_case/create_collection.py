@@ -6,7 +6,6 @@ from domain.models import Collection, Album
 from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
 from infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from infrastructure.plex.plex_manager import PlexManager
-from infrastructure.rest.gazelle.config import initialize_gazelle_api
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 
 
@@ -27,7 +26,7 @@ class CollectionCreator:
         Forces the update of each collage (force_update=True)
         """
         for collage in collages:
-            self.gazelle_api = initialize_gazelle_api(collage.site)
+            self.gazelle_api = GazelleAPI(collage.site)
             self.create_or_update_collection_from_collage(
                 collage.id, site=collage.site, fetch_bookmarks=fetch_bookmarks, force_update=True
             )
@@ -67,12 +66,15 @@ class CollectionCreator:
 
             # Is there cached data?
             if fetch_bookmarks:
-                cached_collage_collection = self.bookmarks_collection_cache.get_bookmark(existing_collection.id)
+                cached_collage_collection = (self.bookmarks_collection_cache
+                                             .get_bookmark(existing_collection.id))
             else:
-                cached_collage_collection = self.collage_collection_cache.get_collection(existing_collection.id)
+                cached_collage_collection = (self.collage_collection_cache
+                                             .get_collection(existing_collection.id))
 
             if cached_collage_collection:
-                cached_group_ids = set(torrent_group.id for torrent_group in cached_collage_collection.torrent_groups)
+                cached_group_ids = set(torrent_group.id for torrent_group
+                                       in cached_collage_collection.torrent_groups)
             else:
                 cached_group_ids = set()
         else:
