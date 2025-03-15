@@ -164,7 +164,7 @@ class PlexManager:
 
         try:
             collection = self.library_section.createCollection(name, items=albums_media)
-        except Exception as e:
+        except Exception as e: # pylint: disable=W0718
             logger.warning('An error occurred while creating the collection: %s', e)
             return None
         return PlexMapper.map_plex_collection_to_domain(collection)

@@ -58,14 +58,13 @@ class GazelleAPI:
                 response = requests.get(formatted_url, headers=self.headers, timeout=10)
                 response.raise_for_status()
                 return response.json()
+            delay_ms = self.get_retry_after()
+            delay_seconds = delay_ms / 1000.0
+            if delay_seconds > 0.001:
+                logger.warning('Rate limit exceeded. Sleeping for %.2f seconds.', delay_seconds)
+                time.sleep(delay_seconds)
             else:
-                delay_ms = self.get_retry_after()
-                delay_seconds = delay_ms / 1000.0
-                if delay_seconds > 0.001:
-                    logger.warning('Rate limit exceeded. Sleeping for %.2f seconds.', delay_seconds)
-                    time.sleep(delay_seconds)
-                else:
-                    time.sleep(0.001)
+                time.sleep(0.001)
 
     def get_retry_after(self) -> int:
         """Calculates the time to wait until another request can be made."""
