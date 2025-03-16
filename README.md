@@ -60,85 +60,85 @@ pipx install red-plex
 ### Convert Commands
 ```bash
 # Create playlist from collage
-red_plex convert playlist [COLLAGE_IDS] --site SITE
+red-plex convert playlist [COLLAGE_IDS] --site SITE
 
 # Create collection from collage
-red_plex convert collection [COLLAGE_IDS] --site SITE
+red-plex convert collection [COLLAGE_IDS] --site SITE
 ```
 
 ### Playlist Management
 ```bash
 # Show playlist cache location
-red_plex playlists cache show
+red-plex playlists cache show
 
 # Reset playlist cache
-red_plex playlists cache reset
+red-plex playlists cache reset
 
 # Update all cached playlists
-red_plex playlists update
+red-plex playlists update
 ```
 
 ### Collection Management
 ```bash
 # Show collection cache location
-red_plex collections cache show
+red-plex collections cache show
 
 # Reset collection cache
-red_plex collections cache reset
+red-plex collections cache reset
 
 # Update all cached collections
-red_plex collections update
+red-plex collections update
 ```
 
 ### Bookmark Management
 ```bash
 # Create playlist from bookmarks
-red_plex bookmarks create playlist --site SITE
+red-plex bookmarks create playlist --site SITE
 
 # Create collection from bookmarks
-red_plex bookmarks create collection --site SITE
+red-plex bookmarks create collection --site SITE
 
 # Update bookmark playlists
-red_plex bookmarks update playlist
+red-plex bookmarks update playlist
 
 # Update bookmark collections
-red_plex bookmarks update collection
+red-plex bookmarks update collection
 
 # Show bookmark cache (playlist)
-red_plex bookmarks cache playlist show
+red-plex bookmarks cache playlist show
 
 # Reset bookmark cache (playlist)
-red_plex bookmarks cache playlist reset
+red-plex bookmarks cache playlist reset
 
 # Show bookmark cache (collection)
-red_plex bookmarks cache collection show
+red-plex bookmarks cache collection show
 
 # Reset bookmark cache (collection)
-red_plex bookmarks cache collection reset
+red-plex bookmarks cache collection reset
 ```
 
 ### Album Cache Management
 ```bash
 # Show cache location
-red_plex album-cache show
+red-plex album-cache show
 
 # Reset cache
-red_plex album-cache reset
+red-plex album-cache reset
 
 # Update cache
-red_plex album-cache update
+red-plex album-cache update
 ```
 
 ### Configuration (Commands)
 ```bash
 # Show current configuration
-red_plex config show
+red-plex config show
 
 # Edit configuration
-red_plex config edit
+red-plex config edit
 
 # Reset configuration
-red_plex config reset
+red-plex config reset
 ```
 
 ## Examples
@@ -146,31 +146,31 @@ red_plex config reset
 ### Creating Playlists and Collections
 ```bash
 # Create playlists from collages
-red_plex convert playlist 12345 67890 --site red
+red-plex convert playlist 12345 67890 --site red
 
 # Create collections from collages
-red_plex convert collection 12345 67890 --site red
+red-plex convert collection 12345 67890 --site red
 
 # Create playlist from bookmarks
-red_plex bookmarks create playlist --site red
+red-plex bookmarks create playlist --site red
 
 # Create collection from bookmarks
-red_plex bookmarks create collection --site red
+red-plex bookmarks create collection --site red
 ```
 
 ### Updating Existing Items
 ```bash
 # Update all playlists
-red_plex playlists update
+red-plex playlists update
 
 # Update all collections
-red_plex collections update
+red-plex collections update
 
 # Update bookmark playlists
-red_plex bookmarks update playlist
+red-plex bookmarks update playlist
 
 # Update bookmark collections
-red_plex bookmarks update collection
+red-plex bookmarks update collection
 ```
 
 ## Configuration (Root)
