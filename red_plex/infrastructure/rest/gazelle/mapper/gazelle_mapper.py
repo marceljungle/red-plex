@@ -20,7 +20,7 @@ class GazelleMapper:
             id=str(collage_id),
             name=GazelleMapper._clean_text(collage_data.get('name', f'Collage {collage_id}')),
             torrent_groups=[
-                GazelleMapper.map_torrent_group(tg)
+                GazelleMapper.map_torrent_group(str(tg))
                 for tg in collage_data.get('torrentGroupIDList', [])
             ]
         )

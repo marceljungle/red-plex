@@ -1,11 +1,12 @@
 """Collection creator CLI."""
-
 import os
 import subprocess
+from typing import List
 
 import click
 import yaml
 
+from domain.models import Collection
 from infrastructure.cache.album_cache import AlbumCache
 from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
 from infrastructure.cache.collage_collection_cache import CollageCollectionCache
@@ -19,7 +20,7 @@ from infrastructure.config.models import Configuration
 from infrastructure.logger.logger import logger, configure_logger
 from infrastructure.plex.plex_manager import PlexManager
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
-from use_case.create_collection import CollectionCreator
+from use_case.create_collection.create_collection import CollectionCreator
 
 
 @click.group()
@@ -57,10 +58,11 @@ def collection(collage_ids, site):
     if not gazelle_api:
         return
 
-    collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
+    collection_creator = CollectionCreator(plex_manager, gazelle_api)
 
     # Now the logic for each collage ID
     for collage_id in collage_ids:
+        logger.info('Processing collage ID "%s"...', collage_id)
         result = collection_creator.create_or_update_collection_from_collage(
             collage_id=collage_id,
             site=site,
@@ -69,9 +71,9 @@ def collection(collage_ids, site):
         )
 
         # The use case returns False if the collection already exists and the update was not forced
-        if result is False:
+        if result.response_status is False:
             if click.confirm(
-                    f'Collection "{collage_id}" already exists. '
+                    f'Collection "{result.collection_data.name}" already exists. '
                     'Do you want to update it with new items?',
                     default=True
             ):
@@ -83,11 +85,12 @@ def collection(collage_ids, site):
                     force_update=True
                 )
             else:
-                click.echo(f'Skipping collection update for "{collage_id}".')
-        elif result is None:
-            click.echo(f'No valid data found for collage "{collage_id}".')
+                click.echo(f'Skipping collection update for "{result.collection_data.name}".')
+        elif result.response_status is None:
+            click.echo(f'No valid data found for collage "{result.collection_data.name}".')
         else:
-            click.echo(f'Collection for collage "{collage_id}" created/updated successfully.')
+            click.echo(f'Collection for collage "{result.collection_data.name}" '
+                       f'created/updated successfully with {len(result.albums)} entries.')
 
 
 # config
@@ -252,8 +255,7 @@ def update_collections():
             return
         plex_manager.populate_album_cache()
 
-        collection_creator = initialize_collection_creator(plex_manager, None)
-        collection_creator.update_collections_from_collages(all_collages, fetch_bookmarks=False)
+        update_collections_from_collages(all_collages, plex_manager, fetch_bookmarks=False)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cached collections: %s', exc)
         click.echo(f"An error occurred while updating cached collections: {exc}")
@@ -282,8 +284,7 @@ def update_bookmarks_collection():
             return
         plex_manager.populate_album_cache()
 
-        collection_creator = initialize_collection_creator(plex_manager, None)
-        collection_creator.update_collections_from_collages(all_bookmarks, fetch_bookmarks=True)
+        update_collections_from_collages(all_bookmarks, plex_manager, fetch_bookmarks=True)
 
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cached bookmarks: %s', exc)
@@ -295,21 +296,46 @@ def update_bookmarks_collection():
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 def create_collection_from_bookmarks(site: str):
-    """Create a Plex collection based on your site bookmarks."""
+    """
+    Create a Plex collection based on your site bookmarks.
+    If the collection already exists, ask for confirmation to update.
+    """
     plex_manager = PlexManager()
-    if not plex_manager:
-        return
     plex_manager.populate_album_cache()
-
     gazelle_api = GazelleAPI(site)
-    if not gazelle_api:
-        return
-
-    collection_creator = initialize_collection_creator(plex_manager, gazelle_api)
+    collection_creator = CollectionCreator(plex_manager, gazelle_api)
 
     try:
-        collection_creator.create_or_update_collection_from_collage(
-            site=site.upper(), fetch_bookmarks=True)
+        # First attempt without forcing
+        result = collection_creator.create_or_update_collection_from_collage(
+            site=site.upper(),
+            fetch_bookmarks=True,
+            force_update=False
+        )
+
+        if result.response_status is False:
+            # That means a collection already existed and no force_update was used
+            if click.confirm(
+                    f'Collection from bookmarks on site "{site.upper()}" already exists. '
+                    'Do you want to update it with new items?',
+                    default=True
+            ):
+                # Attempt again with force_update=True
+                collection_creator.create_or_update_collection_from_collage(
+                    site=site.upper(),
+                    fetch_bookmarks=True,
+                    force_update=True
+                )
+            else:
+                click.echo(f'Skipping bookmark-based collection update for "{site.upper()}".')
+
+        elif result is None:
+            click.echo(f"No valid bookmark data found for site {site.upper()}.")
+        else:
+            # True => created/updated successfully
+            click.echo(f"Bookmark-based collection for site "
+                       f"{site.upper()} created or updated successfully.")
+
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to create collection from bookmarks on site %s: %s',
                          site.upper(), exc)
@@ -353,11 +379,33 @@ def reset_bookmarks_cache_collection():
             click.echo(f"An error occurred while resetting the collection bookmarks cache: {exc}")
 
 
-def initialize_collection_creator(plex_manager, gazelle_api):
-    """Initialize CollectionCreator using existing plex_manager and gazelle_api."""
-    return CollectionCreator(plex_manager, gazelle_api)
+def update_collections_from_collages(
+        collages: List[Collection], plex_manager: PlexManager, fetch_bookmarks=False):
+    """
+    Forces the update of each collage (force_update=True)
+    """
+    for collage in collages:
+        logger.info('Updating collection for collage "%s"...', collage.name)
+        gazelle_api = GazelleAPI(collage.site)
+        collection_creator = CollectionCreator(plex_manager, gazelle_api)
+        result = collection_creator.create_or_update_collection_from_collage(
+            collage.external_id, site=collage.site,
+            fetch_bookmarks=fetch_bookmarks, force_update=True
+        )
+
+        if result.response_status is None:
+            logger.info('No valid data found for collage "%s".', collage.name)
+        else:
+            logger.info('Collection for collage "%s" created/updated successfully with %s entries.',
+                        collage.name, len(result.albums))
+
+
+def main():
+    """Actual entry point for the CLI when installed."""
+    configure_logger()
+    cli()
 
 
 if __name__ == '__main__':
     configure_logger()
-    cli()
+    main()

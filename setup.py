@@ -37,7 +37,7 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        red-plex=infrastructure.cli.cli:cli
+        red-plex=infrastructure.cli.cli:main
     ''',
     classifiers=[
         'Programming Language :: Python :: 3',

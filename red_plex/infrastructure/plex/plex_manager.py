@@ -101,7 +101,7 @@ class PlexManager:
 
             # Check if the path matches any part of folder_path
             if path in folder_parts:
-                rating_keys[album.id] = path
+                rating_keys[album.id] = normalized_folder_path
 
         # No matches found
         if not rating_keys:
@@ -122,7 +122,7 @@ class PlexManager:
             choice: str
             choice = click.prompt(
                 "Select the numbers of the matches you want to keep, separated by commas "
-                "(or enter 'A' to select all, 'N' to select none)",
+                "(or enter/'A' to select all, 'N' to select none)",
                 default="A",
             )
 
@@ -176,7 +176,8 @@ class PlexManager:
         try:
             collection = self.library_section.collection(name)
         except Exception as e:  # pylint: disable=W0718
-            logger.warning('An error occurred while trying to fetch the collection: %s', e)
+            logger.warning('An error occurred while trying to fetch '
+                           'the collection from Plex: %s', e)
             collection = None
         if collection:
             return Collection(

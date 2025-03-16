@@ -1,14 +1,14 @@
 """Module for creating Plex collections from Gazelle collages or bookmarks."""
 
-from typing import List
-
 from domain.models import Collection, Album
 from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
 from infrastructure.cache.collage_collection_cache import CollageCollectionCache
 from infrastructure.plex.plex_manager import PlexManager
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from use_case.create_collection.response.create_collection_response import CreateCollectionResponse
 
 
+# pylint: disable=too-few-public-methods
 class CollectionCreator:
     """
     Handles the creation and updating of Plex collections
@@ -21,16 +21,6 @@ class CollectionCreator:
         self.collage_collection_cache = CollageCollectionCache(cache_file)
         self.bookmarks_collection_cache = BookmarksCollectionCache(cache_file)
 
-    def update_collections_from_collages(self, collages: List[Collection], fetch_bookmarks=False):
-        """
-        Forces the update of each collage (force_update=True)
-        """
-        for collage in collages:
-            self.gazelle_api = GazelleAPI(collage.site)
-            self.create_or_update_collection_from_collage(
-                collage.id, site=collage.site, fetch_bookmarks=fetch_bookmarks, force_update=True
-            )
-
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def create_or_update_collection_from_collage(
             self,
@@ -38,7 +28,7 @@ class CollectionCreator:
             site: str = None,
             fetch_bookmarks=False,
             force_update=False
-    ):
+    ) -> CreateCollectionResponse:
         """
         Creates or updates a Plex collection based on a Gazelle collage.
 
@@ -56,13 +46,14 @@ class CollectionCreator:
             collage_data = self.gazelle_api.get_collage(collage_id)
 
         if not collage_data:
-            return None  # Nothing to update
+            return CreateCollectionResponse(response_status=None,
+                                            collection_data=collage_data)  # Nothing to update
 
         existing_collection = self.plex_manager.get_collection_by_name(collage_data.name)
         if existing_collection:
             # If it exists, and we are not forcing an update => notify that confirmation is needed
             if not force_update:
-                return False
+                return CreateCollectionResponse(response_status=False, collection_data=collage_data)
 
             # Is there cached data?
             if fetch_bookmarks:
@@ -99,7 +90,7 @@ class CollectionCreator:
                         matched_rating_keys.update(int(key) for key in rating_keys)
                 if group_matched:
                     processed_group_ids.add(gid)
-
+        albums = []
         if matched_rating_keys:
             albums = [Album(rating_key) for rating_key in matched_rating_keys]
             if existing_collection:
@@ -130,4 +121,5 @@ class CollectionCreator:
                     )
 
         # If we reach this point, the creation or update was successful
-        return True
+        return CreateCollectionResponse(response_status=True,
+                                        collection_data=collage_data, albums=albums)
