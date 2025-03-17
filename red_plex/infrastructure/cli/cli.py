@@ -355,10 +355,7 @@ def create_collection_from_bookmarks(site: str):
                 else:
                     # If forced_result.response_status is False again (unlikely),
                     # or any other scenario
-                    click.echo(
-                        f"Unexpected status: {forced_result.response_status} "
-                        f"while trying to force-update bookmarks for {site.upper()}."
-                    )
+                    click.echo("Something unexpected happened.")
             else:
                 click.echo(
                     f'Skipping bookmark-based collection update for "{site.upper()}".'
@@ -367,8 +364,11 @@ def create_collection_from_bookmarks(site: str):
         elif initial_result.response_status is None:
             click.echo(f"No valid bookmark data found for site {site.upper()}.")
         else:
-            # This shouldn't happen
-            click.echo('Something unexpected happened.')
+            # response_status == True => successfully created/updated
+            click.echo(
+                f"Bookmark-based collection for site {site.upper()} "
+                f"created or updated successfully with {len(initial_result.albums)} entries."
+                )
 
     except Exception as exc:  # pylint: disable=W0718
         logger.exception(
