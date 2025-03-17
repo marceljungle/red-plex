@@ -184,7 +184,7 @@ class PlexManager:
                 name=collection.title,
                 id=str(collection.ratingKey)
             )
-        logger.info('No existing collection found with name "%s".', name)
+        logger.info('No existing collection found with name "%s" in Plex.', name)
         return None
 
     def add_items_to_collection(self, collection: Collection, albums: List[Album]) -> None:
