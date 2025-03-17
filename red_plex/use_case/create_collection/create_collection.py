@@ -1,0 +1,125 @@
+"""Module for creating Plex collections from Gazelle collages or bookmarks."""
+
+from domain.models import Collection, Album
+from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
+from infrastructure.cache.collage_collection_cache import CollageCollectionCache
+from infrastructure.plex.plex_manager import PlexManager
+from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from use_case.create_collection.response.create_collection_response import CreateCollectionResponse
+
+
+# pylint: disable=too-few-public-methods
+class CollectionCreator:
+    """
+    Handles the creation and updating of Plex collections
+    based on Gazelle collages or bookmarks.
+    """
+
+    def __init__(self, plex_manager: PlexManager, gazelle_api: GazelleAPI = None, cache_file=None):
+        self.plex_manager = plex_manager
+        self.gazelle_api = gazelle_api
+        self.collage_collection_cache = CollageCollectionCache(cache_file)
+        self.bookmarks_collection_cache = BookmarksCollectionCache(cache_file)
+
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
+    def create_or_update_collection_from_collage(
+            self,
+            collage_id: str = "",
+            site: str = None,
+            fetch_bookmarks=False,
+            force_update=False
+    ) -> CreateCollectionResponse:
+        """
+        Creates or updates a Plex collection based on a Gazelle collage.
+
+        Returns:
+          - True if it was created/updated successfully.
+          - False if the collection already existed and the update was not forced
+            (leaves it to the CLI layer to decide what to do).
+          - None if there is nothing to do or data could not be retrieved.
+        """
+        collage_data: Collection
+
+        if fetch_bookmarks:
+            collage_data = self.gazelle_api.get_bookmarks(site)
+        else:
+            collage_data = self.gazelle_api.get_collage(collage_id)
+
+        if not collage_data:
+            return CreateCollectionResponse(response_status=None,
+                                            collection_data=collage_data)  # Nothing to update
+
+        existing_collection = self.plex_manager.get_collection_by_name(collage_data.name)
+        if existing_collection:
+            # If it exists, and we are not forcing an update => notify that confirmation is needed
+            if not force_update:
+                return CreateCollectionResponse(response_status=False, collection_data=collage_data)
+
+            # Is there cached data?
+            if fetch_bookmarks:
+                cached_collage_collection = (self.bookmarks_collection_cache
+                                             .get_bookmark(existing_collection.id))
+            else:
+                cached_collage_collection = (self.collage_collection_cache
+                                             .get_collection(existing_collection.id))
+
+            if cached_collage_collection:
+                cached_group_ids = set(torrent_group.id for torrent_group
+                                       in cached_collage_collection.torrent_groups)
+            else:
+                cached_group_ids = set()
+        else:
+            existing_collection = None
+            cached_group_ids = set()
+
+        # Calculate which groups are new (not in the cache)
+        group_ids = [torrent_group.id for torrent_group in collage_data.torrent_groups]
+        new_group_ids = set(map(int, group_ids)) - cached_group_ids
+
+        matched_rating_keys = set()
+        processed_group_ids = set()
+
+        for gid in new_group_ids:
+            torrent_group = self.gazelle_api.get_torrent_group(str(gid))
+            if torrent_group:
+                group_matched = False
+                for path in torrent_group.file_paths:
+                    rating_keys = self.plex_manager.get_rating_keys(path) or []
+                    if rating_keys:
+                        group_matched = True
+                        matched_rating_keys.update(key for key in rating_keys)
+                if group_matched:
+                    processed_group_ids.add(gid)
+        albums = []
+        if matched_rating_keys:
+            albums = [Album(id=rating_key) for rating_key in matched_rating_keys]
+            if existing_collection:
+                # Update existing collection
+                self.plex_manager.add_items_to_collection(existing_collection, albums)
+                # Update the cache with the new groups
+                updated_group_ids = cached_group_ids.union(processed_group_ids)
+                if fetch_bookmarks:
+                    self.bookmarks_collection_cache.save_bookmarks(
+                        existing_collection.id, site, list(updated_group_ids)
+                    )
+                else:
+                    self.collage_collection_cache.save_collection(
+                        existing_collection.id, collage_data.name, site,
+                        collage_id, list(updated_group_ids)
+                    )
+            else:
+                # Create the new collection
+                collection = self.plex_manager.create_collection(collage_data.name, albums)
+                if fetch_bookmarks:
+                    self.bookmarks_collection_cache.save_bookmarks(
+                        collection.id, site, list(processed_group_ids)
+                    )
+                else:
+                    self.collage_collection_cache.save_collection(
+                        collection.id, collage_data.name, site,
+                        collage_id, list(processed_group_ids)
+                    )
+
+        # If we reach this point, the creation or update was successful
+        return CreateCollectionResponse(response_status=True,
+                                        collection_data=collage_data, albums=albums)
