@@ -23,15 +23,15 @@ class CollageCollectionCache:
         ensure_directory_exists(os.path.dirname(self.csv_file))
 
     # pylint: disable=too-many-arguments, R0917
-    def save_collection(self, rating_key, collection_name, site,
-                        collage_id, torrent_group_list) -> None:
+    def save_collection(self, rating_key: str, collection_name: str, site: str,
+                        collage_id: str, torrent_group_list: list) -> None:
         """Saves or updates a single collection entry in the cache."""
         collections = self.get_all_collections()
 
         # Check if this collection is already in the cache
         updated = False
         for coll in collections:
-            if coll.external_id == rating_key:
+            if coll.id == rating_key:
                 coll.name = collection_name
                 coll.site = site
                 coll.external_id = collage_id
@@ -61,7 +61,7 @@ class CollageCollectionCache:
                 ])
         logger.info('Collections saved to cache.')
 
-    def get_collection(self, rating_key) -> Collection:
+    def get_collection(self, rating_key: str) -> Collection:
         """Retrieve a single collection by rating_key."""
         return next((coll for coll in self.get_all_collections() if coll.id == rating_key), None)
 
@@ -75,7 +75,7 @@ class CollageCollectionCache:
                     if len(row) == 5:
                         rating_key_str, collection_name, site, collage_id_str, group_ids_str = row
                         try:
-                            rating_key = int(rating_key_str)
+                            rating_key = rating_key_str
                         except ValueError:
                             continue
                         try:
@@ -86,7 +86,7 @@ class CollageCollectionCache:
 
                         collections.append(Collection(
                             rating_key,
-                            collage_id,
+                            str(collage_id),
                             collection_name,
                             [TorrentGroup(id=gid) for gid in group_ids],
                             site

@@ -17,7 +17,7 @@ class GazelleMapper:
         collage_data = response.get('response', {})
         collage_id = collage_data.get('id')
         return Collection(
-            id=str(collage_id),
+            external_id=str(collage_id),
             name=GazelleMapper._clean_text(collage_data.get('name', f'Collage {collage_id}')),
             torrent_groups=[
                 GazelleMapper.map_torrent_group(str(tg))

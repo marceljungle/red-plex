@@ -2,7 +2,7 @@
 
 import csv
 import os
-from typing import List
+from typing import List, Optional
 
 from domain.models import Collection, TorrentGroup
 from infrastructure.cache.utils.cache_utils import get_cache_directory, ensure_directory_exists
@@ -23,7 +23,7 @@ class BookmarksCollectionCache:
         ensure_directory_exists(os.path.dirname(self.csv_file))
 
     # pylint: disable=too-many-arguments, R0917
-    def save_bookmarks(self, rating_key, site, torrent_group_ids) -> None:
+    def save_bookmarks(self, rating_key: str, site: str, torrent_group_ids: list) -> None:
         """Saves or updates a single bookmark entry in the cache."""
         bookmarks = self.get_all_bookmarks()
 
@@ -54,7 +54,7 @@ class BookmarksCollectionCache:
                 ])
         logger.info('%s bookmarks saved to cache.', site.upper())
 
-    def get_bookmark(self, rating_key) -> Collection:
+    def get_bookmark(self, rating_key: str) -> Optional[Collection]:
         """Retrieve a bookmark by rating_key."""
         bookmarks = self.get_all_bookmarks()
         for bookmrk in bookmarks:
@@ -72,7 +72,7 @@ class BookmarksCollectionCache:
                     if len(row) == 3:
                         rating_key_str, site, group_ids_str = row
                         try:
-                            rating_key = int(rating_key_str)
+                            rating_key = rating_key_str
                         except ValueError:
                             continue
                         group_ids = [int(g.strip()) for g in group_ids_str.split(',') if g.strip()]

@@ -60,37 +60,54 @@ def collection(collage_ids, site):
 
     collection_creator = CollectionCreator(plex_manager, gazelle_api)
 
-    # Now the logic for each collage ID
     for collage_id in collage_ids:
         logger.info('Processing collage ID "%s"...', collage_id)
-        result = collection_creator.create_or_update_collection_from_collage(
+        # 1) First try, without forcing
+        initial_result = collection_creator.create_or_update_collection_from_collage(
             collage_id=collage_id,
             site=site,
             fetch_bookmarks=False,
-            force_update=False  # Initial attempt without forcing
+            force_update=False
         )
 
-        # The use case returns False if the collection already exists and the update was not forced
-        if result.response_status is False:
+        if initial_result.response_status is False:
+            # That means the collection exists but wasn't forced => ask user
             if click.confirm(
-                    f'Collection "{result.collection_data.name}" already exists. '
+                    f'Collection "{initial_result.collection_data.name}" already exists. '
                     'Do you want to update it with new items?',
                     default=True
             ):
-                # If the user confirms, repeat the operation with force_update=True
-                collection_creator.create_or_update_collection_from_collage(
+                # 2) If user says yes, do the forced call
+                forced_result = collection_creator.create_or_update_collection_from_collage(
                     collage_id=collage_id,
                     site=site,
                     fetch_bookmarks=False,
                     force_update=True
                 )
+                # Now show forced_result
+                if forced_result.response_status is True:
+                    click.echo(
+                        f'Collection for collage "{forced_result.collection_data.name}" '
+                        f'was updated successfully with {len(forced_result.albums)} entries.'
+                    )
+                elif forced_result.response_status is None:
+                    click.echo(f'No valid data found for collage "{collage_id}" when forced.')
+                else:
+                    # This shouldn't happen
+                    click.echo('Something unexpected happened.')
             else:
-                click.echo(f'Skipping collection update for "{result.collection_data.name}".')
-        elif result.response_status is None:
-            click.echo(f'No valid data found for collage "{result.collection_data.name}".')
+                click.echo(f'Skipping collection update for '
+                           f'"{initial_result.collection_data.name}".')
+
+        elif initial_result.response_status is None:
+            click.echo(f'No valid data found for collage "{collage_id}".')
+
         else:
-            click.echo(f'Collection for collage "{result.collection_data.name}" '
-                       f'created/updated successfully with {len(result.albums)} entries.')
+            # response_status == True => successfully created/updated
+            click.echo(
+                f'Collection for collage "{initial_result.collection_data.name}" '
+                f'created/updated successfully with {len(initial_result.albums)} entries.'
+            )
 
 
 # config
@@ -267,7 +284,7 @@ def bookmarks():
     """Manage collection based on your site bookmarks."""
 
 
-# bookmarks update collection
+# bookmarks update
 @bookmarks.command('update')
 def update_bookmarks_collection():
     """Synchronize all cached bookmarks with their source collages."""
@@ -291,7 +308,7 @@ def update_bookmarks_collection():
         click.echo(f"An error occurred while updating cached bookmarks: {exc}")
 
 
-# bookmarks create collection
+# bookmarks create
 @bookmarks.command('create')
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
@@ -307,39 +324,60 @@ def create_collection_from_bookmarks(site: str):
 
     try:
         # First attempt without forcing
-        result = collection_creator.create_or_update_collection_from_collage(
+        initial_result = collection_creator.create_or_update_collection_from_collage(
             site=site.upper(),
             fetch_bookmarks=True,
             force_update=False
         )
 
-        if result.response_status is False:
-            # That means a collection already existed and no force_update was used
+        if initial_result.response_status is False:
+            # The collection already exists but wasn't forced => ask the user
             if click.confirm(
                     f'Collection from bookmarks on site "{site.upper()}" already exists. '
                     'Do you want to update it with new items?',
                     default=True
             ):
-                # Attempt again with force_update=True
-                collection_creator.create_or_update_collection_from_collage(
+                # Second call with force_update=True
+                forced_result = collection_creator.create_or_update_collection_from_collage(
                     site=site.upper(),
                     fetch_bookmarks=True,
                     force_update=True
                 )
+                if forced_result.response_status is True:
+                    click.echo(
+                        f'Bookmark-based collection for site {site.upper()} '
+                        f'was updated successfully with {len(forced_result.albums)} entries.'
+                    )
+                elif forced_result.response_status is None:
+                    click.echo(
+                        f"No valid bookmark data found for site {site.upper()} when forced."
+                    )
+                else:
+                    # If forced_result.response_status is False again (unlikely),
+                    # or any other scenario
+                    click.echo(
+                        f"Unexpected status: {forced_result.response_status} "
+                        f"while trying to force-update bookmarks for {site.upper()}."
+                    )
             else:
-                click.echo(f'Skipping bookmark-based collection update for "{site.upper()}".')
+                click.echo(
+                    f'Skipping bookmark-based collection update for "{site.upper()}".'
+                )
 
-        elif result is None:
+        elif initial_result.response_status is None:
             click.echo(f"No valid bookmark data found for site {site.upper()}.")
         else:
-            # True => created/updated successfully
-            click.echo(f"Bookmark-based collection for site "
-                       f"{site.upper()} created or updated successfully.")
+            # This shouldn't happen
+            click.echo('Something unexpected happened.')
 
     except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to create collection from bookmarks on site %s: %s',
-                         site.upper(), exc)
-        click.echo(f'Failed to create collection from bookmarks on site {site.upper()}: {exc}')
+        logger.exception(
+            'Failed to create collection from bookmarks on site %s: %s',
+            site.upper(), exc
+        )
+        click.echo(
+            f'Failed to create collection from bookmarks on site {site.upper()}: {exc}'
+        )
 
 
 # bookmarks cache

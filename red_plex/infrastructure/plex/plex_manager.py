@@ -150,7 +150,7 @@ class PlexManager:
     def _fetch_albums_by_keys(self, albums: List[Album]) -> List[MediaContainer]:
         """Fetches album objects from Plex using their rating keys."""
         logger.debug('Fetching albums from Plex: %s', albums)
-        rating_keys = [album.id for album in albums]
+        rating_keys = [int(album.id) for album in albums]
         try:
             fetched_albums = self.plex.fetchItems(rating_keys)
         except Exception as e:  # pylint: disable=W0718
@@ -182,7 +182,7 @@ class PlexManager:
         if collection:
             return Collection(
                 name=collection.title,
-                id=collection.ratingKey
+                id=str(collection.ratingKey)
             )
         logger.info('No existing collection found with name "%s".', name)
         return None

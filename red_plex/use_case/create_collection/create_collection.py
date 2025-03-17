@@ -80,19 +80,19 @@ class CollectionCreator:
         processed_group_ids = set()
 
         for gid in new_group_ids:
-            torrent_group = self.gazelle_api.get_torrent_group(gid)
+            torrent_group = self.gazelle_api.get_torrent_group(str(gid))
             if torrent_group:
                 group_matched = False
                 for path in torrent_group.file_paths:
                     rating_keys = self.plex_manager.get_rating_keys(path) or []
                     if rating_keys:
                         group_matched = True
-                        matched_rating_keys.update(int(key) for key in rating_keys)
+                        matched_rating_keys.update(key for key in rating_keys)
                 if group_matched:
                     processed_group_ids.add(gid)
         albums = []
         if matched_rating_keys:
-            albums = [Album(rating_key) for rating_key in matched_rating_keys]
+            albums = [Album(id=rating_key) for rating_key in matched_rating_keys]
             if existing_collection:
                 # Update existing collection
                 self.plex_manager.add_items_to_collection(existing_collection, albums)
