@@ -17,10 +17,9 @@ class CollageCollectionCache:
     rating_key,collection_name,site,collage_id,torrent_group_ids (comma-separated)
     """
 
-    def __init__(self, csv_file=None):
-        default_csv_path = os.path.join(get_cache_directory(), 'collage_collection_cache.csv')
-        self.csv_file = csv_file if csv_file else default_csv_path
-        ensure_directory_exists(os.path.dirname(self.csv_file))
+    def __init__(self):
+        self.csv_file = os.path.join(get_cache_directory(), 'collage_collection_cache.csv')
+        ensure_directory_exists(get_cache_directory())
 
     # pylint: disable=too-many-arguments, R0917
     def save_collection(self, rating_key: str, collection_name: str, site: str,

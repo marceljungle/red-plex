@@ -15,11 +15,10 @@ class AlbumCache:
 
     def __init__(self):
         # Define the default CSV file path in the cache directory
-        default_csv_path = os.path.join(get_cache_directory(), 'plex_albums_cache.csv')
-        self.csv_file = default_csv_path
+        self.csv_file = os.path.join(get_cache_directory(), 'plex_albums_cache.csv')
 
         # Ensure the cache directory exists
-        ensure_directory_exists(os.path.dirname(default_csv_path))
+        ensure_directory_exists(get_cache_directory())
 
     def save_albums(self, albums: List[Album]) -> None:
         """Saves album data to the CSV file."""

@@ -15,11 +15,11 @@ class CollectionCreator:
     based on Gazelle collages or bookmarks.
     """
 
-    def __init__(self, plex_manager: PlexManager, gazelle_api: GazelleAPI = None, cache_file=None):
+    def __init__(self, plex_manager: PlexManager, gazelle_api: GazelleAPI = None):
         self.plex_manager = plex_manager
         self.gazelle_api = gazelle_api
-        self.collage_collection_cache = CollageCollectionCache(cache_file)
-        self.bookmarks_collection_cache = BookmarksCollectionCache(cache_file)
+        self.collage_collection_cache = CollageCollectionCache()
+        self.bookmarks_collection_cache = BookmarksCollectionCache()
 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def create_or_update_collection_from_collage(
