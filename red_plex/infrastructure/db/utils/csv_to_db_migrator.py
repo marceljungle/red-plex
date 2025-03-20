@@ -80,7 +80,7 @@ class CsvToDbMigrator:
                         album_id, folder_name, added_at_str = row
                         added_at = datetime.fromisoformat(added_at_str)
                     else:
-                        # Handle old cache files without added_at
+                        # Handle old db files without added_at
                         album_id, folder_name = row
                         added_at = datetime.min  # Assign a default date
                     albums.append(Album(
@@ -88,14 +88,14 @@ class CsvToDbMigrator:
                         path=folder_name,
                         added_at=added_at
                     ))
-            logger.info('Albums loaded from cache.')
+            logger.info('Albums loaded from db.')
         else:
             logger.info('Cache file not found.')
         return albums
 
     @staticmethod
     def _load_collage_collections(csv_file: str) -> List[Collection]:
-        """Retrieve all collections from the cache."""
+        """Retrieve all collections from the db."""
         collections = []
         if os.path.exists(csv_file):
             with open(csv_file, newline='', encoding='utf-8') as f:
@@ -124,7 +124,7 @@ class CsvToDbMigrator:
 
     @staticmethod
     def _load_bookmark_collections(csv_file: str) -> List[Collection]:
-        """Retrieve all bookmarks from the cache."""
+        """Retrieve all bookmarks from the db."""
         bookmarks = []
         if os.path.exists(csv_file):
             with open(csv_file, newline='', encoding='utf-8') as f:
@@ -147,7 +147,7 @@ class CsvToDbMigrator:
 
     @staticmethod
     def _get_cache_directory():
-        """Return the cache directory path based on the OS."""
+        """Return the db directory path based on the OS."""
         if os.name == 'nt':  # Windows
             return os.path.join(os.getenv('LOCALAPPDATA',
                                           os.path.expanduser('~\\AppData\\Local')), 'red-plex')

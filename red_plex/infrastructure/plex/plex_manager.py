@@ -13,7 +13,7 @@ from plexapi.library import MusicSection
 from plexapi.server import PlexServer
 
 from domain.models import Collection, Album
-from infrastructure.cache.local_database import LocalDatabase
+from infrastructure.db.local_database import LocalDatabase
 from infrastructure.config.config import load_config
 from infrastructure.logger.logger import logger
 from infrastructure.plex.mapper.plex_mapper import PlexMapper
@@ -34,23 +34,23 @@ class PlexManager:
         self.library_section: MusicSection
         self.library_section = self.plex.library.section(self.section_name)
 
-        # Initialize the album cache
+        # Initialize the album db
         self.local_database = db
         self.album_data = self.local_database.get_all_albums()
 
     def populate_album_table(self):
-        """Fetches new albums from Plex and updates the cache."""
-        logger.info('Updating album cache...')
+        """Fetches new albums from Plex and updates the db."""
+        logger.info('Updating album db...')
 
-        # Determine the latest addedAt date from the existing cache
+        # Determine the latest addedAt date from the existing db
         if self.album_data:
             latest_added_at = max(album.added_at for album in self.album_data)
             logger.info('Latest album added at: %s', latest_added_at)
         else:
             latest_added_at = datetime(1970, 1, 1, tzinfo=timezone.utc)
-            logger.info('No existing albums in cache. Fetching all albums.')
+            logger.info('No existing albums in db. Fetching all albums.')
 
-        # Fetch albums added after the latest date in cache
+        # Fetch albums added after the latest date in db
         filters = {"addedAt>>": latest_added_at}
         new_albums = self.get_albums_given_filter(filters)
         logger.info('Found %d new albums added after %s.', len(new_albums), latest_added_at)
@@ -58,7 +58,7 @@ class PlexManager:
         # Update the album_data dictionary with new albums
         self.album_data.extend(new_albums)
 
-        # Save the updated album data to the cache
+        # Save the updated album data to the db
         self.local_database.insert_albums_bulk(self.album_data)
 
     def get_albums_given_filter(self, plex_filter: dict) -> List[Album]:

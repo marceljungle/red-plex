@@ -1,7 +1,7 @@
 """Module for creating Plex collections from Gazelle collages or bookmarks."""
 
 from domain.models import Collection, Album, TorrentGroup
-from infrastructure.cache.local_database import LocalDatabase
+from infrastructure.db.local_database import LocalDatabase
 from infrastructure.plex.plex_manager import PlexManager
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from use_case.create_collection.response.create_collection_response import CreateCollectionResponse
@@ -55,26 +55,26 @@ class CollectionCreator:
             if not force_update:
                 return CreateCollectionResponse(response_status=False, collection_data=collage_data)
 
-            # Is there cached data?
+            # Is there stored data?
             if fetch_bookmarks:
-                cached_collage_collection = (self.db
+                stored_collage_collection = (self.db
                                              .get_bookmark_collection(existing_collection.id))
             else:
-                cached_collage_collection = (self.db
+                stored_collage_collection = (self.db
                                              .get_collage_collection(existing_collection.id))
 
-            if cached_collage_collection:
-                cached_group_ids = set(torrent_group.id for torrent_group
-                                       in cached_collage_collection.torrent_groups)
+            if stored_collage_collection:
+                stored_group_ids = set(torrent_group.id for torrent_group
+                                       in stored_collage_collection.torrent_groups)
             else:
-                cached_group_ids = set()
+                stored_group_ids = set()
         else:
             existing_collection = None
-            cached_group_ids = set()
+            stored_group_ids = set()
 
-        # Calculate which groups are new (not in the cache)
+        # Calculate which groups are new (not in the db)
         group_ids = [torrent_group.id for torrent_group in collage_data.torrent_groups]
-        new_group_ids = set(map(int, group_ids)) - cached_group_ids
+        new_group_ids = set(map(int, group_ids)) - stored_group_ids
 
         matched_rating_keys = set()
         processed_group_ids = set()
@@ -97,8 +97,8 @@ class CollectionCreator:
                 # Update existing collection
                 self.plex_manager.add_items_to_collection(existing_collection, albums)
 
-                # Update the cache with the new groups
-                updated_group_ids = cached_group_ids.union(processed_group_ids)
+                # Update the db with the new groups
+                updated_group_ids = stored_group_ids.union(processed_group_ids)
                 collection_with_new_groups = Collection(id=existing_collection.id, site=site,
                                                         torrent_groups=[TorrentGroup(
                                                             id=group_id) for group_id in

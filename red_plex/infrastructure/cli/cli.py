@@ -7,7 +7,7 @@ import click
 import yaml
 
 from domain.models import Collection
-from infrastructure.cache.local_database import LocalDatabase
+from infrastructure.db.local_database import LocalDatabase
 from infrastructure.config.config import (
     CONFIG_FILE_PATH,
     load_config,
@@ -88,17 +88,17 @@ def collages():
 @collages.command('update')
 @click.pass_context
 def update_collages(ctx):
-    """Synchronize all cached collections with their source collages."""
+    """Synchronize all stored collections with their source collages."""
     try:
         local_database = ctx.obj.get('db', None)
         local_database: LocalDatabase
         all_collages = local_database.get_all_collage_collections()
 
         if not all_collages:
-            click.echo("No collages found in the cache.")
+            click.echo("No collages found in the db.")
             return
 
-        # Initialize PlexManager once, populate its cache once
+        # Initialize PlexManager once, populate its db once
         plex_manager = PlexManager(local_database)
         if not plex_manager:
             return
@@ -107,8 +107,8 @@ def update_collages(ctx):
         update_collections_from_collages(
             local_database, all_collages, plex_manager, fetch_bookmarks=False)
     except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to update cached collections: %s', exc)
-        click.echo(f"An error occurred while updating cached collections: {exc}")
+        logger.exception('Failed to update stored collections: %s', exc)
+        click.echo(f"An error occurred while updating stored collections: {exc}")
 
 
 # convert collection
@@ -200,14 +200,14 @@ def bookmarks():
 @bookmarks.command('update')
 @click.pass_context
 def update_bookmarks_collection(ctx):
-    """Synchronize all cached bookmarks with their source collages."""
+    """Synchronize all stored bookmarks with their source collages."""
     try:
         local_database = ctx.obj.get('db', None)
         local_database: LocalDatabase
         all_bookmarks = local_database.get_all_bookmark_collections()
 
         if not all_bookmarks:
-            click.echo("No bookmarks found in the cache.")
+            click.echo("No bookmarks found in the db.")
             return
 
         plex_manager = PlexManager(local_database)
@@ -219,8 +219,8 @@ def update_bookmarks_collection(ctx):
             local_database, all_bookmarks, plex_manager, fetch_bookmarks=True)
 
     except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to update cached bookmarks: %s', exc)
-        click.echo(f"An error occurred while updating cached bookmarks: {exc}")
+        logger.exception('Failed to update stored bookmarks: %s', exc)
+        click.echo(f"An error occurred while updating stored bookmarks: {exc}")
 
 
 # bookmarks create
@@ -321,7 +321,7 @@ def db_albums():
 @click.pass_context
 def db_albums_reset(ctx):
     """Resets albums table from database."""
-    if click.confirm('Are you sure you want to reset the cache?'):
+    if click.confirm('Are you sure you want to reset the db?'):
         try:
             local_database = ctx.obj.get('db', None)
             local_database: LocalDatabase
@@ -356,16 +356,16 @@ def db_collections():
 @click.pass_context
 def db_collections_reset(ctx):
     """Resets collections table from database."""
-    if click.confirm('Are you sure you want to reset the collection cache?'):
+    if click.confirm('Are you sure you want to reset the collection db?'):
         try:
             local_database = ctx.obj.get('db', None)
             local_database: LocalDatabase
             local_database.reset_collage_collections()
-            click.echo("Collage collection cache has been reset successfully.")
+            click.echo("Collage collection db has been reset successfully.")
         except Exception as exc:  # pylint: disable=W0718
-            logger.exception('Failed to reset collage collection cache: %s', exc)
+            logger.exception('Failed to reset collage collection db: %s', exc)
             click.echo(
-                f"An error occurred while resetting the collage collection cache: {exc}")
+                f"An error occurred while resetting the collage collection db: {exc}")
 
 
 # db bookmarks
@@ -379,15 +379,15 @@ def db_bookmarks():
 @click.pass_context
 def db_bookmarks_reset(ctx):
     """Resets bookmarks table from database."""
-    if click.confirm('Are you sure you want to reset the collection bookmarks cache?'):
+    if click.confirm('Are you sure you want to reset the collection bookmarks db?'):
         try:
             local_database = ctx.obj.get('db', None)
             local_database: LocalDatabase
             local_database.reset_bookmark_collections()
-            click.echo("Collection bookmarks cache has been reset successfully.")
+            click.echo("Collection bookmarks db has been reset successfully.")
         except Exception as exc:  # pylint: disable=W0718
-            logger.exception('Failed to reset collection bookmarks cache: %s', exc)
-            click.echo(f"An error occurred while resetting the collection bookmarks cache: {exc}")
+            logger.exception('Failed to reset collection bookmarks db: %s', exc)
+            click.echo(f"An error occurred while resetting the collection bookmarks db: {exc}")
 
 
 def update_collections_from_collages(local_database: LocalDatabase,
