@@ -14,7 +14,9 @@ class CollectionCreator:
     based on Gazelle collages or bookmarks.
     """
 
-    def __init__(self, db: LocalDatabase, plex_manager: PlexManager, gazelle_api: GazelleAPI = None):
+    def __init__(self, db: LocalDatabase,
+                 plex_manager: PlexManager,
+                 gazelle_api: GazelleAPI = None):
         self.plex_manager = plex_manager
         self.gazelle_api = gazelle_api
         self.db = db
@@ -98,8 +100,9 @@ class CollectionCreator:
                 # Update the cache with the new groups
                 updated_group_ids = cached_group_ids.union(processed_group_ids)
                 collection_with_new_groups = Collection(id=existing_collection.id, site=site,
-                                                        torrent_groups=[TorrentGroup(id=group_id) for group_id in
-                                                                        updated_group_ids])
+                                                        torrent_groups=[TorrentGroup(
+                                                            id=group_id) for group_id in
+                                                            updated_group_ids])
                 if fetch_bookmarks:
                     self.db.insert_or_update_bookmark_collection(collection_with_new_groups)
                 else:
@@ -108,7 +111,8 @@ class CollectionCreator:
                 # Create the new collection
                 collection = self.plex_manager.create_collection(collage_data.name, albums)
                 collection_with_new_groups = Collection(id=collection.id, site=site,
-                                                        torrent_groups=[TorrentGroup(id=group_id) for group_id in
+                                                        torrent_groups=[TorrentGroup(id=group_id)
+                                                                        for group_id in
                                                                         processed_group_ids])
                 if fetch_bookmarks:
                     self.db.insert_or_update_bookmark_collection(collection_with_new_groups)

@@ -10,7 +10,9 @@ from domain.models import Album, Collection, TorrentGroup
 from infrastructure.logger.logger import logger
 
 
+# pylint: disable=too-few-public-methods
 class CsvToDbMigrator:
+    """Migrates data from CSV to a SQLite database."""
 
     def __init__(self, db_file_path: str):
         self.csv_path = self._get_cache_directory()
@@ -37,7 +39,8 @@ class CsvToDbMigrator:
             collages = self._load_collage_collections(collages_file_path)
             for collage in collages:
                 conn.execute(
-                    "INSERT INTO collage_collections(rating_key, name, site, external_id) VALUES(?, ?, ?, ?)",
+                    "INSERT INTO collage_collections(rating_key, name, site, external_id) "
+                    "VALUES(?, ?, ?, ?)",
                     (collage.id, collage.name, collage.site, collage.external_id)
                 )
 

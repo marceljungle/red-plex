@@ -21,7 +21,6 @@ from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from use_case.create_collection.create_collection import CollectionCreator
 
 
-# TODO: add db command with the resets of the tables and the location of the db
 @click.group()
 @click.pass_context
 def cli(ctx):
@@ -30,19 +29,95 @@ def cli(ctx):
         ctx.obj['db'] = LocalDatabase()
 
 
-# convert
+# config
 @cli.group()
-def convert():
-    """Conversion methods."""
+def config():
+    """View or edit configuration settings."""
+
+
+# config show
+@config.command('show')
+def show_config():
+    """Display the current configuration."""
+    config_data = load_config()
+    path_with_config = (
+            f"Configuration path: {CONFIG_FILE_PATH}\n\n" +
+            yaml.dump(config_data.to_dict(), default_flow_style=False)
+    )
+    click.echo(path_with_config)
+
+
+# config edit
+@config.command('edit')
+def edit_config():
+    """Open the configuration file in the default editor."""
+    # Ensure the configuration file exists
+    ensure_config_exists()
+
+    # Default to 'nano' if EDITOR is not set
+    editor = os.environ.get('EDITOR', 'notepad' if os.name == 'nt' else 'nano')
+    click.echo(f"Opening config file at {CONFIG_FILE_PATH}...")
+    try:
+        subprocess.call([editor, CONFIG_FILE_PATH])
+    except FileNotFoundError:
+        message = f"Editor '{editor}' not found. \
+            Please set the EDITOR environment variable to a valid editor."
+        logger.error(message)
+        click.echo(message)
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to open editor: %s', exc)
+        click.echo(f"An error occurred while opening the editor: {exc}")
+
+
+# config reset
+@config.command('reset')
+def reset_config():
+    """Reset the configuration to default values."""
+    if click.confirm('Are you sure you want to reset the configuration to default values?'):
+        save_config(Configuration.default())
+        click.echo(f"Configuration reset to default values at {CONFIG_FILE_PATH}")
+
+
+# collages
+@cli.group('collages')
+def collages():
+    """Possible operations with site collages."""
+
+
+# collages update
+@collages.command('update')
+@click.pass_context
+def update_collages(ctx):
+    """Synchronize all cached collections with their source collages."""
+    try:
+        local_database = ctx.obj.get('db', None)
+        local_database: LocalDatabase
+        all_collages = local_database.get_all_collage_collections()
+
+        if not all_collages:
+            click.echo("No collages found in the cache.")
+            return
+
+        # Initialize PlexManager once, populate its cache once
+        plex_manager = PlexManager(local_database)
+        if not plex_manager:
+            return
+        plex_manager.populate_album_table()
+
+        update_collections_from_collages(
+            local_database, all_collages, plex_manager, fetch_bookmarks=False)
+    except Exception as exc:  # pylint: disable=W0718
+        logger.exception('Failed to update cached collections: %s', exc)
+        click.echo(f"An error occurred while updating cached collections: {exc}")
 
 
 # convert collection
-@convert.command()
+@collages.command('create')
 @click.argument('collage_ids', nargs=-1)
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 @click.pass_context
-def collection(ctx, collage_ids, site):
+def create_collages(ctx, collage_ids, site):
     """
     Create Plex collections from given COLLAGE_IDS.
     If the collection already exists, confirmation will be requested to update it.
@@ -115,151 +190,10 @@ def collection(ctx, collage_ids, site):
             )
 
 
-# config
-@cli.group()
-def config():
-    """View or edit configuration settings."""
-
-
-# config show
-@config.command('show')
-def show_config():
-    """Display the current configuration."""
-    config_data = load_config()
-    path_with_config = (
-            f"Configuration path: {CONFIG_FILE_PATH}\n\n" +
-            yaml.dump(config_data.to_dict(), default_flow_style=False)
-    )
-    click.echo(path_with_config)
-
-
-# config edit
-@config.command('edit')
-def edit_config():
-    """Open the configuration file in the default editor."""
-    # Ensure the configuration file exists
-    ensure_config_exists()
-
-    # Default to 'nano' if EDITOR is not set
-    editor = os.environ.get('EDITOR', 'notepad' if os.name == 'nt' else 'nano')
-    click.echo(f"Opening config file at {CONFIG_FILE_PATH}...")
-    try:
-        subprocess.call([editor, CONFIG_FILE_PATH])
-    except FileNotFoundError:
-        message = f"Editor '{editor}' not found. \
-            Please set the EDITOR environment variable to a valid editor."
-        logger.error(message)
-        click.echo(message)
-    except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to open editor: %s', exc)
-        click.echo(f"An error occurred while opening the editor: {exc}")
-
-
-# config reset
-@config.command('reset')
-def reset_config():
-    """Reset the configuration to default values."""
-    if click.confirm('Are you sure you want to reset the configuration to default values?'):
-        save_config(Configuration.default())
-        click.echo(f"Configuration reset to default values at {CONFIG_FILE_PATH}")
-
-
-# album-cache
-@cli.group()
-def album_cache(): # TODO: rename to album instead of album-cache
-    """Manage saved albums cache."""
-
-
-# album-cache reset
-@album_cache.command('reset')
-@click.pass_context
-def reset_cache(ctx):
-    """Reset the saved albums cache."""
-    if click.confirm('Are you sure you want to reset the cache?'):
-        try:
-            local_database = ctx.obj.get('db', None)
-            local_database: LocalDatabase
-            local_database.reset_albums()
-            click.echo("Albums table has been reset successfully.")
-        except Exception as exc:  # pylint: disable=W0718
-            click.echo(f"An error occurred while resetting the album table: {exc}")
-
-
-# album-cache update
-@album_cache.command('update')
-@click.pass_context
-def update_cache(ctx):
-    """Update the saved albums cache with the latest albums from Plex."""
-    try:
-        # Initialize & update cache using PlexManager
-        local_database = ctx.obj.get('db', None)
-        db: LocalDatabase
-        plex_manager = PlexManager(db=local_database)
-        plex_manager.populate_album_table()
-        click.echo("Cache has been updated successfully.")
-    except Exception as exc:  # pylint: disable=W0718
-        click.echo(f"An error occurred while updating the cache: {exc}")
-
-
-# collections
-@cli.group('collections')
-def collections():
-    """Manage collections."""
-
-
-# collections cache
-@collections.group('cache')
-def collections_cache():
-    """Manage collections cache."""
-
-
-# collections cache reset
-@collections_cache.command('reset')
-@click.pass_context
-def reset_collection_cache(ctx):
-    """Resets the saved collection cache."""
-    if click.confirm('Are you sure you want to reset the collection cache?'):
-        try:
-            local_database = ctx.obj.get('db', None)
-            local_database: LocalDatabase
-            local_database.reset_collage_collections()
-            click.echo("Collage collection cache has been reset successfully.")
-        except Exception as exc:  # pylint: disable=W0718
-            logger.exception('Failed to reset collage collection cache: %s', exc)
-            click.echo(
-                f"An error occurred while resetting the collage collection cache: {exc}")
-
-
-# collections update
-@collections.command('update')
-@click.pass_context
-def update_collections(ctx):
-    """Synchronize all cached collections with their source collages."""
-    try:
-        local_database = ctx.obj.get('db', None)
-        local_database: LocalDatabase
-        all_collages = local_database.get_all_collage_collections()
-
-        if not all_collages:
-            click.echo("No collages found in the cache.")
-            return
-
-        # Initialize PlexManager once, populate its cache once
-        plex_manager = PlexManager(local_database)
-        if not plex_manager:
-            return
-        plex_manager.populate_album_table()
-
-        update_collections_from_collages(local_database, all_collages, plex_manager, fetch_bookmarks=False)
-    except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to update cached collections: %s', exc)
-        click.echo(f"An error occurred while updating cached collections: {exc}")
-
-
 # bookmarks
 @cli.group()
 def bookmarks():
-    """Manage collection based on your site bookmarks."""
+    """Possible operations with your site bookmarks."""
 
 
 # bookmarks update
@@ -281,7 +215,8 @@ def update_bookmarks_collection(ctx):
             return
         plex_manager.populate_album_table()
 
-        update_collections_from_collages(local_database, all_bookmarks, plex_manager, fetch_bookmarks=True)
+        update_collections_from_collages(
+            local_database, all_bookmarks, plex_manager, fetch_bookmarks=True)
 
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cached bookmarks: %s', exc)
@@ -363,17 +298,87 @@ def create_collection_from_bookmarks(ctx, site: str):
         )
 
 
-# bookmarks cache
-@bookmarks.group('cache')
-def bookmarks_cache():
-    """Manage bookmarks cache."""
+# db
+@cli.group()
+def db():
+    """Manage database."""
 
 
-# bookmarks cache reset
-@bookmarks_cache.command('reset')
+# db
+@db.command('location')
+def db_location():
+    """Returns the location to the database."""
+
+
+# db albums
+@db.group('albums')
+def db_albums():
+    """Manage albums inside database."""
+
+
+# db albums reset
+@db_albums.command('reset')
 @click.pass_context
-def reset_bookmarks_cache_collection(ctx):
-    """Resets the saved bookmarks cache."""
+def db_albums_reset(ctx):
+    """Resets albums table from database."""
+    if click.confirm('Are you sure you want to reset the cache?'):
+        try:
+            local_database = ctx.obj.get('db', None)
+            local_database: LocalDatabase
+            local_database.reset_albums()
+            click.echo("Albums table has been reset successfully.")
+        except Exception as exc:  # pylint: disable=W0718
+            click.echo(f"An error occurred while resetting the album table: {exc}")
+
+
+@db_albums.command('update')
+@click.pass_context
+def db_albums_update(ctx):
+    """Updates albums table from Plex."""
+    try:
+        local_database = ctx.obj.get('db', None)
+        local_database: LocalDatabase
+        plex_manager = PlexManager(db=local_database)
+        plex_manager.populate_album_table()
+        click.echo("Albums table has been updated successfully.")
+    except Exception as exc: # pylint: disable=W0703
+        click.echo(f"An error occurred while updating the album table: {exc}")
+
+
+# db collections
+@db.group('collections')
+def db_collections():
+    """Manage albums inside database."""
+
+
+# db collections reset
+@db_collections.command('reset')
+@click.pass_context
+def db_collections_reset(ctx):
+    """Resets collections table from database."""
+    if click.confirm('Are you sure you want to reset the collection cache?'):
+        try:
+            local_database = ctx.obj.get('db', None)
+            local_database: LocalDatabase
+            local_database.reset_collage_collections()
+            click.echo("Collage collection cache has been reset successfully.")
+        except Exception as exc:  # pylint: disable=W0718
+            logger.exception('Failed to reset collage collection cache: %s', exc)
+            click.echo(
+                f"An error occurred while resetting the collage collection cache: {exc}")
+
+
+# db bookmarks
+@db.group('bookmarks')
+def db_bookmarks():
+    """Manage bookmarks inside database."""
+
+
+# db bookmarks reset
+@db_bookmarks.command('reset')
+@click.pass_context
+def db_bookmarks_reset(ctx):
+    """Resets bookmarks table from database."""
     if click.confirm('Are you sure you want to reset the collection bookmarks cache?'):
         try:
             local_database = ctx.obj.get('db', None)
@@ -386,11 +391,13 @@ def reset_bookmarks_cache_collection(ctx):
 
 
 def update_collections_from_collages(local_database: LocalDatabase,
-        collages: List[Collection], plex_manager: PlexManager, fetch_bookmarks=False):
+                                     collage_list: List[Collection],
+                                     plex_manager: PlexManager,
+                                     fetch_bookmarks=False):
     """
     Forces the update of each collage (force_update=True)
     """
-    for collage in collages:
+    for collage in collage_list:
         logger.info('Updating collection for collage "%s"...', collage.name)
         gazelle_api = GazelleAPI(collage.site)
         collection_creator = CollectionCreator(local_database, plex_manager, gazelle_api)
@@ -408,17 +415,17 @@ def update_collections_from_collages(local_database: LocalDatabase,
 
 @cli.result_callback()
 @click.pass_context
-def finalize_cli(ctx):
+def finalize_cli(ctx, _result, *_args, **_kwargs):
     """Close the DB when all commands have finished."""
-    db = ctx.obj.get('db', None)
-    if db:
-        db.close()
+    local_database = ctx.obj.get('db', None)
+    if local_database:
+        local_database.close()
 
 
 def main():
     """Actual entry point for the CLI when installed."""
     configure_logger()
-    cli(obj={})
+    cli(obj={})  # pylint: disable=no-value-for-parameter
 
 
 if __name__ == '__main__':

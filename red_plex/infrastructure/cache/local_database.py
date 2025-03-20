@@ -1,3 +1,5 @@
+"""Defines the LocalDatabase class for managing a SQLite database."""
+
 import os
 import sqlite3
 from datetime import datetime
@@ -134,7 +136,8 @@ class LocalDatabase:
                 """,
                 album_rows
             )
-        # The transaction is committed automatically at the end of the 'with' block if no exceptions occur.
+        # The transaction is committed automatically
+        # at the end of the 'with' block if no exceptions occur.
 
     def get_album(self, album_id: str) -> Optional[Album]:
         """
