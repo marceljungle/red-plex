@@ -114,6 +114,28 @@ class LocalDatabase:
         )
         self.conn.commit()
 
+    def insert_albums_bulk(self, albums: List[Album]) -> None:
+        """
+        Inserts or updates a list of albums in bulk, using a single transaction.
+        It uses INSERT OR REPLACE logic to handle upsert behavior for each Album.
+        """
+        logger.debug("Inserting/updating %d albums in bulk.", len(albums))
+        # Prepare rows for executemany
+        album_rows = [
+            (album.id, album.path, album.added_at.isoformat() if album.added_at else None)
+            for album in albums
+        ]
+        # Use a transaction via a context manager (with self.conn:)
+        with self.conn:
+            self.conn.executemany(
+                """
+                INSERT OR REPLACE INTO albums (album_id, path, added_at)
+                VALUES (?, ?, ?)
+                """,
+                album_rows
+            )
+        # The transaction is committed automatically at the end of the 'with' block if no exceptions occur.
+
     def get_album(self, album_id: str) -> Optional[Album]:
         """
         Retrieve a single album by its ID.

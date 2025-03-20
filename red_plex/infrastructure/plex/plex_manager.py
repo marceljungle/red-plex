@@ -13,7 +13,7 @@ from plexapi.library import MusicSection
 from plexapi.server import PlexServer
 
 from domain.models import Collection, Album
-from infrastructure.cache.album_cache import AlbumCache
+from infrastructure.cache.local_database import LocalDatabase
 from infrastructure.config.config import load_config
 from infrastructure.logger.logger import logger
 from infrastructure.plex.mapper.plex_mapper import PlexMapper
@@ -22,7 +22,7 @@ from infrastructure.plex.mapper.plex_mapper import PlexMapper
 class PlexManager:
     """Handles operations related to Plex."""
 
-    def __init__(self):
+    def __init__(self, db: LocalDatabase):
         # Load configuration
         config_data = load_config()
 
@@ -35,10 +35,10 @@ class PlexManager:
         self.library_section = self.plex.library.section(self.section_name)
 
         # Initialize the album cache
-        self.album_cache = AlbumCache()
-        self.album_data = self.album_cache.load_albums()
+        self.local_database = db
+        self.album_data = self.local_database.get_all_albums()
 
-    def populate_album_cache(self):
+    def populate_album_table(self):
         """Fetches new albums from Plex and updates the cache."""
         logger.info('Updating album cache...')
 
@@ -59,7 +59,7 @@ class PlexManager:
         self.album_data.extend(new_albums)
 
         # Save the updated album data to the cache
-        self.album_cache.save_albums(self.album_data)
+        self.local_database.insert_albums_bulk(self.album_data)
 
     def get_albums_given_filter(self, plex_filter: dict) -> List[Album]:
         """Returns a list of albums that match the specified filter."""
@@ -78,12 +78,6 @@ class PlexManager:
                 album_folder_path = os.path.dirname(media_path)
                 domain_albums.append(Album(album.ratingKey, album.addedAt, album_folder_path))
         return domain_albums
-
-    def reset_album_cache(self) -> None:
-        """Resets the album cache by deleting the cache file."""
-        self.album_cache.reset_cache()
-        self.album_data = []
-        logger.info('Album cache has been reset.')
 
     def get_rating_keys(self, path: str) -> List[str]:
         """Returns the rating keys if the path matches part of an album folder."""

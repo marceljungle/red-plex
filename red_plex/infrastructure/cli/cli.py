@@ -7,9 +7,7 @@ import click
 import yaml
 
 from domain.models import Collection
-from infrastructure.cache.album_cache import AlbumCache
-from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
-from infrastructure.cache.collage_collection_cache import CollageCollectionCache
+from infrastructure.cache.local_database import LocalDatabase
 from infrastructure.config.config import (
     CONFIG_FILE_PATH,
     load_config,
@@ -23,9 +21,13 @@ from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from use_case.create_collection.create_collection import CollectionCreator
 
 
+# TODO: add db command with the resets of the tables and the location of the db
 @click.group()
-def cli():
+@click.pass_context
+def cli(ctx):
     """A CLI tool for creating Plex collections from RED and OPS collages."""
+    if 'db' not in ctx.obj:
+        ctx.obj['db'] = LocalDatabase()
 
 
 # convert
@@ -39,7 +41,8 @@ def convert():
 @click.argument('collage_ids', nargs=-1)
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
-def collection(collage_ids, site):
+@click.pass_context
+def collection(ctx, collage_ids, site):
     """
     Create Plex collections from given COLLAGE_IDS.
     If the collection already exists, confirmation will be requested to update it.
@@ -48,17 +51,19 @@ def collection(collage_ids, site):
         click.echo("Please provide at least one COLLAGE_ID.")
         return
 
-    plex_manager = PlexManager()
+    local_database = ctx.obj.get('db', None)
+    local_database: LocalDatabase
+    plex_manager = PlexManager(db=local_database)
     if not plex_manager:
         return
 
-    plex_manager.populate_album_cache()
+    plex_manager.populate_album_table()
 
     gazelle_api = GazelleAPI(site)
     if not gazelle_api:
         return
 
-    collection_creator = CollectionCreator(plex_manager, gazelle_api)
+    collection_creator = CollectionCreator(local_database, plex_manager, gazelle_api)
 
     for collage_id in collage_ids:
         logger.info('Processing collage ID "%s"...', collage_id)
@@ -161,52 +166,38 @@ def reset_config():
 
 # album-cache
 @cli.group()
-def album_cache():
+def album_cache(): # TODO: rename to album instead of album-cache
     """Manage saved albums cache."""
-
-
-# album-cache show
-@album_cache.command('show')
-def show_cache():
-    """Show the location of the cache file if it exists."""
-    try:
-        album_cache_instance = AlbumCache()
-        cache_file = album_cache_instance.csv_file
-
-        if os.path.exists(cache_file):
-            click.echo(f"Cache file exists at: {os.path.abspath(cache_file)}")
-        else:
-            click.echo("Cache file does not exist.")
-    except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to show cache: %s', exc)
-        click.echo(f"An error occurred while showing the cache: {exc}")
 
 
 # album-cache reset
 @album_cache.command('reset')
-def reset_cache():
+@click.pass_context
+def reset_cache(ctx):
     """Reset the saved albums cache."""
     if click.confirm('Are you sure you want to reset the cache?'):
         try:
-            album_cache_instance = AlbumCache()
-            album_cache_instance.reset_cache()
-            click.echo("Cache has been reset successfully.")
+            local_database = ctx.obj.get('db', None)
+            local_database: LocalDatabase
+            local_database.reset_albums()
+            click.echo("Albums table has been reset successfully.")
         except Exception as exc:  # pylint: disable=W0718
-            logger.exception('Failed to reset cache: %s', exc)
-            click.echo(f"An error occurred while resetting the cache: {exc}")
+            click.echo(f"An error occurred while resetting the album table: {exc}")
 
 
 # album-cache update
 @album_cache.command('update')
-def update_cache():
+@click.pass_context
+def update_cache(ctx):
     """Update the saved albums cache with the latest albums from Plex."""
     try:
         # Initialize & update cache using PlexManager
-        plex_manager = PlexManager()
-        plex_manager.populate_album_cache()
+        local_database = ctx.obj.get('db', None)
+        db: LocalDatabase
+        plex_manager = PlexManager(db=local_database)
+        plex_manager.populate_album_table()
         click.echo("Cache has been updated successfully.")
     except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to update cache: %s', exc)
         click.echo(f"An error occurred while updating the cache: {exc}")
 
 
@@ -222,31 +213,16 @@ def collections_cache():
     """Manage collections cache."""
 
 
-# collections cache show
-@collections_cache.command('show')
-def show_collection_cache():
-    """Shows the location of the collection cache file if it exists."""
-    try:
-        collection_cache = CollageCollectionCache()
-        cache_file = collection_cache.csv_file
-
-        if os.path.exists(cache_file):
-            click.echo(f"Collection cache file exists at: {os.path.abspath(cache_file)}")
-        else:
-            click.echo("Collection cache file does not exist.")
-    except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to show collection cache: %s', exc)
-        click.echo(f"An error occurred while showing the collection cache: {exc}")
-
-
 # collections cache reset
 @collections_cache.command('reset')
-def reset_collection_cache():
+@click.pass_context
+def reset_collection_cache(ctx):
     """Resets the saved collection cache."""
     if click.confirm('Are you sure you want to reset the collection cache?'):
         try:
-            collection_cache = CollageCollectionCache()
-            collection_cache.reset_cache()
+            local_database = ctx.obj.get('db', None)
+            local_database: LocalDatabase
+            local_database.reset_collage_collections()
             click.echo("Collage collection cache has been reset successfully.")
         except Exception as exc:  # pylint: disable=W0718
             logger.exception('Failed to reset collage collection cache: %s', exc)
@@ -256,23 +232,25 @@ def reset_collection_cache():
 
 # collections update
 @collections.command('update')
-def update_collections():
+@click.pass_context
+def update_collections(ctx):
     """Synchronize all cached collections with their source collages."""
     try:
-        ccc = CollageCollectionCache()
-        all_collages = ccc.get_all_collections()
+        local_database = ctx.obj.get('db', None)
+        local_database: LocalDatabase
+        all_collages = local_database.get_all_collage_collections()
 
         if not all_collages:
             click.echo("No collages found in the cache.")
             return
 
         # Initialize PlexManager once, populate its cache once
-        plex_manager = PlexManager()
+        plex_manager = PlexManager(local_database)
         if not plex_manager:
             return
-        plex_manager.populate_album_cache()
+        plex_manager.populate_album_table()
 
-        update_collections_from_collages(all_collages, plex_manager, fetch_bookmarks=False)
+        update_collections_from_collages(local_database, all_collages, plex_manager, fetch_bookmarks=False)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cached collections: %s', exc)
         click.echo(f"An error occurred while updating cached collections: {exc}")
@@ -286,22 +264,24 @@ def bookmarks():
 
 # bookmarks update
 @bookmarks.command('update')
-def update_bookmarks_collection():
+@click.pass_context
+def update_bookmarks_collection(ctx):
     """Synchronize all cached bookmarks with their source collages."""
     try:
-        ccc = BookmarksCollectionCache()
-        all_bookmarks = ccc.get_all_bookmarks()
+        local_database = ctx.obj.get('db', None)
+        local_database: LocalDatabase
+        all_bookmarks = local_database.get_all_bookmark_collections()
 
         if not all_bookmarks:
             click.echo("No bookmarks found in the cache.")
             return
 
-        plex_manager = PlexManager()
+        plex_manager = PlexManager(local_database)
         if not plex_manager:
             return
-        plex_manager.populate_album_cache()
+        plex_manager.populate_album_table()
 
-        update_collections_from_collages(all_bookmarks, plex_manager, fetch_bookmarks=True)
+        update_collections_from_collages(local_database, all_bookmarks, plex_manager, fetch_bookmarks=True)
 
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update cached bookmarks: %s', exc)
@@ -310,17 +290,20 @@ def update_bookmarks_collection():
 
 # bookmarks create
 @bookmarks.command('create')
+@click.pass_context
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
-def create_collection_from_bookmarks(site: str):
+def create_collection_from_bookmarks(ctx, site: str):
     """
     Create a Plex collection based on your site bookmarks.
     If the collection already exists, ask for confirmation to update.
     """
-    plex_manager = PlexManager()
-    plex_manager.populate_album_cache()
+    local_database = ctx.obj.get('db', None)
+    local_database: LocalDatabase
+    plex_manager = PlexManager(db=local_database)
+    plex_manager.populate_album_table()
     gazelle_api = GazelleAPI(site)
-    collection_creator = CollectionCreator(plex_manager, gazelle_api)
+    collection_creator = CollectionCreator(local_database, plex_manager, gazelle_api)
 
     try:
         # First attempt without forcing
@@ -368,7 +351,7 @@ def create_collection_from_bookmarks(site: str):
             click.echo(
                 f"Bookmark-based collection for site {site.upper()} "
                 f"created or updated successfully with {len(initial_result.albums)} entries."
-                )
+            )
 
     except Exception as exc:  # pylint: disable=W0718
         logger.exception(
@@ -386,38 +369,23 @@ def bookmarks_cache():
     """Manage bookmarks cache."""
 
 
-# bookmarks cache show
-@bookmarks_cache.command('show')
-def show_bookmarks_cache_collection():
-    """Shows the location of the bookmarks cache file if it exists."""
-    try:
-        bookmarks_cache_manager = BookmarksCollectionCache()
-        cache_file = bookmarks_cache_manager.csv_file
-
-        if os.path.exists(cache_file):
-            click.echo(f"Collection bookmarks cache file exists at: {os.path.abspath(cache_file)}")
-        else:
-            click.echo("Collection bookmarks cache file does not exist.")
-    except Exception as exc:  # pylint: disable=W0718
-        logger.exception('Failed to show collection bookmarks cache: %s', exc)
-        click.echo(f"An error occurred while showing the collection bookmarks cache: {exc}")
-
-
 # bookmarks cache reset
 @bookmarks_cache.command('reset')
-def reset_bookmarks_cache_collection():
+@click.pass_context
+def reset_bookmarks_cache_collection(ctx):
     """Resets the saved bookmarks cache."""
     if click.confirm('Are you sure you want to reset the collection bookmarks cache?'):
         try:
-            bookmarks_cache_manager = BookmarksCollectionCache()
-            bookmarks_cache_manager.reset_cache()
+            local_database = ctx.obj.get('db', None)
+            local_database: LocalDatabase
+            local_database.reset_bookmark_collections()
             click.echo("Collection bookmarks cache has been reset successfully.")
         except Exception as exc:  # pylint: disable=W0718
             logger.exception('Failed to reset collection bookmarks cache: %s', exc)
             click.echo(f"An error occurred while resetting the collection bookmarks cache: {exc}")
 
 
-def update_collections_from_collages(
+def update_collections_from_collages(local_database: LocalDatabase,
         collages: List[Collection], plex_manager: PlexManager, fetch_bookmarks=False):
     """
     Forces the update of each collage (force_update=True)
@@ -425,7 +393,7 @@ def update_collections_from_collages(
     for collage in collages:
         logger.info('Updating collection for collage "%s"...', collage.name)
         gazelle_api = GazelleAPI(collage.site)
-        collection_creator = CollectionCreator(plex_manager, gazelle_api)
+        collection_creator = CollectionCreator(local_database, plex_manager, gazelle_api)
         result = collection_creator.create_or_update_collection_from_collage(
             collage.external_id, site=collage.site,
             fetch_bookmarks=fetch_bookmarks, force_update=True
@@ -438,10 +406,19 @@ def update_collections_from_collages(
                         collage.name, len(result.albums))
 
 
+@cli.result_callback()
+@click.pass_context
+def finalize_cli(ctx):
+    """Close the DB when all commands have finished."""
+    db = ctx.obj.get('db', None)
+    if db:
+        db.close()
+
+
 def main():
     """Actual entry point for the CLI when installed."""
     configure_logger()
-    cli()
+    cli(obj={})
 
 
 if __name__ == '__main__':
