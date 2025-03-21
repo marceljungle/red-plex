@@ -112,12 +112,12 @@ def update_collages(ctx):
 
 
 # convert collection
-@collages.command('create')
+@collages.command('convert')
 @click.argument('collage_ids', nargs=-1)
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 @click.pass_context
-def create_collages(ctx, collage_ids, site):
+def convert_collages(ctx, collage_ids, site):
     """
     Create Plex collections from given COLLAGE_IDS.
     If the collection already exists, confirmation will be requested to update it.
@@ -223,12 +223,12 @@ def update_bookmarks_collection(ctx):
         click.echo(f"An error occurred while updating stored bookmarks: {exc}")
 
 
-# bookmarks create
-@bookmarks.command('create')
+# bookmarks convert
+@bookmarks.command('convert')
 @click.pass_context
 @click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
-def create_collection_from_bookmarks(ctx, site: str):
+def convert_collection_from_bookmarks(ctx, site: str):
     """
     Create a Plex collection based on your site bookmarks.
     If the collection already exists, ask for confirmation to update.
@@ -304,10 +304,18 @@ def db():
     """Manage database."""
 
 
-# db
+# db location
 @db.command('location')
-def db_location():
+@click.pass_context
+def db_location(ctx):
     """Returns the location to the database."""
+    local_database = ctx.obj.get('db', None)
+    local_database: LocalDatabase
+    db_path = local_database.db_path
+    if os.path.exists(db_path):
+        click.echo(f"Database exists at: {db_path}")
+    else:
+        click.echo("Database file does not exist.")
 
 
 # db albums

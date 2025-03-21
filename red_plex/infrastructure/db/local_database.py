@@ -21,9 +21,9 @@ class LocalDatabase:
     """
 
     def __init__(self):
-        db_path = self._get_database_directory()
-        os.makedirs(db_path, exist_ok=True)
-        db_file_path = os.path.join(db_path, 'red_plex.db')
+        self.db_path = self._get_database_directory()
+        os.makedirs(self.db_path, exist_ok=True)
+        db_file_path = os.path.join(self.db_path, 'red_plex.db')
 
         # If the database file doesn't exist, create and run migrations
         if not os.path.isfile(db_file_path):
