@@ -13,7 +13,7 @@ from plexapi.library import MusicSection
 from plexapi.server import PlexServer
 
 from domain.models import Collection, Album
-from infrastructure.cache.album_cache import AlbumCache
+from infrastructure.db.local_database import LocalDatabase
 from infrastructure.config.config import load_config
 from infrastructure.logger.logger import logger
 from infrastructure.plex.mapper.plex_mapper import PlexMapper
@@ -22,7 +22,7 @@ from infrastructure.plex.mapper.plex_mapper import PlexMapper
 class PlexManager:
     """Handles operations related to Plex."""
 
-    def __init__(self):
+    def __init__(self, db: LocalDatabase):
         # Load configuration
         config_data = load_config()
 
@@ -34,32 +34,32 @@ class PlexManager:
         self.library_section: MusicSection
         self.library_section = self.plex.library.section(self.section_name)
 
-        # Initialize the album cache
-        self.album_cache = AlbumCache()
-        self.album_data = self.album_cache.load_albums()
+        # Initialize the album db
+        self.local_database = db
+        self.album_data = self.local_database.get_all_albums()
 
-    def populate_album_cache(self):
-        """Fetches new albums from Plex and updates the cache."""
-        logger.info('Updating album cache...')
+    def populate_album_table(self):
+        """Fetches new albums from Plex and updates the db."""
+        logger.info('Updating album db...')
 
-        # Determine the latest addedAt date from the existing cache
+        # Determine the latest addedAt date from the existing db
         if self.album_data:
             latest_added_at = max(album.added_at for album in self.album_data)
             logger.info('Latest album added at: %s', latest_added_at)
         else:
             latest_added_at = datetime(1970, 1, 1, tzinfo=timezone.utc)
-            logger.info('No existing albums in cache. Fetching all albums.')
+            logger.info('No existing albums in db. Fetching all albums.')
 
-        # Fetch albums added after the latest date in cache
+        # Fetch albums added after the latest date in db
         filters = {"addedAt>>": latest_added_at}
         new_albums = self.get_albums_given_filter(filters)
         logger.info('Found %d new albums added after %s.', len(new_albums), latest_added_at)
 
-        # Update the album_data dictionary with new albums
+        # Update the album_data list with new albums
         self.album_data.extend(new_albums)
 
-        # Save the updated album data to the cache
-        self.album_cache.save_albums(self.album_data)
+        # Save new albums to the db
+        self.local_database.insert_albums_bulk(new_albums)
 
     def get_albums_given_filter(self, plex_filter: dict) -> List[Album]:
         """Returns a list of albums that match the specified filter."""
@@ -78,12 +78,6 @@ class PlexManager:
                 album_folder_path = os.path.dirname(media_path)
                 domain_albums.append(Album(album.ratingKey, album.addedAt, album_folder_path))
         return domain_albums
-
-    def reset_album_cache(self) -> None:
-        """Resets the album cache by deleting the cache file."""
-        self.album_cache.reset_cache()
-        self.album_data = []
-        logger.info('Album cache has been reset.')
 
     def get_rating_keys(self, path: str) -> List[str]:
         """Returns the rating keys if the path matches part of an album folder."""

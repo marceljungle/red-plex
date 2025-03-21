@@ -28,7 +28,7 @@ def configure_logger():
     if os.name == 'nt':  # Windows
         log_dir = os.path.join(os.getenv('APPDATA'), 'red-plex', 'logs')
     else:  # Linux/macOS
-        log_dir = os.path.join(Path.home(), '.cache', 'red-plex', 'logs')
+        log_dir = os.path.join(Path.home(), '.db', 'red-plex', 'logs')
 
     # Ensure the log directory exists
     os.makedirs(log_dir, exist_ok=True)

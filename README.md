@@ -1,22 +1,22 @@
 # red-plex
 
-**red-plex** is a command-line tool for creating and updating **Plex collections** based on collages and bookmarks from Gazelle-based music trackers like Redacted (RED) and Orpheus Network (OPS). It allows users to generate collections in their Plex Media Server by matching music albums from specified collages or personal bookmarks, and provides ways to synchronize previously created items with updated information.
+**red-plex** is a command-line tool for creating and updating **Plex collections** based on collages and bookmarks from Gazelle-based music trackers (Redacted “RED” and Orpheus “OPS”). It stores all data in a local SQLite database and provides commands to synchronize your music library with Plex and the torrent data from these trackers.
 
 ---
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Features](#features)
 - [Installation](#installation)
-- [Commands](#commands)
-  - [Convert (Create) Collections](#convert-create-collections)
-  - [Collections Management](#collections-management)
-  - [Bookmarks Management](#bookmarks-management)
-  - [Album Cache Management](#album-cache-management)
-  - [Configuration Commands](#configuration-commands)
+- [Usage & Commands](#usage--commands)
+  - [Configuration](#configuration-commands)
+  - [Collages](#collages)
+  - [Bookmarks](#bookmarks)
+  - [Database Commands](#database-commands)
 - [Examples](#examples)
   - [Creating Collections](#creating-collections)
-  - [Updating Existing Items](#updating-existing-items)
+  - [Updating Collections](#updating-collections)
 - [Configuration Details](#configuration-details)
   - [Configuration Tips](#configuration-tips)
 - [Considerations](#considerations)
@@ -25,44 +25,34 @@
 
 ## Overview
 
-- **Library Scanning**: The application scans your Plex music library, extracting album paths into a local cache for quick matching.
-- **Fetching Collages/Bookmarks**: It connects to a Gazelle-based site using your API credentials to fetch collages or your personal bookmarks, retrieving torrent paths for the albums listed.
-- **Matching Albums**: The tool compares the torrent paths from the site with album paths in your Plex library, matching based on folder names or partial matches.
-- **Creating Collections**: For each collage or set of bookmarks, `red-plex` creates a corresponding Plex collection containing all matched albums.
-- **Incremental Updates**: Previously created collections can be synchronized later to add newly found albums or reflect changes from the site.
-- **Cache Management**: Album, bookmark, and collection data are cached to avoid repeated full scans, enable incremental updates, and speed up usage.
+- **Stores Data in SQLite**: Instead of CSV-based “caches,” red-plex now stores albums, collages, and bookmarks in a lightweight SQLite database.  
+- **Collages & Bookmarks**: Fetch and manage torrent-based “collages” or personal “bookmarks” from Gazelle-based sites.  
+- **Plex Integration**: Compare the torrent group info with your Plex music library to create or update Plex collections.  
+- **Incremental Updating**: Update previously created collections as new albums become available or site data changes.
 
 ---
 
 ## Features
 
-- **Multi-Site Support**: Create Plex collections from both Redacted (“red”) and Orpheus Network (“ops”).
-- **Multiple Collage IDs**: Process multiple collages in one command:
-
-  ```bash
-  red-plex convert collection 12345 67890 --site red
-  ```
-
-- **Bookmarks Integration**: Create or update collections from your bookmarked releases.
-- **Optimized Album Caching**: Maintain a timestamped album cache to scan only newly added albums in Plex.
-- **Collection Caching**: Track processed collages or bookmarks to allow incremental synchronization.
-- **Configurable Logging**: Control the verbosity via a YAML config file.
-- **Rate Limiting and Retries**: Respects the site’s API rate limits and retries on network/HTTP errors.
-- **User Confirmation**: Prompts for confirmation when a collection already exists.
-- **Python 3 Compatible**: Runs on Python 3.8+ (tested through 3.10+).
-- **Command-Line Interface**: Provides clear and organized CLI commands for all major operations.
+- **Multi-Site**: Works with Redacted (“red”) and Orpheus Network (“ops”).  
+- **Collections from Collages/Bookmarks**: Create or update entire Plex collections for each collage or bookmarked set.  
+- **Local SQLite Database**: All data (albums, collages, bookmarks) is kept in one DB—no more CSV.  
+- **Configurable Logging**: Choose between INFO, DEBUG, etc., in `config.yml`.  
+- **Rate Limiting**: Respects site rate limits and retries on errors.  
+- **Simple CLI**: All major tasks are accessed via subcommands like `collages`, `bookmarks`, `db`, etc.  
+- **Python 3.8+ Compatible**: Runs on modern Python versions with no external database dependencies.
 
 ---
 
 ## Installation
 
-You can install **red-plex** using pip:
+You can install **red-plex** using **pip**:
 
 ```bash
 pip install red-plex
 ```
 
-Alternatively, you can install it using `pipx` to isolate the package and its dependencies:
+Or install in an isolated environment with `pipx`:
 
 ```bash
 pipx install red-plex
@@ -70,72 +60,60 @@ pipx install red-plex
 
 ---
 
-## Commands
+## Usage & Commands
 
-Below is a summary of the main commands. For detailed usage, run `red-plex --help` or any subcommand with `--help`.
-
-### Convert (Create) Collections
-
-```bash
-# Create collections from one or more collages
-red-plex convert collection [COLLAGE_IDS] --site [red|ops]
-```
-
-If the collection already exists in Plex, the tool asks if you want to update it (add new matched albums).
-
-### Collections Management
-
-```bash
-# Show the location of the collections cache file
-red-plex collections cache show
-
-# Reset (delete) the collections cache
-red-plex collections cache reset
-
-# Update all cached collections (force synchronization with the source collages)
-red-plex collections update
-```
-
-### Bookmarks Management
-
-```bash
-# Create a Plex collection from your bookmarks on RED or OPS
-red-plex bookmarks create --site [red|ops]
-
-# Update all cached bookmark collections (force synchronization)
-red-plex bookmarks update
-
-# Show the bookmarks cache file location
-red-plex bookmarks cache show
-
-# Reset (delete) the bookmarks cache
-red-plex bookmarks cache reset
-```
-
-### Album Cache Management
-
-```bash
-# Show the location of the album cache
-red-plex album-cache show
-
-# Reset (delete) the album cache
-red-plex album-cache reset
-
-# Update (scan) the album cache with the latest info from Plex
-red-plex album-cache update
-```
+Below is a brief overview of the main commands. Type `red-plex --help` for more details.
 
 ### Configuration Commands
 
 ```bash
-# Show current configuration
+# Show current configuration (YAML)
 red-plex config show
 
 # Edit configuration in your default editor
 red-plex config edit
 
-# Reset configuration to defaults
+# Reset configuration to default values
 red-plex config reset
+```
+
+### Collages
+
+```bash
+# Create Plex collections for specific collage IDs
+red-plex collages create [COLLAGE_IDS] --site [red|ops]
+
+# Update all collages in the database, re-checking the site data
+red-plex collages update
+```
+
+### Bookmarks
+
+```bash
+# Create Plex collections from your bookmarked releases
+red-plex bookmarks create --site [red|ops]
+
+# Update all bookmarks in the database
+red-plex bookmarks update
+```
+
+### Database Commands
+
+```bash
+# Show or manage the SQLite database
+
+# Show database location
+red-plex db location
+
+# Manage albums table
+red-plex db albums reset        # Clear all album records
+red-plex db albums update       # Pull fresh album info from Plex
+
+# Manage collections table
+red-plex db collections reset   # Clear the collage collections table
+
+# Manage bookmarks table
+red-plex db bookmarks reset     # Clear the bookmark collections table
 ```
 
 ---
@@ -144,45 +122,51 @@ red-plex config reset
 
 ### Creating Collections
 
-Create a Plex collection from a collage (on Redacted):
+From a single collage (on Redacted):
 
 ```bash
-red-plex convert collection 12345 --site red
+red-plex collages create 12345 --site red
 ```
 
-Create from multiple collages (on Orpheus):
+From multiple collages (on Orpheus):
 
 ```bash
-red-plex convert collection 1111 2222 3333 --site ops
+red-plex collages create 1111 2222 3333 --site ops
 ```
 
-Create a Plex collection from personal bookmarks:
+From your bookmarks (on RED or OPS):
 
 ```bash
 red-plex bookmarks create --site red
 ```
 
-(Will prompt if a collection already exists.)
+_(Prompts if a collection already exists.)_
 
-### Updating Existing Items
+### Updating Collections
+
+Update all stored collages:
 
 ```bash
-# Update all cached collections
-red-plex collections update
+red-plex collages update
+```
 
-# Update all cached bookmarks
+Update all stored bookmarks:
+
+```bash
 red-plex bookmarks update
+```
 
-# Manually reset and re-update the album cache
-red-plex album-cache reset
-red-plex album-cache update
+Update albums from Plex:
+
+```bash
+red-plex db albums update
 ```
 
 ---
 
 ## Configuration Details
 
-The configuration file (`~/.config/red-plex/config.yml` on Linux/macOS) should look like this:
+Your configuration is kept in a YAML file (by default `~/.config/red-plex/config.yml` on Linux/macOS). Example:
 
 ```yaml
 LOG_LEVEL: INFO
@@ -203,30 +187,23 @@ RED:
 SECTION_NAME: Music
 ```
 
-On Windows, the config path is typically `%APPDATA%\red-plex\config.yml`.
+### Configuration Tips
 
----
-
-## Configuration Tips
-
-If you run into issues with `http://localhost:32400`, you may need the secure HTTPS URL. You can retrieve it from:
+If accessing Plex via HTTP fails, you can fetch an HTTPS URL by calling:
 
 ```bash
 https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={YOUR_TOKEN}
 ```
 
-This call returns an XML with a `<Device>` entry containing `uri="https://192-168-..."`. Use that URI in your config (e.g., `"https://192-168-x-x.plex.direct:32400"`).
+The result includes an XML `<Device>` node with a secure `uri=...`. That `plex.direct` address can be used as your `plex_url`.
 
 ---
 
 ## Considerations
 
-- **Album Matching**: Ensure the physical folder names in your Plex library are reasonably close to the torrent folder names.
-- **Cache Management**: Regularly updating the cache helps performance and accuracy.
-- **API Rate Limits**: `red-plex` uses built-in limiters and retries to avoid hitting site rate limits. Adjust them in `config.yml`.
-- **Logging Levels**: Default is `INFO`. Set `log_level: "DEBUG"` for more detailed logs or `"WARNING"` for fewer messages.
-- **Interactive Prompts**: When the collection already exists, `red-plex` will prompt to confirm updating.
-- **Multiple Collages**: You can list multiple collage IDs after the `collection` subcommand.
-- **Python Versions**: Tested on Python 3.8 to 3.12.
-- **Bookmarks**: Bookmarks are handled similarly to collages but stored separately.
-
+- **Album Matching**: File and folder naming must be consistent enough to match the torrent’s path with your Plex library’s path.  
+- **Database**: All data (albums, collages, bookmarks) is in `red_plex.db`. You can reset specific tables with `db albums reset`, etc.  
+- **Site Credentials**: Provide valid API keys for each site in `config.yml`.  
+- **Rate Limits**: The tool respects each site’s call/seconds settings to avoid spamming.  
+- **Logging**: Set `log_level` to `"DEBUG"` for more details, `"WARNING"` or higher for fewer logs.  
+- **Updates**: Running `collages update` or `bookmarks update` adds newly matched albums, but won’t remove items from Plex collections unless you specifically handle that scenario.  

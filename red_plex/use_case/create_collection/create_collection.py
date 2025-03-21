@@ -1,8 +1,7 @@
 """Module for creating Plex collections from Gazelle collages or bookmarks."""
 
-from domain.models import Collection, Album
-from infrastructure.cache.bookmarks_collection_cache import BookmarksCollectionCache
-from infrastructure.cache.collage_collection_cache import CollageCollectionCache
+from domain.models import Collection, Album, TorrentGroup
+from infrastructure.db.local_database import LocalDatabase
 from infrastructure.plex.plex_manager import PlexManager
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from use_case.create_collection.response.create_collection_response import CreateCollectionResponse
@@ -15,11 +14,12 @@ class CollectionCreator:
     based on Gazelle collages or bookmarks.
     """
 
-    def __init__(self, plex_manager: PlexManager, gazelle_api: GazelleAPI = None, cache_file=None):
+    def __init__(self, db: LocalDatabase,
+                 plex_manager: PlexManager,
+                 gazelle_api: GazelleAPI = None):
         self.plex_manager = plex_manager
         self.gazelle_api = gazelle_api
-        self.collage_collection_cache = CollageCollectionCache(cache_file)
-        self.bookmarks_collection_cache = BookmarksCollectionCache(cache_file)
+        self.db = db
 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def create_or_update_collection_from_collage(
@@ -55,26 +55,26 @@ class CollectionCreator:
             if not force_update:
                 return CreateCollectionResponse(response_status=False, collection_data=collage_data)
 
-            # Is there cached data?
+            # Is there stored data?
             if fetch_bookmarks:
-                cached_collage_collection = (self.bookmarks_collection_cache
-                                             .get_bookmark(existing_collection.id))
+                stored_collage_collection = (self.db
+                                             .get_bookmark_collection(existing_collection.id))
             else:
-                cached_collage_collection = (self.collage_collection_cache
-                                             .get_collection(existing_collection.id))
+                stored_collage_collection = (self.db
+                                             .get_collage_collection(existing_collection.id))
 
-            if cached_collage_collection:
-                cached_group_ids = set(torrent_group.id for torrent_group
-                                       in cached_collage_collection.torrent_groups)
+            if stored_collage_collection:
+                stored_group_ids = set(torrent_group.id for torrent_group
+                                       in stored_collage_collection.torrent_groups)
             else:
-                cached_group_ids = set()
+                stored_group_ids = set()
         else:
             existing_collection = None
-            cached_group_ids = set()
+            stored_group_ids = set()
 
-        # Calculate which groups are new (not in the cache)
+        # Calculate which groups are new (not in the db)
         group_ids = [torrent_group.id for torrent_group in collage_data.torrent_groups]
-        new_group_ids = set(map(int, group_ids)) - cached_group_ids
+        new_group_ids = set(map(int, group_ids)) - stored_group_ids
 
         matched_rating_keys = set()
         processed_group_ids = set()
@@ -96,29 +96,32 @@ class CollectionCreator:
             if existing_collection:
                 # Update existing collection
                 self.plex_manager.add_items_to_collection(existing_collection, albums)
-                # Update the cache with the new groups
-                updated_group_ids = cached_group_ids.union(processed_group_ids)
+
+                # Update the db with the new groups
+                updated_group_ids = stored_group_ids.union(processed_group_ids)
+                collection_with_new_groups = Collection(id=existing_collection.id, site=site,
+                                                        torrent_groups=[TorrentGroup(
+                                                            id=group_id) for group_id in
+                                                            updated_group_ids],
+                                                        name=existing_collection.name,
+                                                        external_id=collage_data.external_id)
                 if fetch_bookmarks:
-                    self.bookmarks_collection_cache.save_bookmarks(
-                        existing_collection.id, site, list(updated_group_ids)
-                    )
+                    self.db.insert_or_update_bookmark_collection(collection_with_new_groups)
                 else:
-                    self.collage_collection_cache.save_collection(
-                        existing_collection.id, collage_data.name, site,
-                        collage_id, list(updated_group_ids)
-                    )
+                    self.db.insert_or_update_collage_collection(collection_with_new_groups)
             else:
                 # Create the new collection
                 collection = self.plex_manager.create_collection(collage_data.name, albums)
+                collection_with_new_groups = Collection(id=collection.id, site=site,
+                                                        torrent_groups=[TorrentGroup(id=group_id)
+                                                                        for group_id in
+                                                                        processed_group_ids],
+                                                        name=collection.name,
+                                                        external_id=collage_data.external_id)
                 if fetch_bookmarks:
-                    self.bookmarks_collection_cache.save_bookmarks(
-                        collection.id, site, list(processed_group_ids)
-                    )
+                    self.db.insert_or_update_bookmark_collection(collection_with_new_groups)
                 else:
-                    self.collage_collection_cache.save_collection(
-                        collection.id, collage_data.name, site,
-                        collage_id, list(processed_group_ids)
-                    )
+                    self.db.insert_or_update_collage_collection(collection_with_new_groups)
 
         # If we reach this point, the creation or update was successful
         return CreateCollectionResponse(response_status=True,
