@@ -28,6 +28,7 @@ class CsvToDbMigrator:
         conn = sqlite3.connect(db_file_path)
 
         if os.path.isfile(albums_file_path):
+            logger.info('Migrating albums from CSV to db...')
             albums = self._load_albums(albums_file_path)
             for album in albums:
                 conn.execute(
@@ -35,7 +36,9 @@ class CsvToDbMigrator:
                     (album.id, album.path, album.added_at.isoformat())
                 )
             conn.commit()
+            logger.info('Albums successfully migrated to db.')
         if os.path.isfile(collages_file_path):
+            logger.info('Migrating collages from CSV to db...')
             collages = self._load_collage_collections(collages_file_path)
             for collage in collages:
                 conn.execute(
@@ -51,7 +54,9 @@ class CsvToDbMigrator:
                         (collage.id, group.id)
                     )
             conn.commit()
+            logger.info('Collages successfully migrated to db.')
         if os.path.isfile(bookmarks_file_path):
+            logger.info('Migrating bookmarks from CSV to db...')
             bookmarks = self._load_bookmark_collections(bookmarks_file_path)
             for bookmark in bookmarks:
                 conn.execute(
@@ -65,6 +70,8 @@ class CsvToDbMigrator:
                         "INSERT INTO collection_torrent_groups(rating_key, group_id) VALUES(?, ?)",
                         (bookmark.id, group.id)
                     )
+            conn.commit()
+            logger.info('Bookmarks successfully migrated to db.')
 
     @staticmethod
     def _load_albums(csv_file: str) -> List[Album]:

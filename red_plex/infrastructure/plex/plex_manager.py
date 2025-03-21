@@ -55,11 +55,11 @@ class PlexManager:
         new_albums = self.get_albums_given_filter(filters)
         logger.info('Found %d new albums added after %s.', len(new_albums), latest_added_at)
 
-        # Update the album_data dictionary with new albums
+        # Update the album_data list with new albums
         self.album_data.extend(new_albums)
 
-        # Save the updated album data to the db
-        self.local_database.insert_albums_bulk(self.album_data)
+        # Save new albums to the db
+        self.local_database.insert_albums_bulk(new_albums)
 
     def get_albums_given_filter(self, plex_filter: dict) -> List[Album]:
         """Returns a list of albums that match the specified filter."""

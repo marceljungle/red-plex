@@ -102,7 +102,9 @@ class CollectionCreator:
                 collection_with_new_groups = Collection(id=existing_collection.id, site=site,
                                                         torrent_groups=[TorrentGroup(
                                                             id=group_id) for group_id in
-                                                            updated_group_ids])
+                                                            updated_group_ids],
+                                                        name=existing_collection.name,
+                                                        external_id=collage_data.external_id)
                 if fetch_bookmarks:
                     self.db.insert_or_update_bookmark_collection(collection_with_new_groups)
                 else:
@@ -113,7 +115,9 @@ class CollectionCreator:
                 collection_with_new_groups = Collection(id=collection.id, site=site,
                                                         torrent_groups=[TorrentGroup(id=group_id)
                                                                         for group_id in
-                                                                        processed_group_ids])
+                                                                        processed_group_ids],
+                                                        name=collection.name,
+                                                        external_id=collage_data.external_id)
                 if fetch_bookmarks:
                     self.db.insert_or_update_bookmark_collection(collection_with_new_groups)
                 else:
