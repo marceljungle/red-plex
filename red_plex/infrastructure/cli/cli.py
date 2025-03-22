@@ -398,6 +398,19 @@ def db_bookmarks_reset(ctx):
             click.echo(f"An error occurred while resetting the collection bookmarks db: {exc}")
 
 
+@cli.group()
+def beets():
+    """Beets operations."""
+
+
+@beets.command('import')
+@click.argument('source', nargs=1)
+@click.argument('destination', nargs=1)
+def beets_import(source: str, destination: str):
+    """Import beets albums to the database."""
+    click.echo(f'I will import from {source} to {destination}.')
+
+
 def update_collections_from_collages(local_database: LocalDatabase,
                                      collage_list: List[Collection],
                                      plex_manager: PlexManager,
