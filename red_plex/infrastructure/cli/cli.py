@@ -472,9 +472,12 @@ def beets():
 @beets.command('import')
 @click.argument('source', nargs=1)
 @click.argument('destination', nargs=1)
-def beets_import(source: str, destination: str):
+@click.pass_context
+def beets_import(ctx, source: str, destination: str):
     """Import beets albums to the database."""
-    click.echo(f'I will import from {source} to {destination}.')
+    local_database = ctx.obj.get('db', None)
+    local_database: LocalDatabase
+    local_database.insert_or_update_beets_mapping(source, destination)
 
 
 def update_collections_from_collages(local_database: LocalDatabase,
@@ -514,12 +517,12 @@ def finalize_cli(ctx, _result, *_args, **_kwargs):
 
 
 def map_fetch_mode(fetch_mode) -> AlbumFetchMode:
+    """Map the fetch mode string to an AlbumFetchMode enum."""
     if fetch_mode == 'beets':
         return AlbumFetchMode.EXTERNAL
-    elif fetch_mode == 'mixed':
+    if fetch_mode == 'mixed':
         return AlbumFetchMode.MIXED
-    else:
-        return AlbumFetchMode.NORMAL
+    return AlbumFetchMode.NORMAL
 
 
 def main():

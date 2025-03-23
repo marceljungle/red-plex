@@ -13,7 +13,6 @@ from plexapi.library import MusicSection
 from plexapi.server import PlexServer
 
 from domain.models import Collection, Album
-from infrastructure.beets.album_location import BeetsData
 from infrastructure.config.config import load_config
 from infrastructure.db.local_database import LocalDatabase
 from infrastructure.logger.logger import logger
@@ -90,10 +89,10 @@ class PlexManager:
 
         rating_keys = {}
 
-        if (album_fetch_mode == AlbumFetchMode.EXTERNAL) or (album_fetch_mode == AlbumFetchMode.MIXED):
+        if album_fetch_mode in (AlbumFetchMode.EXTERNAL, AlbumFetchMode.MIXED):
             rating_keys.update(self.find_matching_rating_keys_using_beets(path))
 
-        if (album_fetch_mode == AlbumFetchMode.NORMAL) or (album_fetch_mode == AlbumFetchMode.MIXED):
+        if album_fetch_mode in (AlbumFetchMode.NORMAL, AlbumFetchMode.MIXED):
             rating_keys.update(self.find_matching_rating_keys(path))
 
         # No matches found
@@ -140,27 +139,39 @@ class PlexManager:
                 "Invalid input. Please enter valid "
                 "numbers separated by commas or 'A' for all, 'N' to select none.")
 
+    # pylint: disable=too-many-locals
     def find_matching_rating_keys_using_beets(self, path):
+        """Find matching rating keys using beets mappings."""
         matched_rating_keys = {}
         albums_locations = self.local_database.get_all_beets_mappings()
-        album_sources = albums_locations.source_destination.keys()
+
+        folder_pairs = set()
+
+        for src, dst in albums_locations.source_destination.items():
+            src_folder = os.path.dirname(src)
+            dst_folder = os.path.dirname(dst)
+            folder_pairs.add((src_folder, dst_folder))
+        albums_locations_simplified = dict(folder_pairs)
+
+        album_sources = albums_locations_simplified.keys()
         for source in album_sources:
             normalized_folder_path = os.path.normpath(source)  # Normalize path
             folder_parts = normalized_folder_path.split(os.sep)  # Split path into parts
 
             # Check if the path matches any part of folder_path
             if path in folder_parts:
-                real_path = albums_locations.source_destination[source]
+                real_path = albums_locations_simplified[source]
                 normalized_real_path = os.path.normpath(real_path)  # Normalize path
 
                 # Iterate the whole Plex library
                 for album in self.album_data:
                     normalized_album_path = os.path.normpath(album.path)
-                    if normalized_album_path.startswith(normalized_real_path):
+                    if normalized_real_path.startswith(normalized_album_path):
                         matched_rating_keys[album.id] = album.path
         return matched_rating_keys
 
     def find_matching_rating_keys(self, path):
+        """Find matching rating keys using the album_data."""
         matched_rating_keys = {}
         # Iterate over album_data and find matches
         for album in self.album_data:

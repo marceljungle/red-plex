@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from domain.models import Album, Collection, TorrentGroup
-from infrastructure.beets.album_location import BeetsData
+from infrastructure.beets.model.beets_data import BeetsData
 from infrastructure.db.utils.csv_to_db_migrator import CsvToDbMigrator
 from infrastructure.logger.logger import logger
 
