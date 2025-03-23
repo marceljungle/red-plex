@@ -13,10 +13,12 @@ from plexapi.library import MusicSection
 from plexapi.server import PlexServer
 
 from domain.models import Collection, Album
-from infrastructure.db.local_database import LocalDatabase
+from infrastructure.beets.album_location import BeetsData
 from infrastructure.config.config import load_config
+from infrastructure.db.local_database import LocalDatabase
 from infrastructure.logger.logger import logger
 from infrastructure.plex.mapper.plex_mapper import PlexMapper
+from use_case.create_collection.album_fetch_mode import AlbumFetchMode
 
 
 class PlexManager:
@@ -79,7 +81,7 @@ class PlexManager:
                 domain_albums.append(Album(album.ratingKey, album.addedAt, album_folder_path))
         return domain_albums
 
-    def get_rating_keys(self, path: str) -> List[str]:
+    def get_rating_keys(self, path: str, album_fetch_mode: AlbumFetchMode) -> List[str]:
         """Returns the rating keys if the path matches part of an album folder."""
         # Validate the input path
         if not self.validate_path(path):
@@ -88,14 +90,11 @@ class PlexManager:
 
         rating_keys = {}
 
-        # Iterate over album_data and find matches
-        for album in self.album_data:
-            normalized_folder_path = os.path.normpath(album.path)  # Normalize path
-            folder_parts = normalized_folder_path.split(os.sep)  # Split path into parts
+        if (album_fetch_mode == AlbumFetchMode.EXTERNAL) or (album_fetch_mode == AlbumFetchMode.MIXED):
+            rating_keys.update(self.find_matching_rating_keys_using_beets(path))
 
-            # Check if the path matches any part of folder_path
-            if path in folder_parts:
-                rating_keys[album.id] = normalized_folder_path
+        if (album_fetch_mode == AlbumFetchMode.NORMAL) or (album_fetch_mode == AlbumFetchMode.MIXED):
+            rating_keys.update(self.find_matching_rating_keys(path))
 
         # No matches found
         if not rating_keys:
@@ -140,6 +139,38 @@ class PlexManager:
             logger.error(
                 "Invalid input. Please enter valid "
                 "numbers separated by commas or 'A' for all, 'N' to select none.")
+
+    def find_matching_rating_keys_using_beets(self, path):
+        matched_rating_keys = {}
+        albums_locations = self.local_database.get_all_beets_mappings()
+        album_sources = albums_locations.source_destination.keys()
+        for source in album_sources:
+            normalized_folder_path = os.path.normpath(source)  # Normalize path
+            folder_parts = normalized_folder_path.split(os.sep)  # Split path into parts
+
+            # Check if the path matches any part of folder_path
+            if path in folder_parts:
+                real_path = albums_locations.source_destination[source]
+                normalized_real_path = os.path.normpath(real_path)  # Normalize path
+
+                # Iterate the whole Plex library
+                for album in self.album_data:
+                    normalized_album_path = os.path.normpath(album.path)
+                    if normalized_album_path.startswith(normalized_real_path):
+                        matched_rating_keys[album.id] = album.path
+        return matched_rating_keys
+
+    def find_matching_rating_keys(self, path):
+        matched_rating_keys = {}
+        # Iterate over album_data and find matches
+        for album in self.album_data:
+            normalized_folder_path = os.path.normpath(album.path)  # Normalize path
+            folder_parts = normalized_folder_path.split(os.sep)  # Split path into parts
+
+            # Check if the path matches any part of folder_path
+            if path in folder_parts:
+                matched_rating_keys[album.id] = normalized_folder_path
+        return matched_rating_keys
 
     def _fetch_albums_by_keys(self, albums: List[Album]) -> List[MediaContainer]:
         """Fetches album objects from Plex using their rating keys."""
