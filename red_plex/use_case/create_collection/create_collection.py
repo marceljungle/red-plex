@@ -22,7 +22,8 @@ class CollectionCreator:
         self.gazelle_api = gazelle_api
         self.db = db
 
-    # pylint: disable=too-many-locals, too-many-branches, too-many-statements, too-many-arguments, too-many-positional-arguments
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements, too-many-arguments
+    # pylint: disable=R0917, E1121
     def create_or_update_collection_from_collage(
             self,
             collage_id: str = "",
