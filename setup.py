@@ -2,7 +2,7 @@
 
 import re
 import pathlib
-from setuptools import setup, find_namespace_packages # o from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 # Resolve the absolute path to the directory containing setup.py
 here = pathlib.Path(__file__).parent.resolve()
