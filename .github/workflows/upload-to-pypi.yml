@@ -27,6 +27,10 @@ jobs:
           VERSION=$(git describe --tags --abbrev=0)
           echo "VERSION=${VERSION#v}" >> $GITHUB_ENV
 
+      - name: Update __init__.py with Version
+        run: |
+          echo "__version__ = '${VERSION}'" > red_plex/__init__.py
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:

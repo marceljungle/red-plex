@@ -4,5 +4,3 @@ __pycache__/
 dist/*
 build/*
 red_plex.egg-info/*
-red_plex/red_plex.egg-info/*
-.idea/*
