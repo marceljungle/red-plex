@@ -22,4 +22,5 @@ jobs:
 
       - name: Analysing the code with pylint
         run: |
-          pylint $(git ls-files '*.py')
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/red_plex"
+          pylint $(git ls-files 'red_plex/**/*.py')
