@@ -7,7 +7,6 @@ import click
 import yaml
 
 from domain.models import Collection
-from infrastructure.db.local_database import LocalDatabase
 from infrastructure.config.config import (
     CONFIG_FILE_PATH,
     load_config,
@@ -15,9 +14,11 @@ from infrastructure.config.config import (
     ensure_config_exists
 )
 from infrastructure.config.models import Configuration
+from infrastructure.db.local_database import LocalDatabase
 from infrastructure.logger.logger import logger, configure_logger
 from infrastructure.plex.plex_manager import PlexManager
 from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from use_case.create_collection.album_fetch_mode import AlbumFetchMode
 from use_case.create_collection.create_collection import CollectionCreator
 
 
@@ -87,8 +88,21 @@ def collages():
 # collages update
 @collages.command('update')
 @click.pass_context
-def update_collages(ctx):
+@click.option(
+    '--fetch-mode', '-fm',
+    type=click.Choice(['normal', 'beets', 'mixed']),
+    default='normal',
+    show_default=True,
+    help=(
+            '(Optional) Album lookup strategy:\n'
+            '\n- normal: uses the torrent folder as-is\n'
+            '\n- beets: uses source→destination mapping from Beets\n'
+            '\n- mixed: tries both methods (for hybrid libraries)'
+    )
+)
+def update_collages(ctx, fetch_mode: str):
     """Synchronize all stored collections with their source collages."""
+    fetch_mode = map_fetch_mode(fetch_mode)
     try:
         local_database = ctx.obj.get('db', None)
         local_database: LocalDatabase
@@ -113,15 +127,31 @@ def update_collages(ctx):
 
 # convert collection
 @collages.command('convert')
-@click.argument('collage_ids', nargs=-1)
-@click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
+@click.argument('collage_ids',
+                nargs=-1)
+@click.option('--site', '-s',
+              type=click.Choice(['red', 'ops']),
+              required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
+@click.option(
+    '--fetch-mode', '-fm',
+    type=click.Choice(['normal', 'beets', 'mixed']),
+    default='normal',
+    show_default=True,
+    help=(
+            '(Optional) Album lookup strategy:\n'
+            '\n- normal: uses the torrent folder as-is\n'
+            '\n- beets: uses source→destination mapping from Beets\n'
+            '\n- mixed: tries both methods (for hybrid libraries)'
+    )
+)
 @click.pass_context
-def convert_collages(ctx, collage_ids, site):
+def convert_collages(ctx, collage_ids, site, fetch_mode):
     """
     Create Plex collections from given COLLAGE_IDS.
     If the collection already exists, confirmation will be requested to update it.
     """
+    album_fetch_mode = map_fetch_mode(fetch_mode)
     if not collage_ids:
         click.echo("Please provide at least one COLLAGE_ID.")
         return
@@ -147,7 +177,8 @@ def convert_collages(ctx, collage_ids, site):
             collage_id=collage_id,
             site=site,
             fetch_bookmarks=False,
-            force_update=False
+            force_update=False,
+            album_fetch_mode=album_fetch_mode
         )
 
         if initial_result.response_status is False:
@@ -162,7 +193,8 @@ def convert_collages(ctx, collage_ids, site):
                     collage_id=collage_id,
                     site=site,
                     fetch_bookmarks=False,
-                    force_update=True
+                    force_update=True,
+                    album_fetch_mode=album_fetch_mode
                 )
                 # Now show forced_result
                 if forced_result.response_status is True:
@@ -199,8 +231,21 @@ def bookmarks():
 # bookmarks update
 @bookmarks.command('update')
 @click.pass_context
-def update_bookmarks_collection(ctx):
+@click.option(
+    '--fetch-mode', '-fm',
+    type=click.Choice(['normal', 'beets', 'mixed']),
+    default='normal',
+    show_default=True,
+    help=(
+            '(Optional) Album lookup strategy:\n'
+            '\n- normal: uses the torrent folder as-is\n'
+            '\n- beets: uses source→destination mapping from Beets\n'
+            '\n- mixed: tries both methods (for hybrid libraries)'
+    )
+)
+def update_bookmarks_collection(ctx, fetch_mode: str):
     """Synchronize all stored bookmarks with their source collages."""
+    fetch_mode = map_fetch_mode(fetch_mode)
     try:
         local_database = ctx.obj.get('db', None)
         local_database: LocalDatabase
@@ -216,7 +261,11 @@ def update_bookmarks_collection(ctx):
         plex_manager.populate_album_table()
 
         update_collections_from_collages(
-            local_database, all_bookmarks, plex_manager, fetch_bookmarks=True)
+            local_database,
+            all_bookmarks,
+            plex_manager,
+            fetch_bookmarks=True,
+            fetch_mode=fetch_mode)
 
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update stored bookmarks: %s', exc)
@@ -226,13 +275,28 @@ def update_bookmarks_collection(ctx):
 # bookmarks convert
 @bookmarks.command('convert')
 @click.pass_context
-@click.option('--site', '-s', type=click.Choice(['red', 'ops']), required=True,
+@click.option('--site', '-s',
+              type=click.Choice(['red', 'ops']),
+              required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
-def convert_collection_from_bookmarks(ctx, site: str):
+@click.option(
+    '--fetch-mode', '-fm',
+    type=click.Choice(['normal', 'beets', 'mixed']),
+    default='normal',
+    show_default=True,
+    help=(
+            '(Optional) Album lookup strategy:\n'
+            '\n- normal: uses the torrent folder as-is\n'
+            '\n- beets: uses source→destination mapping from Beets\n'
+            '\n- mixed: tries both methods (for hybrid libraries)'
+    )
+)
+def convert_collection_from_bookmarks(ctx, site: str, fetch_mode: str):
     """
     Create a Plex collection based on your site bookmarks.
     If the collection already exists, ask for confirmation to update.
     """
+    album_fetch_mode = map_fetch_mode(fetch_mode)
     local_database = ctx.obj.get('db', None)
     local_database: LocalDatabase
     plex_manager = PlexManager(db=local_database)
@@ -245,7 +309,8 @@ def convert_collection_from_bookmarks(ctx, site: str):
         initial_result = collection_creator.create_or_update_collection_from_collage(
             site=site.upper(),
             fetch_bookmarks=True,
-            force_update=False
+            force_update=False,
+            album_fetch_mode=album_fetch_mode
         )
 
         if initial_result.response_status is False:
@@ -259,7 +324,8 @@ def convert_collection_from_bookmarks(ctx, site: str):
                 forced_result = collection_creator.create_or_update_collection_from_collage(
                     site=site.upper(),
                     fetch_bookmarks=True,
-                    force_update=True
+                    force_update=True,
+                    album_fetch_mode=album_fetch_mode
                 )
                 if forced_result.response_status is True:
                     click.echo(
@@ -349,7 +415,7 @@ def db_albums_update(ctx):
         plex_manager = PlexManager(db=local_database)
         plex_manager.populate_album_table()
         click.echo("Albums table has been updated successfully.")
-    except Exception as exc: # pylint: disable=W0703
+    except Exception as exc:  # pylint: disable=W0703
         click.echo(f"An error occurred while updating the album table: {exc}")
 
 
@@ -398,10 +464,27 @@ def db_bookmarks_reset(ctx):
             click.echo(f"An error occurred while resetting the collection bookmarks db: {exc}")
 
 
+@cli.group()
+def beets():
+    """Beets operations."""
+
+
+@beets.command('import')
+@click.argument('source', nargs=1)
+@click.argument('destination', nargs=1)
+@click.pass_context
+def beets_import(ctx, source: str, destination: str):
+    """Import beets albums to the database."""
+    local_database = ctx.obj.get('db', None)
+    local_database: LocalDatabase
+    local_database.insert_or_update_beets_mapping(source, destination)
+
+
 def update_collections_from_collages(local_database: LocalDatabase,
                                      collage_list: List[Collection],
                                      plex_manager: PlexManager,
-                                     fetch_bookmarks=False):
+                                     fetch_bookmarks=False,
+                                     fetch_mode: AlbumFetchMode = AlbumFetchMode.NORMAL):
     """
     Forces the update of each collage (force_update=True)
     """
@@ -410,8 +493,11 @@ def update_collections_from_collages(local_database: LocalDatabase,
         gazelle_api = GazelleAPI(collage.site)
         collection_creator = CollectionCreator(local_database, plex_manager, gazelle_api)
         result = collection_creator.create_or_update_collection_from_collage(
-            collage.external_id, site=collage.site,
-            fetch_bookmarks=fetch_bookmarks, force_update=True
+            collage.external_id,
+            site=collage.site,
+            fetch_bookmarks=fetch_bookmarks,
+            force_update=True,
+            album_fetch_mode=fetch_mode
         )
 
         if result.response_status is None:
@@ -428,6 +514,15 @@ def finalize_cli(ctx, _result, *_args, **_kwargs):
     local_database = ctx.obj.get('db', None)
     if local_database:
         local_database.close()
+
+
+def map_fetch_mode(fetch_mode) -> AlbumFetchMode:
+    """Map the fetch mode string to an AlbumFetchMode enum."""
+    if fetch_mode == 'beets':
+        return AlbumFetchMode.EXTERNAL
+    if fetch_mode == 'mixed':
+        return AlbumFetchMode.MIXED
+    return AlbumFetchMode.NORMAL
 
 
 def main():

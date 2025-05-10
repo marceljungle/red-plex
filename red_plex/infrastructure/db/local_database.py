@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from domain.models import Album, Collection, TorrentGroup
+from infrastructure.beets.model.beets_data import BeetsData
 from infrastructure.db.utils.csv_to_db_migrator import CsvToDbMigrator
 from infrastructure.logger.logger import logger
 
@@ -67,6 +68,12 @@ class LocalDatabase:
         CREATE TABLE IF NOT EXISTS collection_torrent_groups (
           rating_key TEXT,
           group_id INTEGER
+        );
+        """)
+        self.conn.execute("""
+        CREATE TABLE IF NOT EXISTS beets_mappings (
+          source TEXT,
+          destination TEXT
         );
         """)
 
@@ -398,6 +405,37 @@ class LocalDatabase:
         """)
 
         self.conn.commit()
+
+    # --------------------------------------------------------------------------
+    #                           BEETS MAPPINGS
+    # --------------------------------------------------------------------------
+    def insert_or_update_beets_mapping(self, source: str, destination: str) -> None:
+        """
+        Insert or update beets source-destination relation in the 'beets_mappings' table.
+        Uses INSERT OR REPLACE to handle upsert logic.
+        """
+        logger.debug("Inserting/updating beets mapping with source "
+                     "%s and destination %s", source, destination)
+        self.conn.execute(
+            """
+            INSERT OR REPLACE INTO beets_mappings(source, destination)
+            VALUES (?, ?)
+            """,
+            (source, destination)
+        )
+        self.conn.commit()
+
+    def get_all_beets_mappings(self) -> BeetsData:
+        """
+        Retrieve all beets mappings from the DB,
+        """
+        cur = self.conn.cursor()
+        cur.execute("SELECT source, destination FROM beets_mappings")
+        rows = cur.fetchall()
+        beets_data = BeetsData({})
+        for (source, destination) in rows:
+            beets_data.source_destination.update({source: destination})
+        return beets_data
 
     # --------------------------------------------------------------------------
     #                HELPER: TORRENT GROUPS FOR A GIVEN RATING_KEY
