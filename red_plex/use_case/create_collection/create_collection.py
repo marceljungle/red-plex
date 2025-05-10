@@ -4,6 +4,7 @@ from red_plex.domain.models import Collection, Album, TorrentGroup
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 from red_plex.use_case.create_collection.response.create_collection_response import CreateCollectionResponse
 
 
@@ -21,13 +22,15 @@ class CollectionCreator:
         self.gazelle_api = gazelle_api
         self.db = db
 
-    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements, too-many-arguments
+    # pylint: disable=R0917, E1121
     def create_or_update_collection_from_collage(
             self,
             collage_id: str = "",
             site: str = None,
             fetch_bookmarks=False,
-            force_update=False
+            force_update=False,
+            album_fetch_mode: AlbumFetchMode = AlbumFetchMode.NORMAL
     ) -> CreateCollectionResponse:
         """
         Creates or updates a Plex collection based on a Gazelle collage.
@@ -84,7 +87,7 @@ class CollectionCreator:
             if torrent_group:
                 group_matched = False
                 for path in torrent_group.file_paths:
-                    rating_keys = self.plex_manager.get_rating_keys(path) or []
+                    rating_keys = self.plex_manager.get_rating_keys(path, album_fetch_mode) or []
                     if rating_keys:
                         group_matched = True
                         matched_rating_keys.update(key for key in rating_keys)

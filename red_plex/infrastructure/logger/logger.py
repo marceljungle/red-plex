@@ -59,6 +59,3 @@ def configure_logger():
     # Add handlers to the logger
     logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
-
-    # Log where the logs are being saved for transparency
-    logger.info("Logs are being saved to: [%s]", log_file_path)
