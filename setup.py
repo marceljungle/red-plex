@@ -1,5 +1,6 @@
 """Setup script for installing the package."""
 
+import re
 import pathlib
 from setuptools import setup, find_namespace_packages
 
