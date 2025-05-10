@@ -1,23 +1,14 @@
 """Setup script for installing the package."""
 
-import re
 import pathlib
 from setuptools import setup, find_namespace_packages
 
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text(encoding="utf-8")
 
-# Read the version from the package's __init__.py
-with open('red_plex/__init__.py', 'r', encoding="utf-8") as f:
-    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M)
-    if version_match:
-        version = version_match.group(1)
-    else:
-        raise RuntimeError("Unable to find version string.")
-
 setup(
     name='red_plex',
-    version=version,
+    version='0.0.0',
     description='A tool for creating Plex playlists or collections from RED collages',
     long_description=long_description,
     long_description_content_type="text/markdown",
