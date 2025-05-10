@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List
 
-from domain.models import Collection, Album
+from red_plex.domain.models import Collection, Album
 
 
 @dataclass

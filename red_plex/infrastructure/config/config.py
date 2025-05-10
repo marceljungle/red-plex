@@ -4,7 +4,7 @@ import os
 
 import yaml
 
-from infrastructure.config.models import Configuration
+from red_plex.infrastructure.config.models import Configuration
 
 # Determine the path to the user's config directory based on OS
 home_dir = os.getenv('APPDATA') if os.name == 'nt' else os.path.expanduser('~/.config')
