@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from plexapi.collection import Collection as PlexCollection
 
-from domain.models import Collection
+from red_plex.domain.models import Collection
 
 
 class PlexMapper:

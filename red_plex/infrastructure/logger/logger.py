@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from infrastructure.config.config import load_config
+from red_plex.infrastructure.config.config import load_config
 
 # Create the logger
 logger = logging.getLogger('red_plex')

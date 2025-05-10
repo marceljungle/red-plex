@@ -4,8 +4,8 @@ import html
 import re
 from typing import Dict, Any, Union, List
 
-from domain.models import Collection, TorrentGroup
-from infrastructure.logger.logger import logger
+from red_plex.domain.models import Collection, TorrentGroup
+from red_plex.infrastructure.logger.logger import logger
 
 
 class GazelleMapper:
