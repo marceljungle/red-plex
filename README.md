@@ -81,7 +81,7 @@ red-plex config reset
 
 ```bash
 # Create Plex collections for specific collage IDs
-red-plex collages create [COLLAGE_IDS] --site [red|ops]
+red-plex collages convert [COLLAGE_IDS] --site [red|ops]
 
 # Update all collages in the database, re-checking the site data
 red-plex collages update
@@ -91,7 +91,7 @@ red-plex collages update
 
 ```bash
 # Create Plex collections from your bookmarked releases
-red-plex bookmarks create --site [red|ops]
+red-plex bookmarks convert --site [red|ops]
 
 # Update all bookmarks in the database
 red-plex bookmarks update
@@ -125,19 +125,19 @@ red-plex db bookmarks reset     # Clear the bookmark collections table
 From a single collage (on Redacted):
 
 ```bash
-red-plex collages create 12345 --site red
+red-plex collages convert 12345 --site red
 ```
 
 From multiple collages (on Orpheus):
 
 ```bash
-red-plex collages create 1111 2222 3333 --site ops
+red-plex collages convert 1111 2222 3333 --site ops
 ```
 
 From your bookmarks (on RED or OPS):
 
 ```bash
-red-plex bookmarks create --site red
+red-plex bookmarks convert --site red
 ```
 
 _(Prompts if a collection already exists.)_
