@@ -22,6 +22,8 @@ class TorrentGroup:
     for each and every torrent present in the group.
     """
     id: int
+    artists: List[str] = field(default_factory=list)
+    album_name: str = ""
     file_paths: List[str] = field(default_factory=list)
 
 

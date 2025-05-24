@@ -18,8 +18,12 @@ from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger, configure_logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from red_plex.infrastructure.service.collection_processor import CollectionProcessingService
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
-from red_plex.use_case.create_collection.create_collection import CollectionCreator
+from red_plex.use_case.create_collection.query.query_sync_collection import (
+    QuerySyncCollectionUseCase)
+from red_plex.use_case.create_collection.torrent_name.torrent_name_sync_collection import (
+    TorrentNameCollectionCreatorUseCase)
 
 
 @click.group()
@@ -90,14 +94,15 @@ def collages():
 @click.pass_context
 @click.option(
     '--fetch-mode', '-fm',
-    type=click.Choice(['normal', 'beets', 'mixed']),
-    default='normal',
+    type=click.Choice(['torrent_name', 'query']),
+    default='torrent_name',
     show_default=True,
     help=(
             '(Optional) Album lookup strategy:\n'
-            '\n- normal: uses the torrent folder as-is\n'
-            '\n- beets: uses source→destination mapping from Beets\n'
-            '\n- mixed: tries both methods (for hybrid libraries)'
+            '\n- torrent_name: uses torrent dir name to search in Plex, '
+            'if you don\'t use Beets/Lidarr \n'
+            '\n- query: uses queries to Plex instead of searching by path name '
+            '(if you use Beets/Lidarr)\n'
     )
 )
 def update_collages(ctx, fetch_mode: str):
@@ -119,7 +124,11 @@ def update_collages(ctx, fetch_mode: str):
         plex_manager.populate_album_table()
 
         update_collections_from_collages(
-            local_database, all_collages, plex_manager, fetch_bookmarks=False)
+            local_database=local_database,
+            collage_list=all_collages,
+            plex_manager=plex_manager,
+            fetch_bookmarks=False,
+            fetch_mode=fetch_mode)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update stored collections: %s', exc)
         click.echo(f"An error occurred while updating stored collections: {exc}")
@@ -127,99 +136,60 @@ def update_collages(ctx, fetch_mode: str):
 
 # convert collection
 @collages.command('convert')
-@click.argument('collage_ids',
-                nargs=-1)
+@click.argument('collage_ids', nargs=-1)
 @click.option('--site', '-s',
               type=click.Choice(['red', 'ops']),
               required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 @click.option(
     '--fetch-mode', '-fm',
-    type=click.Choice(['normal', 'beets', 'mixed']),
+    type=click.Choice(['normal', 'query'], case_sensitive=False),  # Added case_sensitive
     default='normal',
     show_default=True,
     help=(
             '(Optional) Album lookup strategy:\n'
-            '\n- normal: uses the torrent folder as-is\n'
-            '\n- beets: uses source→destination mapping from Beets\n'
-            '\n- mixed: tries both methods (for hybrid libraries)'
+            '\n- normal: uses torrent dir name (original behavior).\n'
+            '\n- query: uses Plex queries (Beets/Lidarr friendly).\n'
     )
 )
 @click.pass_context
 def convert_collages(ctx, collage_ids, site, fetch_mode):
     """
-    Create Plex collections from given COLLAGE_IDS.
-    If the collection already exists, confirmation will be requested to update it.
+    Create/Update Plex collections from given COLLAGE_IDS.
     """
-    album_fetch_mode = map_fetch_mode(fetch_mode)
     if not collage_ids:
         click.echo("Please provide at least one COLLAGE_ID.")
-        return
+        ctx.exit(1)  # Exit with an error code
 
-    local_database = ctx.obj.get('db', None)
-    local_database: LocalDatabase
-    plex_manager = PlexManager(db=local_database)
-    if not plex_manager:
-        return
+    album_fetch_mode_enum = map_fetch_mode(fetch_mode)
 
-    plex_manager.populate_album_table()
+    # --- Dependency Setup ---
+    local_database = ctx.obj.get('db')
+    if not local_database:
+        click.echo("Error: Database not initialized.", err=True)
+        ctx.exit(1)
 
-    gazelle_api = GazelleAPI(site)
-    if not gazelle_api:
-        return
+    plex_manager, gazelle_api = None, None
+    try:
+        plex_manager = PlexManager(db=local_database)
+        gazelle_api = GazelleAPI(site)
+    except Exception as e: # pylint: disable=W0718
+        logger.error("Failed to initialize dependencies: %s", e, exc_info=True)
+        click.echo(f"Error: Failed to initialize dependencies - {e}", err=True)
+        ctx.exit(1)
 
-    collection_creator = CollectionCreator(local_database, plex_manager, gazelle_api)
+    # --- Service Instantiation and Execution ---
+    processor = CollectionProcessingService(local_database, plex_manager, gazelle_api)
 
-    for collage_id in collage_ids:
-        logger.info('Processing collage ID "%s"...', collage_id)
-        # 1) First try, without forcing
-        initial_result = collection_creator.create_or_update_collection_from_collage(
-            collage_id=collage_id,
-            site=site,
-            fetch_bookmarks=False,
-            force_update=False,
-            album_fetch_mode=album_fetch_mode
-        )
+    # Call the service, passing the necessary functions from click
+    processor.process_collages(
+        collage_ids=collage_ids,
+        album_fetch_mode=album_fetch_mode_enum,
+        echo_func=click.echo,
+        confirm_func=click.confirm  # Pass the actual click.confirm
+    )
 
-        if initial_result.response_status is False:
-            # That means the collection exists but wasn't forced => ask user
-            if click.confirm(
-                    f'Collection "{initial_result.collection_data.name}" already exists. '
-                    'Do you want to update it with new items?',
-                    default=True
-            ):
-                # 2) If user says yes, do the forced call
-                forced_result = collection_creator.create_or_update_collection_from_collage(
-                    collage_id=collage_id,
-                    site=site,
-                    fetch_bookmarks=False,
-                    force_update=True,
-                    album_fetch_mode=album_fetch_mode
-                )
-                # Now show forced_result
-                if forced_result.response_status is True:
-                    click.echo(
-                        f'Collection for collage "{forced_result.collection_data.name}" '
-                        f'was updated successfully with {len(forced_result.albums)} entries.'
-                    )
-                elif forced_result.response_status is None:
-                    click.echo(f'No valid data found for collage "{collage_id}" when forced.')
-                else:
-                    # This shouldn't happen
-                    click.echo('Something unexpected happened.')
-            else:
-                click.echo(f'Skipping collection update for '
-                           f'"{initial_result.collection_data.name}".')
-
-        elif initial_result.response_status is None:
-            click.echo(f'No valid data found for collage "{collage_id}".')
-
-        else:
-            # response_status == True => successfully created/updated
-            click.echo(
-                f'Collection for collage "{initial_result.collection_data.name}" '
-                f'created/updated successfully with {len(initial_result.albums)} entries.'
-            )
+    click.echo("Processing finished.")
 
 
 # bookmarks
@@ -233,14 +203,15 @@ def bookmarks():
 @click.pass_context
 @click.option(
     '--fetch-mode', '-fm',
-    type=click.Choice(['normal', 'beets', 'mixed']),
-    default='normal',
+    type=click.Choice(['torrent_name', 'query']),
+    default='torrent_name',
     show_default=True,
     help=(
             '(Optional) Album lookup strategy:\n'
-            '\n- normal: uses the torrent folder as-is\n'
-            '\n- beets: uses source→destination mapping from Beets\n'
-            '\n- mixed: tries both methods (for hybrid libraries)'
+            '\n- torrent_name: uses torrent dir name to search in Plex, '
+            'if you don\'t use Beets/Lidarr \n'
+            '\n- query: uses queries to Plex instead of searching by path name '
+            '(if you use Beets/Lidarr)\n'
     )
 )
 def update_bookmarks_collection(ctx, fetch_mode: str):
@@ -264,8 +235,7 @@ def update_bookmarks_collection(ctx, fetch_mode: str):
             local_database,
             all_bookmarks,
             plex_manager,
-            fetch_bookmarks=True,
-            fetch_mode=fetch_mode)
+            fetch_bookmarks=True)
 
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update stored bookmarks: %s', exc)
@@ -274,94 +244,65 @@ def update_bookmarks_collection(ctx, fetch_mode: str):
 
 # bookmarks convert
 @bookmarks.command('convert')
-@click.pass_context
 @click.option('--site', '-s',
-              type=click.Choice(['red', 'ops']),
+              type=click.Choice(['red', 'ops'], case_sensitive=False),
               required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 @click.option(
     '--fetch-mode', '-fm',
-    type=click.Choice(['normal', 'beets', 'mixed']),
-    default='normal',
+    type=click.Choice(['torrent_name', 'query'], case_sensitive=False),
+    default='torrent_name',
     show_default=True,
     help=(
             '(Optional) Album lookup strategy:\n'
-            '\n- normal: uses the torrent folder as-is\n'
-            '\n- beets: uses source→destination mapping from Beets\n'
-            '\n- mixed: tries both methods (for hybrid libraries)'
+            '\n- torrent_name: uses torrent dir name (original behavior).\n'
+            '\n- query: uses Plex queries (Beets/Lidarr friendly).\n'
     )
 )
+@click.pass_context
 def convert_collection_from_bookmarks(ctx, site: str, fetch_mode: str):
     """
-    Create a Plex collection based on your site bookmarks.
-    If the collection already exists, ask for confirmation to update.
+    Create/Update a Plex collection based on your site bookmarks.
     """
-    album_fetch_mode = map_fetch_mode(fetch_mode)
-    local_database = ctx.obj.get('db', None)
-    local_database: LocalDatabase
-    plex_manager = PlexManager(db=local_database)
-    plex_manager.populate_album_table()
-    gazelle_api = GazelleAPI(site)
-    collection_creator = CollectionCreator(local_database, plex_manager, gazelle_api)
+    album_fetch_mode_enum = map_fetch_mode(fetch_mode)
+
+    # --- Dependency Setup ---
+    local_database = ctx.obj.get('db')
+    if not local_database:
+        click.echo("Error: Database not initialized.", err=True)
+        ctx.exit(1)
+
+    plex_manager, gazelle_api = None, None
+    try:
+        plex_manager = PlexManager(db=local_database)
+        gazelle_api = GazelleAPI(site)  # Create GazelleAPI based on site
+    except Exception as e: # pylint: disable=W0718
+        logger.error("Failed to initialize dependencies: %s", e, exc_info=True)
+        click.echo(f"Error: Failed to initialize dependencies - {e}", err=True)
+        ctx.exit(1)
+
+    # --- Service Instantiation and Execution ---
+    processor = CollectionProcessingService(local_database, plex_manager, gazelle_api)
 
     try:
-        # First attempt without forcing
-        initial_result = collection_creator.create_or_update_collection_from_collage(
-            site=site.upper(),
-            fetch_bookmarks=True,
-            force_update=False,
-            album_fetch_mode=album_fetch_mode
+        # Call the specific bookmark processing method
+        processor.process_bookmarks(
+            album_fetch_mode=album_fetch_mode_enum,
+            echo_func=click.echo,
+            confirm_func=click.confirm
         )
-
-        if initial_result.response_status is False:
-            # The collection already exists but wasn't forced => ask the user
-            if click.confirm(
-                    f'Collection from bookmarks on site "{site.upper()}" already exists. '
-                    'Do you want to update it with new items?',
-                    default=True
-            ):
-                # Second call with force_update=True
-                forced_result = collection_creator.create_or_update_collection_from_collage(
-                    site=site.upper(),
-                    fetch_bookmarks=True,
-                    force_update=True,
-                    album_fetch_mode=album_fetch_mode
-                )
-                if forced_result.response_status is True:
-                    click.echo(
-                        f'Bookmark-based collection for site {site.upper()} '
-                        f'was updated successfully with {len(forced_result.albums)} entries.'
-                    )
-                elif forced_result.response_status is None:
-                    click.echo(
-                        f"No valid bookmark data found for site {site.upper()} when forced."
-                    )
-                else:
-                    # If forced_result.response_status is False again (unlikely),
-                    # or any other scenario
-                    click.echo("Something unexpected happened.")
-            else:
-                click.echo(
-                    f'Skipping bookmark-based collection update for "{site.upper()}".'
-                )
-
-        elif initial_result.response_status is None:
-            click.echo(f"No valid bookmark data found for site {site.upper()}.")
-        else:
-            # response_status == True => successfully created/updated
-            click.echo(
-                f"Bookmark-based collection for site {site.upper()} "
-                f"created or updated successfully with {len(initial_result.albums)} entries."
-            )
-
     except Exception as exc:  # pylint: disable=W0718
         logger.exception(
             'Failed to create collection from bookmarks on site %s: %s',
             site.upper(), exc
         )
         click.echo(
-            f'Failed to create collection from bookmarks on site {site.upper()}: {exc}'
+            f'Failed to create collection from bookmarks on site {site.upper()}: {exc}',
+            err=True
         )
+        ctx.exit(1)
+
+    click.echo("Bookmark processing finished.")
 
 
 # db
@@ -464,41 +405,39 @@ def db_bookmarks_reset(ctx):
             click.echo(f"An error occurred while resetting the collection bookmarks db: {exc}")
 
 
-@cli.group()
-def beets():
-    """Beets operations."""
-
-
-@beets.command('import')
-@click.argument('source', nargs=1)
-@click.argument('destination', nargs=1)
-@click.pass_context
-def beets_import(ctx, source: str, destination: str):
-    """Import beets albums to the database."""
-    local_database = ctx.obj.get('db', None)
-    local_database: LocalDatabase
-    local_database.insert_or_update_beets_mapping(source, destination)
-
-
 def update_collections_from_collages(local_database: LocalDatabase,
                                      collage_list: List[Collection],
                                      plex_manager: PlexManager,
                                      fetch_bookmarks=False,
-                                     fetch_mode: AlbumFetchMode = AlbumFetchMode.NORMAL):
+                                     fetch_mode: AlbumFetchMode = AlbumFetchMode.TORRENT_NAME):
     """
     Forces the update of each collage (force_update=True)
     """
+
     for collage in collage_list:
         logger.info('Updating collection for collage "%s"...', collage.name)
         gazelle_api = GazelleAPI(collage.site)
-        collection_creator = CollectionCreator(local_database, plex_manager, gazelle_api)
-        result = collection_creator.create_or_update_collection_from_collage(
-            collage.external_id,
-            site=collage.site,
-            fetch_bookmarks=fetch_bookmarks,
-            force_update=True,
-            album_fetch_mode=fetch_mode
-        )
+
+        if AlbumFetchMode.TORRENT_NAME == fetch_mode:
+            collection_creator = TorrentNameCollectionCreatorUseCase(local_database,
+                                                                     plex_manager,
+                                                                     gazelle_api)
+            result = collection_creator.execute(
+                collage_id=collage.external_id,
+                site=collage.site,
+                fetch_bookmarks=fetch_bookmarks,
+                force_update=True
+            )
+        else:
+            collection_creator = QuerySyncCollectionUseCase(local_database,
+                                                            plex_manager,
+                                                            gazelle_api)
+            result = collection_creator.execute(
+                collage_id=collage.external_id,
+                site=collage.site,
+                fetch_bookmarks=fetch_bookmarks,
+                force_update=True
+            )
 
         if result.response_status is None:
             logger.info('No valid data found for collage "%s".', collage.name)
@@ -518,11 +457,9 @@ def finalize_cli(ctx, _result, *_args, **_kwargs):
 
 def map_fetch_mode(fetch_mode) -> AlbumFetchMode:
     """Map the fetch mode string to an AlbumFetchMode enum."""
-    if fetch_mode == 'beets':
-        return AlbumFetchMode.EXTERNAL
-    if fetch_mode == 'mixed':
-        return AlbumFetchMode.MIXED
-    return AlbumFetchMode.NORMAL
+    if fetch_mode == 'query':
+        return AlbumFetchMode.QUERY
+    return AlbumFetchMode.TORRENT_NAME
 
 
 def main():
