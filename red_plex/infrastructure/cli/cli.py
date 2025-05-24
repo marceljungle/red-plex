@@ -20,8 +20,10 @@ from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.infrastructure.service.collection_processor import CollectionProcessingService
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
-from red_plex.use_case.create_collection.query.query_sync_collection import QuerySyncCollectionUseCase
-from red_plex.use_case.create_collection.torrent_name.torrent_name_sync_collection import TorrentNameCollectionCreatorUseCase
+from red_plex.use_case.create_collection.query.query_sync_collection import (
+    QuerySyncCollectionUseCase)
+from red_plex.use_case.create_collection.torrent_name.torrent_name_sync_collection import (
+    TorrentNameCollectionCreatorUseCase)
 
 
 @click.group()
@@ -97,8 +99,10 @@ def collages():
     show_default=True,
     help=(
             '(Optional) Album lookup strategy:\n'
-            '\n- torrent_name: uses torrent dir name to search in Plex, if you don\'t use Beets/Lidarr \n'
-            '\n- query: uses queries to Plex instead of searching by path name (if you use Beets/Lidarr)\n'
+            '\n- torrent_name: uses torrent dir name to search in Plex, '
+            'if you don\'t use Beets/Lidarr \n'
+            '\n- query: uses queries to Plex instead of searching by path name '
+            '(if you use Beets/Lidarr)\n'
     )
 )
 def update_collages(ctx, fetch_mode: str):
@@ -169,7 +173,7 @@ def convert_collages(ctx, collage_ids, site, fetch_mode):
     try:
         plex_manager = PlexManager(db=local_database)
         gazelle_api = GazelleAPI(site)
-    except Exception as e:
+    except Exception as e: # pylint: disable=W0718
         logger.error("Failed to initialize dependencies: %s", e, exc_info=True)
         click.echo(f"Error: Failed to initialize dependencies - {e}", err=True)
         ctx.exit(1)
@@ -204,8 +208,10 @@ def bookmarks():
     show_default=True,
     help=(
             '(Optional) Album lookup strategy:\n'
-            '\n- torrent_name: uses torrent dir name to search in Plex, if you don\'t use Beets/Lidarr \n'
-            '\n- query: uses queries to Plex instead of searching by path name (if you use Beets/Lidarr)\n'
+            '\n- torrent_name: uses torrent dir name to search in Plex, '
+            'if you don\'t use Beets/Lidarr \n'
+            '\n- query: uses queries to Plex instead of searching by path name '
+            '(if you use Beets/Lidarr)\n'
     )
 )
 def update_bookmarks_collection(ctx, fetch_mode: str):
@@ -270,7 +276,7 @@ def convert_collection_from_bookmarks(ctx, site: str, fetch_mode: str):
     try:
         plex_manager = PlexManager(db=local_database)
         gazelle_api = GazelleAPI(site)  # Create GazelleAPI based on site
-    except Exception as e:
+    except Exception as e: # pylint: disable=W0718
         logger.error("Failed to initialize dependencies: %s", e, exc_info=True)
         click.echo(f"Error: Failed to initialize dependencies - {e}", err=True)
         ctx.exit(1)
@@ -285,7 +291,7 @@ def convert_collection_from_bookmarks(ctx, site: str, fetch_mode: str):
             echo_func=click.echo,
             confirm_func=click.confirm
         )
-    except Exception as exc:  # Catch exceptions during processing
+    except Exception as exc:  # pylint: disable=W0718
         logger.exception(
             'Failed to create collection from bookmarks on site %s: %s',
             site.upper(), exc
@@ -413,7 +419,9 @@ def update_collections_from_collages(local_database: LocalDatabase,
         gazelle_api = GazelleAPI(collage.site)
 
         if AlbumFetchMode.TORRENT_NAME == fetch_mode:
-            collection_creator = TorrentNameCollectionCreatorUseCase(local_database, plex_manager, gazelle_api)
+            collection_creator = TorrentNameCollectionCreatorUseCase(local_database,
+                                                                     plex_manager,
+                                                                     gazelle_api)
             result = collection_creator.execute(
                 collage_id=collage.external_id,
                 site=collage.site,
@@ -421,7 +429,9 @@ def update_collections_from_collages(local_database: LocalDatabase,
                 force_update=True
             )
         else:
-            collection_creator = QuerySyncCollectionUseCase(local_database, plex_manager, gazelle_api)
+            collection_creator = QuerySyncCollectionUseCase(local_database,
+                                                            plex_manager,
+                                                            gazelle_api)
             result = collection_creator.execute(
                 collage_id=collage.external_id,
                 site=collage.site,

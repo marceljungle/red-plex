@@ -6,9 +6,11 @@ from red_plex.domain.models import Collection, Album, TorrentGroup
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
-from red_plex.use_case.create_collection.response.create_collection_response import CreateCollectionResponse
+from red_plex.use_case.create_collection.response.create_collection_response import (
+    CreateCollectionResponse)
 
 
+# pylint: disable=too-few-public-methods, too-many-positional-arguments, too-many-arguments
 class TorrentNameCollectionCreatorUseCase:
     """
     Handles creating/updating Plex collections by matching
@@ -34,7 +36,8 @@ class TorrentNameCollectionCreatorUseCase:
         # 1. Fetch data from the source (Gazelle)
         source_collection = self._fetch_source_data(collage_id, site, fetch_bookmarks)
         if not source_collection:
-            return CreateCollectionResponse(response_status=None, collection_data=None)
+            return CreateCollectionResponse(response_status=None,
+                                            collection_data=None)
 
         # 2. Handle existing collection in Plex and DB
         plex_collection = self.plex_manager.get_collection_by_name(source_collection.name)
@@ -43,7 +46,8 @@ class TorrentNameCollectionCreatorUseCase:
         if plex_collection:
             if not force_update:
                 # Collection exists, and update is not forced; confirmation is needed.
-                return CreateCollectionResponse(response_status=False, collection_data=source_collection)
+                return CreateCollectionResponse(response_status=False,
+                                                collection_data=source_collection)
             db_group_ids = self._get_stored_group_ids(plex_collection.id, fetch_bookmarks)
 
         # 3. Identify and find new albums in Plex using paths
@@ -55,7 +59,9 @@ class TorrentNameCollectionCreatorUseCase:
         # 4. Create or update if albums were found
         if not matched_rating_keys:
             # No new albums found or nothing to do.
-            return CreateCollectionResponse(response_status=True, collection_data=source_collection, albums=[])
+            return CreateCollectionResponse(response_status=True,
+                                            collection_data=source_collection,
+                                            albums=[])
 
         albums_to_add = [Album(id=rk) for rk in matched_rating_keys]
 
@@ -75,7 +81,9 @@ class TorrentNameCollectionCreatorUseCase:
             response_status=True, collection_data=source_collection, albums=albums_to_add
         )
 
-    def _fetch_source_data(self, collage_id: str, site: str, fetch_bookmarks: bool) -> Optional[Collection]:
+    def _fetch_source_data(self, collage_id: str,
+                           site: str,
+                           fetch_bookmarks: bool) -> Optional[Collection]:
         """Fetches collection data from Gazelle (collage or bookmarks)."""
         if fetch_bookmarks:
             return self.gazelle_api.get_bookmarks(site)
@@ -88,7 +96,9 @@ class TorrentNameCollectionCreatorUseCase:
         else:
             stored_collection = self.db.get_collage_collection(collection_id)
 
-        return {int(tg.id) for tg in stored_collection.torrent_groups} if stored_collection else set()
+        return {int(tg.id)
+                for tg
+                in stored_collection.torrent_groups} if stored_collection else set()
 
     def _find_new_plex_albums_by_path(self, new_group_ids: Set[int]) -> Tuple[Set[str], Set[int]]:
         """

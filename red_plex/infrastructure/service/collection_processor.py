@@ -1,3 +1,6 @@
+"""This module contains the CollectionProcessingService class, which is responsible for
+orchestrating the processing of collages or bookmarks into Plex collections."""
+
 import logging
 from typing import Callable, List, Optional
 
@@ -5,14 +8,19 @@ from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
-from red_plex.use_case.create_collection.query.query_sync_collection import QuerySyncCollectionUseCase
-from red_plex.use_case.create_collection.response.create_collection_response import CreateCollectionResponse
-from red_plex.use_case.create_collection.torrent_name.torrent_name_sync_collection import TorrentNameCollectionCreatorUseCase
+from red_plex.use_case.create_collection.query.query_sync_collection import (
+    QuerySyncCollectionUseCase)
+from red_plex.use_case.create_collection.response.create_collection_response import (
+    CreateCollectionResponse)
+from red_plex.use_case.create_collection.torrent_name.torrent_name_sync_collection import (
+    TorrentNameCollectionCreatorUseCase)
 
 logger = logging.getLogger(__name__)
 
-UseCaseType = (TorrentNameCollectionCreatorUseCase | QuerySyncCollectionUseCase)
+UseCaseType = TorrentNameCollectionCreatorUseCase | QuerySyncCollectionUseCase
 
+
+# pylint: disable=too-many-positional-arguments, too-many-arguments, duplicate-code
 class CollectionProcessingService:
     """Orchestrates processing collages or bookmarks into Plex collections."""
 
@@ -23,16 +31,24 @@ class CollectionProcessingService:
 
         # Initialize both use cases
         self.use_cases = {
-            AlbumFetchMode.TORRENT_NAME: TorrentNameCollectionCreatorUseCase(db, plex_manager, gazelle_api),
-            AlbumFetchMode.QUERY: QuerySyncCollectionUseCase(db, plex_manager, gazelle_api),
+            AlbumFetchMode.TORRENT_NAME: TorrentNameCollectionCreatorUseCase(db,
+                                                                             plex_manager,
+                                                                             gazelle_api),
+            AlbumFetchMode.QUERY: QuerySyncCollectionUseCase(db,
+                                                             plex_manager,
+                                                             gazelle_api),
         }
-        self.site = gazelle_api.site # Store site for messages
+        self.site = gazelle_api.site  # Store site for messages
 
     def _select_use_case(self, album_fetch_mode: AlbumFetchMode) -> Optional[UseCaseType]:
         """Selects the appropriate use case based on the fetch mode."""
         return self.use_cases.get(album_fetch_mode)
 
-    def _display_result(self, result: CreateCollectionResponse, source_desc: str, echo_func: Callable, forced: bool = False):
+    @staticmethod
+    def _display_result(result: CreateCollectionResponse,
+                        source_desc: str,
+                        echo_func: Callable,
+                        forced: bool = False):
         """Helper to display results using the echo_func."""
         context = " when forced" if forced else ""
 
@@ -47,18 +63,17 @@ class CollectionProcessingService:
             )
         elif result.response_status is None:
             echo_func(f'No valid data found or nothing to do for {source_desc}{context}.')
-        else: # Should not happen if initial False is handled
+        else:  # Should not happen if initial False is handled
             echo_func(f'Something unexpected happened for {source_desc}{context}.')
 
-
     def _process_single_request(
-        self,
-        use_case: UseCaseType,
-        echo_func: Callable,
-        confirm_func: Callable,
-        source_description: str,
-        collage_id: Optional[str] = None,
-        fetch_bookmarks: bool = False
+            self,
+            use_case: UseCaseType,
+            echo_func: Callable,
+            confirm_func: Callable,
+            source_description: str,
+            collage_id: Optional[str] = None,
+            fetch_bookmarks: bool = False
     ):
         """
         Handles the core logic for a single request (collage or bookmark),
@@ -78,8 +93,8 @@ class CollectionProcessingService:
             # Collection exists, ask for confirmation
             collection_name = initial_result.collection_data.name
             if confirm_func(
-                f'Collection "{collection_name}" from {source_description} '
-                'already exists. Do you want to update it with new items?'
+                    f'Collection "{collection_name}" from {source_description} '
+                    'already exists. Do you want to update it with new items?'
             ):
                 # 2) If user says yes, do the forced call
                 forced_result = use_case.execute(
@@ -95,11 +110,11 @@ class CollectionProcessingService:
             self._display_result(initial_result, source_description, echo_func)
 
     def process_collages(
-        self,
-        collage_ids: List[str],
-        album_fetch_mode: AlbumFetchMode,
-        echo_func: Callable,
-        confirm_func: Callable
+            self,
+            collage_ids: List[str],
+            album_fetch_mode: AlbumFetchMode,
+            echo_func: Callable,
+            confirm_func: Callable
     ):
         """Processes a list of collage IDs."""
         use_case = self._select_use_case(album_fetch_mode)
@@ -122,10 +137,10 @@ class CollectionProcessingService:
             )
 
     def process_bookmarks(
-        self,
-        album_fetch_mode: AlbumFetchMode,
-        echo_func: Callable,
-        confirm_func: Callable
+            self,
+            album_fetch_mode: AlbumFetchMode,
+            echo_func: Callable,
+            confirm_func: Callable
     ):
         """Processes bookmarks for the site."""
         use_case = self._select_use_case(album_fetch_mode)

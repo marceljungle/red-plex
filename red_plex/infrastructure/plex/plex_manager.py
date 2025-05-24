@@ -86,11 +86,12 @@ class PlexManager:
         album_names = self._get_album_transformations(album_name)
         artist_names = self._get_artist_transformations(artists)
         try:
-            albums = self.library_section.searchAlbums(albumTitle=album_names, artistTitle=artist_names)
+            albums = self.library_section.searchAlbums(albumTitle=album_names,
+                                                       artistTitle=artist_names)
             if albums:
                 return albums
             return []
-        except Exception as e:
+        except Exception as e: # pylint: disable=W0718
             logger.warning('An error occurred while searching for albums: %s', e)
             return []
 

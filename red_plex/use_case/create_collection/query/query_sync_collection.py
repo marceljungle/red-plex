@@ -1,12 +1,17 @@
+"""This module contains the CollectionProcessingService class, which is responsible for
+orchestrating the processing of collages or bookmarks into Plex collections."""
+
+
 from typing import List, Optional, Set, Tuple
 
 from red_plex.domain.models import Collection, Album, TorrentGroup
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
-from red_plex.use_case.create_collection.response.create_collection_response import CreateCollectionResponse
+from red_plex.use_case.create_collection.response.create_collection_response import (
+    CreateCollectionResponse)
 
-
+# pylint: disable=too-few-public-methods, too-many-positional-arguments, too-many-arguments, duplicate-code
 class QuerySyncCollectionUseCase:
     """
     Handles the logic to create or update a Plex collection based on
@@ -31,7 +36,8 @@ class QuerySyncCollectionUseCase:
         # 1. Fetch data from the source (Gazelle)
         source_collection = self._fetch_source_data(collage_id, site, fetch_bookmarks)
         if not source_collection:
-            return CreateCollectionResponse(response_status=None, collection_data=None)
+            return CreateCollectionResponse(response_status=None,
+                                            collection_data=None)
 
         # 2. Handle existing collection in Plex and DB
         plex_collection = self.plex_manager.get_collection_by_name(source_collection.name)
@@ -40,7 +46,8 @@ class QuerySyncCollectionUseCase:
         if plex_collection:
             if not force_update:
                 # The collection exists and update is not forced, confirmation is needed.
-                return CreateCollectionResponse(response_status=False, collection_data=source_collection)
+                return CreateCollectionResponse(response_status=False,
+                                                collection_data=source_collection)
             db_torrents = self._get_stored_torrents(plex_collection.id, fetch_bookmarks)
 
         # 3. Identify and search for new albums in Plex
@@ -50,7 +57,9 @@ class QuerySyncCollectionUseCase:
         # 4. Create or update if albums were found
         if not matched_albums:
             # No new albums found or nothing to do.
-            return CreateCollectionResponse(response_status=True, collection_data=source_collection, albums=[])
+            return CreateCollectionResponse(response_status=True,
+                                            collection_data=source_collection,
+                                            albums=[])
 
         if plex_collection:
             self._update_existing_collection(
@@ -68,7 +77,9 @@ class QuerySyncCollectionUseCase:
             response_status=True, collection_data=source_collection, albums=list(matched_albums)
         )
 
-    def _fetch_source_data(self, collage_id: str, site: str, fetch_bookmarks: bool) -> Optional[Collection]:
+    def _fetch_source_data(self, collage_id: str,
+                           site: str,
+                           fetch_bookmarks: bool) -> Optional[Collection]:
         """Fetches collection data from Gazelle (collage or bookmarks)."""
         if fetch_bookmarks:
             return self.gazelle_api.get_bookmarks(site)
