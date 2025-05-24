@@ -6,20 +6,20 @@ from typing import List
 import click
 import yaml
 
-from domain.models import Collection
-from infrastructure.config.config import (
+from red_plex.domain.models import Collection
+from red_plex.infrastructure.config.config import (
     CONFIG_FILE_PATH,
     load_config,
     save_config,
     ensure_config_exists
 )
-from infrastructure.config.models import Configuration
-from infrastructure.db.local_database import LocalDatabase
-from infrastructure.logger.logger import logger, configure_logger
-from infrastructure.plex.plex_manager import PlexManager
-from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
-from use_case.create_collection.album_fetch_mode import AlbumFetchMode
-from use_case.create_collection.create_collection import CollectionCreator
+from red_plex.infrastructure.config.models import Configuration
+from red_plex.infrastructure.db.local_database import LocalDatabase
+from red_plex.infrastructure.logger.logger import logger, configure_logger
+from red_plex.infrastructure.plex.plex_manager import PlexManager
+from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
+from red_plex.use_case.create_collection.create_collection import CollectionCreator
 
 
 @click.group()

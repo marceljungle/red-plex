@@ -6,8 +6,8 @@ import sqlite3
 from datetime import datetime
 from typing import List
 
-from domain.models import Album, Collection, TorrentGroup
-from infrastructure.logger.logger import logger
+from red_plex.domain.models import Album, Collection, TorrentGroup
+from red_plex.infrastructure.logger.logger import logger
 
 
 # pylint: disable=too-few-public-methods

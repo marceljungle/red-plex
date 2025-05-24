@@ -12,12 +12,12 @@ from plexapi.collection import Collection as PlexCollection
 from plexapi.library import MusicSection
 from plexapi.server import PlexServer
 
-from domain.models import Collection, Album
-from infrastructure.config.config import load_config
-from infrastructure.db.local_database import LocalDatabase
-from infrastructure.logger.logger import logger
-from infrastructure.plex.mapper.plex_mapper import PlexMapper
-from use_case.create_collection.album_fetch_mode import AlbumFetchMode
+from red_plex.domain.models import Collection, Album
+from red_plex.infrastructure.config.config import load_config
+from red_plex.infrastructure.db.local_database import LocalDatabase
+from red_plex.infrastructure.logger.logger import logger
+from red_plex.infrastructure.plex.mapper.plex_mapper import PlexMapper
+from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 
 
 class PlexManager:

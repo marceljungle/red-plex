@@ -9,10 +9,10 @@ import requests
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from domain.models import Collection, TorrentGroup
-from infrastructure.config.config import load_config
-from infrastructure.logger.logger import logger
-from infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
+from red_plex.domain.models import Collection, TorrentGroup
+from red_plex.infrastructure.config.config import load_config
+from red_plex.infrastructure.logger.logger import logger
+from red_plex.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
 
 # pylint: disable=W0718
