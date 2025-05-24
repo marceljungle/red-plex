@@ -2,7 +2,7 @@
 orchestrating the processing of collages or bookmarks into Plex collections."""
 
 import logging
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Union
 
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.plex.plex_manager import PlexManager
@@ -17,10 +17,11 @@ from red_plex.use_case.create_collection.torrent_name.torrent_name_sync_collecti
 
 logger = logging.getLogger(__name__)
 
-UseCaseType = TorrentNameCollectionCreatorUseCase | QuerySyncCollectionUseCase
+UseCaseType = Union[TorrentNameCollectionCreatorUseCase, QuerySyncCollectionUseCase]
 
 
 # pylint: disable=too-many-positional-arguments, too-many-arguments, duplicate-code
+# pylint: disable=R0913
 class CollectionProcessingService:
     """Orchestrates processing collages or bookmarks into Plex collections."""
 

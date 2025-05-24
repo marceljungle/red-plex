@@ -11,7 +11,8 @@ from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.use_case.create_collection.response.create_collection_response import (
     CreateCollectionResponse)
 
-# pylint: disable=too-few-public-methods, too-many-positional-arguments, too-many-arguments, duplicate-code
+# pylint: disable=too-few-public-methods, too-many-arguments, duplicate-code
+# pylint: disable=R0917, R0913
 class QuerySyncCollectionUseCase:
     """
     Handles the logic to create or update a Plex collection based on
