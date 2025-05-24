@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 UseCaseType = Union[TorrentNameCollectionCreatorUseCase, QuerySyncCollectionUseCase]
 
 
-# pylint: disable=too-many-positional-arguments, too-many-arguments, duplicate-code
+# pylint: disable=too-many-arguments, duplicate-code
 # pylint: disable=R0913
 class CollectionProcessingService:
     """Orchestrates processing collages or bookmarks into Plex collections."""
