@@ -12,12 +12,11 @@ from plexapi.collection import Collection as PlexCollection
 from plexapi.library import MusicSection
 from plexapi.server import PlexServer
 
-from domain.models import Collection, Album
-from infrastructure.config.config import load_config
-from infrastructure.db.local_database import LocalDatabase
-from infrastructure.logger.logger import logger
-from infrastructure.plex.mapper.plex_mapper import PlexMapper
-from use_case.create_collection.album_fetch_mode import AlbumFetchMode
+from red_plex.domain.models import Collection, Album
+from red_plex.infrastructure.config.config import load_config
+from red_plex.infrastructure.db.local_database import LocalDatabase
+from red_plex.infrastructure.logger.logger import logger
+from red_plex.infrastructure.plex.mapper.plex_mapper import PlexMapper
 
 
 class PlexManager:
@@ -220,60 +219,60 @@ class PlexManager:
 
     @staticmethod
     def _get_album_transformations(album_name: str) -> List[str]:
-            """
-            Returns a list of album name transformations for use in Plex queries.
-            """
-            album_name = album_name.strip()
-            tags = [
-                "EP", "Single", "Album", "Soundtrack", "Anthology",
-                "Compilation", "Live Album", "Remix", "Bootleg", "Interview",
-                "Mixtape", "Demo", "Concert Recording", "DJ Mix"
-            ]
-            suffixes = sorted(tags, key=len, reverse=True)
-            transforms = [album_name]
-            seen = {album_name.lower()}
-            i = 0
-            while i < len(transforms):
-                name = transforms[i]
-                for suffix in suffixes:
-                    if name.lower().endswith(suffix.lower()):
-                        new_name = name[:-len(suffix)].strip()
-                        if new_name and new_name.lower() not in seen:
-                            transforms.append(new_name)
-                            seen.add(new_name.lower())
-                i += 1
-            return transforms
+        """
+        Returns a list of album name transformations for use in Plex queries.
+        """
+        album_name = album_name.strip()
+        tags = [
+            "EP", "Single", "Album", "Soundtrack", "Anthology",
+            "Compilation", "Live Album", "Remix", "Bootleg", "Interview",
+            "Mixtape", "Demo", "Concert Recording", "DJ Mix"
+        ]
+        suffixes = sorted(tags, key=len, reverse=True)
+        transforms = [album_name]
+        seen = {album_name.lower()}
+        i = 0
+        while i < len(transforms):
+            name = transforms[i]
+            for suffix in suffixes:
+                if name.lower().endswith(suffix.lower()):
+                    new_name = name[:-len(suffix)].strip()
+                    if new_name and new_name.lower() not in seen:
+                        transforms.append(new_name)
+                        seen.add(new_name.lower())
+            i += 1
+        return transforms
 
     @staticmethod
     def _get_artist_transformations(artists: List[str]) -> List[str]:
-            """Returns a list of artist name transformations for use in Plex queries."""
-            transformations: List[str] = []
-            seen_lower: set = set()
+        """Returns a list of artist name transformations for use in Plex queries."""
+        transformations: List[str] = []
+        seen_lower: set = set()
 
-            for artist_name in artists:
-                cleaned_name = artist_name.strip()
-                lower_name = cleaned_name.lower()
-                if lower_name not in seen_lower:
-                    transformations.append(cleaned_name)
-                    seen_lower.add(lower_name)
+        for artist_name in artists:
+            cleaned_name = artist_name.strip()
+            lower_name = cleaned_name.lower()
+            if lower_name not in seen_lower:
+                transformations.append(cleaned_name)
+                seen_lower.add(lower_name)
 
-                for segment in cleaned_name.split(','):
-                    segment = segment.strip()
-                    if not segment:
-                        continue
-                    lower_segment = segment.lower()
-                    if lower_segment not in seen_lower:
-                        transformations.append(segment)
-                        seen_lower.add(lower_segment)
+            for segment in cleaned_name.split(','):
+                segment = segment.strip()
+                if not segment:
+                    continue
+                lower_segment = segment.lower()
+                if lower_segment not in seen_lower:
+                    transformations.append(segment)
+                    seen_lower.add(lower_segment)
 
-                    for collaborator in segment.split('&'):
-                        collaborator = collaborator.strip()
-                        lower_collab = collaborator.lower()
-                        if lower_collab not in seen_lower:
-                            transformations.append(collaborator)
-                            seen_lower.add(lower_collab)
+                for collaborator in segment.split('&'):
+                    collaborator = collaborator.strip()
+                    lower_collab = collaborator.lower()
+                    if lower_collab not in seen_lower:
+                        transformations.append(collaborator)
+                        seen_lower.add(lower_collab)
 
-            return transformations
+        return transformations
 
     @staticmethod
     def validate_path(path: str) -> bool:

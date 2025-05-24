@@ -5,9 +5,9 @@ import sqlite3
 from datetime import datetime
 from typing import List, Optional
 
-from domain.models import Album, Collection, TorrentGroup
-from infrastructure.db.utils.csv_to_db_migrator import CsvToDbMigrator
-from infrastructure.logger.logger import logger
+from red_plex.domain.models import Album, Collection, TorrentGroup
+from red_plex.infrastructure.db.utils.csv_to_db_migrator import CsvToDbMigrator
+from red_plex.infrastructure.logger.logger import logger
 
 
 class LocalDatabase:

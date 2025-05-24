@@ -1,13 +1,13 @@
 import logging
 from typing import Callable, List, Optional
 
-from infrastructure.db.local_database import LocalDatabase
-from infrastructure.plex.plex_manager import PlexManager
-from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
-from use_case.create_collection.album_fetch_mode import AlbumFetchMode
-from use_case.create_collection.query.query_sync_collection import QuerySyncCollectionUseCase
-from use_case.create_collection.response.create_collection_response import CreateCollectionResponse
-from use_case.create_collection.torrent_name.torrent_name_sync_collection import TorrentNameCollectionCreatorUseCase
+from red_plex.infrastructure.db.local_database import LocalDatabase
+from red_plex.infrastructure.plex.plex_manager import PlexManager
+from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
+from red_plex.use_case.create_collection.query.query_sync_collection import QuerySyncCollectionUseCase
+from red_plex.use_case.create_collection.response.create_collection_response import CreateCollectionResponse
+from red_plex.use_case.create_collection.torrent_name.torrent_name_sync_collection import TorrentNameCollectionCreatorUseCase
 
 logger = logging.getLogger(__name__)
 

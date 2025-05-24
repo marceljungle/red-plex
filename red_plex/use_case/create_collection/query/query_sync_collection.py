@@ -1,10 +1,10 @@
 from typing import List, Optional, Set, Tuple
 
-from domain.models import Collection, Album, TorrentGroup
-from infrastructure.db.local_database import LocalDatabase
-from infrastructure.plex.plex_manager import PlexManager
-from infrastructure.rest.gazelle.gazelle_api import GazelleAPI
-from use_case.create_collection.response.create_collection_response import CreateCollectionResponse
+from red_plex.domain.models import Collection, Album, TorrentGroup
+from red_plex.infrastructure.db.local_database import LocalDatabase
+from red_plex.infrastructure.plex.plex_manager import PlexManager
+from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
+from red_plex.use_case.create_collection.response.create_collection_response import CreateCollectionResponse
 
 
 class QuerySyncCollectionUseCase:
