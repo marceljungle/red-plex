@@ -35,24 +35,24 @@ class GazelleMapper:
         )
 
     @staticmethod
-    def map_torrent_group(data: Dict[str, Any]) -> TorrentGroup:
+    def map_torrent_group(data: Dict[str, Any], torrents: List[Dict] = None) -> TorrentGroup:
         """Map individual torrent group data"""
+        torrents = torrents or []
         return TorrentGroup(
             id=data.get('id'),
             artists=[GazelleMapper._clean_text(artist.get('name', ''))
                      for artist in data.get('musicInfo', {}).get('artists', [])],
+            file_paths=GazelleMapper._map_torrent_group_file_paths(torrents),
             album_name=GazelleMapper._clean_text(data.get('name', ''))
         )
 
     @staticmethod
-    def _map_torrent_group_file_paths(torrent_group: Dict[str, Any]) -> List[str]:
+    def _map_torrent_group_file_paths(torrents: List[Dict]) -> List[str]:
         """Extracts file paths from a torrent group."""
         logger.debug('Extracting file paths from torrent group response.')
         try:
-            torrents = torrent_group.get('response', {}).get('torrents', [])
             file_paths = [torrent.get('filePath') for torrent in torrents if 'filePath' in torrent]
             normalized_file_paths = [GazelleMapper._clean_text(path) for path in file_paths if path]
-            logger.debug('Extracted file paths: %s', normalized_file_paths)
             return normalized_file_paths
         except Exception as e:  # pylint: disable=W0718
             logger.exception('Error extracting file paths from torrent group: %s', e)
