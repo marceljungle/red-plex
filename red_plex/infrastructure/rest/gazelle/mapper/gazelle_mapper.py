@@ -2,7 +2,7 @@
 
 import html
 import re
-from typing import Dict, Any, Union, List
+from typing import Dict, Any, List
 
 from domain.models import Collection, TorrentGroup
 from infrastructure.logger.logger import logger
@@ -20,8 +20,8 @@ class GazelleMapper:
             external_id=str(collage_id),
             name=GazelleMapper._clean_text(collage_data.get('name', f'Collage {collage_id}')),
             torrent_groups=[
-                GazelleMapper.map_torrent_group(str(tg))
-                for tg in collage_data.get('torrentGroupIDList', [])
+                GazelleMapper.map_torrent_group(tg)
+                for tg in collage_data.get('torrentgroups', [])
             ]
         )
 
@@ -35,21 +35,14 @@ class GazelleMapper:
         )
 
     @staticmethod
-    def map_torrent_group(data: Union[Dict[str, Any], str]) -> TorrentGroup:
+    def map_torrent_group(data: Dict[str, Any]) -> TorrentGroup:
         """Map individual torrent group data"""
-        if isinstance(data, dict):
-            # Handle case where data is a dictionary
-            return TorrentGroup(
-                id=data.get('response', {}).get('group', {}).get('id'),
-                file_paths=GazelleMapper._map_torrent_group_file_paths(data)
-            )
-        if isinstance(data, str):
-            # Handle case where data is a string (ID only)
-            return TorrentGroup(
-                id=int(data),
-                file_paths=[]
-            )
-        raise TypeError(f"Unsupported type for data: {type(data)}")
+        return TorrentGroup(
+            id=data.get('id'),
+            artists=[GazelleMapper._clean_text(artist.get('name', ''))
+                     for artist in data.get('musicInfo', {}).get('artists', [])],
+            album_name=GazelleMapper._clean_text(data.get('name', ''))
+        )
 
     @staticmethod
     def _map_torrent_group_file_paths(torrent_group: Dict[str, Any]) -> List[str]:
@@ -61,7 +54,7 @@ class GazelleMapper:
             normalized_file_paths = [GazelleMapper._clean_text(path) for path in file_paths if path]
             logger.debug('Extracted file paths: %s', normalized_file_paths)
             return normalized_file_paths
-        except Exception as e: # pylint: disable=W0718
+        except Exception as e:  # pylint: disable=W0718
             logger.exception('Error extracting file paths from torrent group: %s', e)
             return []
 
@@ -75,7 +68,7 @@ class GazelleMapper:
                                     for bookmark in response.get('bookmarks', [])]
             logger.debug('Bookmarked group IDs: %s', bookmarked_group_ids)
             return [TorrentGroup(id=group_id, file_paths=[]) for group_id in bookmarked_group_ids]
-        except Exception as e: # pylint: disable=W0718
+        except Exception as e:  # pylint: disable=W0718
             logger.exception('Error extracting group ids from bookmarks: %s', e)
             return []
 

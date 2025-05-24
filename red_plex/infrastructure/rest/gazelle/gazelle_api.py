@@ -20,6 +20,7 @@ class GazelleAPI:
     """Handles API interactions with Gazelle-based services."""
 
     def __init__(self, site: str):
+        self.site = site
         config_data = load_config()
         site_config = config_data.site_configurations.get(site.upper())
 

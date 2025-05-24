@@ -80,7 +80,22 @@ class PlexManager:
                 domain_albums.append(Album(album.ratingKey, album.addedAt, album_folder_path))
         return domain_albums
 
-    def get_rating_keys(self, path: str, album_fetch_mode: AlbumFetchMode) -> List[str]:
+    def query_rating_keys(self, album_name: str, artists: List[str]) -> List[Album]:
+        """Queries Plex for the rating keys of albums that match the given name and artists."""
+        logger.info('Querying Plex for album name: %s', album_name)
+        logger.info('Artists: %s', artists)
+        album_names = self._get_album_transformations(album_name)
+        artist_names = self._get_artist_transformations(artists)
+        try:
+            albums = self.library_section.searchAlbums(albumTitle=album_names, artistTitle=artist_names)
+            if albums:
+                return albums
+            return []
+        except Exception as e:
+            logger.warning('An error occurred while searching for albums: %s', e)
+            return []
+
+    def get_rating_keys(self, path: str) -> List[str]:
         """Returns the rating keys if the path matches part of an album folder."""
         # Validate the input path
         if not self.validate_path(path):
@@ -89,11 +104,7 @@ class PlexManager:
 
         rating_keys = {}
 
-        if album_fetch_mode in (AlbumFetchMode.EXTERNAL, AlbumFetchMode.MIXED):
-            rating_keys.update(self.find_matching_rating_keys_using_beets(path))
-
-        if album_fetch_mode in (AlbumFetchMode.NORMAL, AlbumFetchMode.MIXED):
-            rating_keys.update(self.find_matching_rating_keys(path))
+        rating_keys.update(self.find_matching_rating_keys(path))
 
         # No matches found
         if not rating_keys:
@@ -138,37 +149,6 @@ class PlexManager:
             logger.error(
                 "Invalid input. Please enter valid "
                 "numbers separated by commas or 'A' for all, 'N' to select none.")
-
-    # pylint: disable=too-many-locals
-    def find_matching_rating_keys_using_beets(self, path):
-        """Find matching rating keys using beets mappings."""
-        matched_rating_keys = {}
-        albums_locations = self.local_database.get_all_beets_mappings()
-
-        folder_pairs = set()
-
-        for src, dst in albums_locations.source_destination.items():
-            src_folder = os.path.dirname(src)
-            dst_folder = os.path.dirname(dst)
-            folder_pairs.add((src_folder, dst_folder))
-        albums_locations_simplified = dict(folder_pairs)
-
-        album_sources = albums_locations_simplified.keys()
-        for source in album_sources:
-            normalized_folder_path = os.path.normpath(source)  # Normalize path
-            folder_parts = normalized_folder_path.split(os.sep)  # Split path into parts
-
-            # Check if the path matches any part of folder_path
-            if path in folder_parts:
-                real_path = albums_locations_simplified[source]
-                normalized_real_path = os.path.normpath(real_path)  # Normalize path
-
-                # Iterate the whole Plex library
-                for album in self.album_data:
-                    normalized_album_path = os.path.normpath(album.path)
-                    if normalized_real_path.startswith(normalized_album_path):
-                        matched_rating_keys[album.id] = album.path
-        return matched_rating_keys
 
     def find_matching_rating_keys(self, path):
         """Find matching rating keys using the album_data."""
@@ -237,6 +217,63 @@ class PlexManager:
             collection_from_plex.addItems(self._fetch_albums_by_keys(albums))
         else:
             logger.warning('Collection "%s" not found.', collection.name)
+
+    @staticmethod
+    def _get_album_transformations(album_name: str) -> List[str]:
+            """
+            Returns a list of album name transformations for use in Plex queries.
+            """
+            album_name = album_name.strip()
+            tags = [
+                "EP", "Single", "Album", "Soundtrack", "Anthology",
+                "Compilation", "Live Album", "Remix", "Bootleg", "Interview",
+                "Mixtape", "Demo", "Concert Recording", "DJ Mix"
+            ]
+            suffixes = sorted(tags, key=len, reverse=True)
+            transforms = [album_name]
+            seen = {album_name.lower()}
+            i = 0
+            while i < len(transforms):
+                name = transforms[i]
+                for suffix in suffixes:
+                    if name.lower().endswith(suffix.lower()):
+                        new_name = name[:-len(suffix)].strip()
+                        if new_name and new_name.lower() not in seen:
+                            transforms.append(new_name)
+                            seen.add(new_name.lower())
+                i += 1
+            return transforms
+
+    @staticmethod
+    def _get_artist_transformations(artists: List[str]) -> List[str]:
+            """Returns a list of artist name transformations for use in Plex queries."""
+            transformations: List[str] = []
+            seen_lower: set = set()
+
+            for artist_name in artists:
+                cleaned_name = artist_name.strip()
+                lower_name = cleaned_name.lower()
+                if lower_name not in seen_lower:
+                    transformations.append(cleaned_name)
+                    seen_lower.add(lower_name)
+
+                for segment in cleaned_name.split(','):
+                    segment = segment.strip()
+                    if not segment:
+                        continue
+                    lower_segment = segment.lower()
+                    if lower_segment not in seen_lower:
+                        transformations.append(segment)
+                        seen_lower.add(lower_segment)
+
+                    for collaborator in segment.split('&'):
+                        collaborator = collaborator.strip()
+                        lower_collab = collaborator.lower()
+                        if lower_collab not in seen_lower:
+                            transformations.append(collaborator)
+                            seen_lower.add(lower_collab)
+
+            return transformations
 
     @staticmethod
     def validate_path(path: str) -> bool:
