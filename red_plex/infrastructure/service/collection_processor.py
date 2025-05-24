@@ -21,7 +21,7 @@ UseCaseType = Union[TorrentNameCollectionCreatorUseCase, QuerySyncCollectionUseC
 
 
 # pylint: disable=too-many-arguments, duplicate-code
-# pylint: disable=R0913
+# pylint: disable=R0913, R0917
 class CollectionProcessingService:
     """Orchestrates processing collages or bookmarks into Plex collections."""
 

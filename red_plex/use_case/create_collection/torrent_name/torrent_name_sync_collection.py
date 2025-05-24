@@ -11,6 +11,7 @@ from red_plex.use_case.create_collection.response.create_collection_response imp
 
 
 # pylint: disable=too-few-public-methods, too-many-arguments
+# pylint: disable=R0917
 class TorrentNameCollectionCreatorUseCase:
     """
     Handles creating/updating Plex collections by matching
