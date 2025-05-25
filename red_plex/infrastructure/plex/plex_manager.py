@@ -83,8 +83,8 @@ class PlexManager:
     # If multiple matches are found, prompt the user to choose
     def query_for_albums(self, album_name: str, artists: List[str]) -> List[Album]:
         """Queries Plex for the rating keys of albums that match the given name and artists."""
-        logger.info('Querying Plex for album name: %s', album_name)
-        logger.info('Artists: %s', artists)
+        logger.debug('Querying Plex for album name: %s', album_name)
+        logger.debug('Artists: %s', artists)
         album_names = self._get_album_transformations(album_name)
         artist_names = self._get_artist_transformations(artists)
         filters = {"album.title": album_names, "artist.title": artist_names}
@@ -94,6 +94,7 @@ class PlexManager:
             # No matches found
             if not domain_albums:
                 return []
+            logger.debug('Found album(s): %s', domain_albums)
             # Single match found
             if len(domain_albums) == 1:
                 return domain_albums
