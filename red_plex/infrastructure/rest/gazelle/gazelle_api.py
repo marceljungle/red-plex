@@ -20,6 +20,7 @@ class GazelleAPI:
     """Handles API interactions with Gazelle-based services."""
 
     def __init__(self, site: str):
+        self.site = site
         config_data = load_config()
         site_config = config_data.site_configurations.get(site.upper())
 
@@ -120,7 +121,9 @@ class GazelleAPI:
                          'for group_id %s: %s', torrent_group_id, e)
             return None
         logger.debug('Retrieved torrent group information for group_id %s', torrent_group_id)
-        return GazelleMapper.map_torrent_group(json_data)
+        torrent_group_data = json_data.get('response', {}).get('group', {})
+        torrents = json_data.get('response', {}).get('torrents', [])
+        return GazelleMapper.map_torrent_group(torrent_group_data, torrents)
 
     def get_bookmarks(self, site: str) -> Optional[Collection]:
         """Retrieves user bookmarks."""

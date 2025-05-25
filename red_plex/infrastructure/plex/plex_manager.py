@@ -1,6 +1,7 @@
 """Module for managing Plex albums and playlists."""
 
 import os
+import re
 from datetime import datetime, timezone
 from typing import List
 from typing import Optional
@@ -17,7 +18,6 @@ from red_plex.infrastructure.config.config import load_config
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.mapper.plex_mapper import PlexMapper
-from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 
 
 class PlexManager:
@@ -80,7 +80,54 @@ class PlexManager:
                 domain_albums.append(Album(album.ratingKey, album.addedAt, album_folder_path))
         return domain_albums
 
-    def get_rating_keys(self, path: str, album_fetch_mode: AlbumFetchMode) -> List[str]:
+    # If multiple matches are found, prompt the user to choose
+    def query_for_albums(self, album_name: str, artists: List[str]) -> List[Album]:
+        """Queries Plex for the rating keys of albums that match the given name and artists."""
+        logger.debug('Querying Plex for album name: %s', album_name)
+        logger.debug('Artists: %s', artists)
+        album_names = self._get_album_transformations(album_name)
+        artist_names = self._get_artist_transformations(artists)
+        filters = {"album.title": album_names, "artist.title": artist_names}
+        try:
+            albums = self.library_section.search(libtype='album', filters=filters)
+            domain_albums = [PlexMapper.map_plex_album_to_domain(album) for album in albums]
+            # No matches found
+            if not domain_albums:
+                return []
+            logger.debug('Found album(s): %s', domain_albums)
+            # Single match found
+            if len(domain_albums) == 1:
+                return domain_albums
+            # Multiple matches found, prompt the user
+            print(f"Multiple matches found for album '{album_name}' by {', '.join(artists)}:")
+            for i, album in enumerate(domain_albums, 1):
+                print(f"{i}. {album.name} by {', '.join(album.artists)}")
+            while True:
+                choice = click.prompt(
+                    "Select the numbers of the matches you want to keep, separated by commas "
+                    "(or enter 'A' for all, 'N' for none)",
+                    default="A",
+                )
+                choice_up = choice.strip().upper()
+                if choice_up == "A":
+                    return domain_albums
+                if choice_up == "N":
+                    return []
+                try:
+                    selected_indices = [int(x) for x in choice.split(",")]
+                    if all(1 <= idx <= len(domain_albums) for idx in selected_indices):
+                        return [domain_albums[idx - 1] for idx in selected_indices]
+                except ValueError:
+                    pass
+                logger.error(
+                    "Invalid input. Please enter valid numbers separated by commas or 'A' for all, "
+                    "'N' to select none."
+                )
+        except Exception as e:  # pylint: disable=W0718
+            logger.warning('An error occurred while searching for albums: %s', e)
+            return []
+
+    def get_rating_keys(self, path: str) -> List[str]:
         """Returns the rating keys if the path matches part of an album folder."""
         # Validate the input path
         if not self.validate_path(path):
@@ -89,11 +136,7 @@ class PlexManager:
 
         rating_keys = {}
 
-        if album_fetch_mode in (AlbumFetchMode.EXTERNAL, AlbumFetchMode.MIXED):
-            rating_keys.update(self.find_matching_rating_keys_using_beets(path))
-
-        if album_fetch_mode in (AlbumFetchMode.NORMAL, AlbumFetchMode.MIXED):
-            rating_keys.update(self.find_matching_rating_keys(path))
+        rating_keys.update(self.find_matching_rating_keys(path))
 
         # No matches found
         if not rating_keys:
@@ -139,37 +182,6 @@ class PlexManager:
                 "Invalid input. Please enter valid "
                 "numbers separated by commas or 'A' for all, 'N' to select none.")
 
-    # pylint: disable=too-many-locals
-    def find_matching_rating_keys_using_beets(self, path):
-        """Find matching rating keys using beets mappings."""
-        matched_rating_keys = {}
-        albums_locations = self.local_database.get_all_beets_mappings()
-
-        folder_pairs = set()
-
-        for src, dst in albums_locations.source_destination.items():
-            src_folder = os.path.dirname(src)
-            dst_folder = os.path.dirname(dst)
-            folder_pairs.add((src_folder, dst_folder))
-        albums_locations_simplified = dict(folder_pairs)
-
-        album_sources = albums_locations_simplified.keys()
-        for source in album_sources:
-            normalized_folder_path = os.path.normpath(source)  # Normalize path
-            folder_parts = normalized_folder_path.split(os.sep)  # Split path into parts
-
-            # Check if the path matches any part of folder_path
-            if path in folder_parts:
-                real_path = albums_locations_simplified[source]
-                normalized_real_path = os.path.normpath(real_path)  # Normalize path
-
-                # Iterate the whole Plex library
-                for album in self.album_data:
-                    normalized_album_path = os.path.normpath(album.path)
-                    if normalized_real_path.startswith(normalized_album_path):
-                        matched_rating_keys[album.id] = album.path
-        return matched_rating_keys
-
     def find_matching_rating_keys(self, path):
         """Find matching rating keys using the album_data."""
         matched_rating_keys = {}
@@ -211,9 +223,10 @@ class PlexManager:
         collection: Optional[PlexCollection]
         try:
             collection = self.library_section.collection(name)
-        except Exception as e:  # pylint: disable=W0718
-            logger.warning('An error occurred while trying to fetch '
-                           'the collection from Plex: %s', e)
+        # pylint: disable=broad-except
+        # pylint: disable=W0718
+        except Exception:
+            # If the collection doesn't exist, collection will be set to None
             collection = None
         if collection:
             return Collection(
@@ -237,6 +250,139 @@ class PlexManager:
             collection_from_plex.addItems(self._fetch_albums_by_keys(albums))
         else:
             logger.warning('Collection "%s" not found.', collection.name)
+
+    @staticmethod
+    def _get_album_transformations(album_name: str) -> List[str]:
+        """
+        Returns a list of album name transformations for use in Plex queries,
+        increasing the chances of a successful match.
+
+        Includes:
+        - Splitting names containing "/" (e.g., "Track A / Track B").
+        - Removal of common suffixes (EP, Single, etc.).
+        - Removal of content within parentheses (e.g., (Original Mix)).
+        """
+        album_name = album_name.strip()
+        if not album_name:
+            return []
+
+        tags = [
+            "EP", "E.P", "E.P.", "Single", "Album", "Soundtrack", "Anthology",
+            "Compilation", "Live Album", "Remix", "Bootleg", "Interview",
+            "Mixtape", "Demo", "Concert Recording", "DJ Mix", "Original Mix",
+            "Remastered", "Deluxe Edition", "Limited Edition", "Bonus Track",
+            "Instrumental", "Acapella"
+        ]
+        suffixes = sorted(tags, key=len, reverse=True)
+
+        transforms = [album_name]
+        seen = {album_name.lower()}
+
+        i = 0
+        while i < len(transforms):
+            name = transforms[i]
+
+            # 1. Split by "/"
+            # If the name contains a slash, split it and add each part.
+            if '/' in name:
+                parts = name.split('/')
+                for part in parts:
+                    new_name_split = part.strip()
+                    # Add the new transformation if it's valid and not seen before
+                    if new_name_split and new_name_split.lower() not in seen:
+                        transforms.append(new_name_split)
+                        seen.add(new_name_split.lower())
+
+            # 2. Remove known suffixes
+            for suffix in suffixes:
+                # Check if the name ends with the suffix (case-insensitive)
+                if name.lower().endswith(f" {suffix.lower()}") or name.lower() == suffix.lower():
+                    # If it ends with " suffix", remove it
+                    if name.lower().endswith(f" {suffix.lower()}"):
+                        new_name = name[:-len(suffix)].strip()
+                    # If it's exactly the suffix (unlikely but possible), it becomes empty
+                    else:
+                        new_name = ""
+
+                    # Add the new transformation if it's valid and not seen before
+                    if new_name and new_name.lower() not in seen:
+                        transforms.append(new_name)
+                        seen.add(new_name.lower())
+
+            # 3. Remove text within parentheses (e.g., " (Original Mix)")
+            new_name_paren = re.sub(r'\s*\([^)]*\)', '', name).strip()
+
+            # Add the new transformation if it's different, valid, and not seen before
+            if (new_name_paren and new_name_paren.lower() != name.lower()
+                    and new_name_paren.lower() not in seen):
+                transforms.append(new_name_paren)
+                seen.add(new_name_paren.lower())
+
+            i += 1
+
+        return list(dict.fromkeys(transforms))
+
+    @staticmethod
+    def _get_artist_transformations(artists: List[str]) -> List[str]:
+        """
+        Returns a list of artist name transformations for use in Plex queries.
+        Includes "Various Artists", comma/ampersand splitting, and removal
+        of any content within parentheses.
+        """
+        transformations: List[str] = []
+        seen_lower: set = set()
+
+        def add_artist_with_transforms(name_to_add: str):
+            """
+            Internal helper to add an artist and its transformations
+            (including parenthesis removal) if they haven't been seen yet.
+            """
+            # 1. Clean and check if empty
+            name = name_to_add.strip()
+            if not name:
+                return
+
+            # 2. Add the original name if new
+            lower_name = name.lower()
+            if lower_name not in seen_lower:
+                transformations.append(name)
+                seen_lower.add(lower_name)
+
+            # 3. Create and add the parenthesis-removed version
+            paren_removed_name = re.sub(r'\s*\([^)]*\)', '', name).strip()
+
+            # Ensure it's different and not empty before adding
+            if paren_removed_name and paren_removed_name.lower() != lower_name:
+                lower_paren_removed = paren_removed_name.lower()
+                if lower_paren_removed not in seen_lower:
+                    transformations.append(paren_removed_name)
+                    seen_lower.add(lower_paren_removed)
+
+        # Handle "Various Artists" if more than one artist
+        if len(artists) > 1:
+            if 'various artists' not in seen_lower:
+                transformations.append('Various Artists')
+                seen_lower.add('various artists')
+
+        # Process each artist from the input list
+        for artist_name in artists:
+            cleaned_name = artist_name.strip()
+            # Add the full name (and its parenthesis-removed version)
+            add_artist_with_transforms(cleaned_name)
+
+            # Process comma-separated segments
+            for segment in cleaned_name.split(','):
+                segment = segment.strip()
+                # Add the segment (and its parenthesis-removed version)
+                add_artist_with_transforms(segment)
+
+                # Process ampersand-separated collaborators within a segment
+                for collaborator in segment.split('&'):
+                    collaborator = collaborator.strip()
+                    # Add the collaborator (and its parenthesis-removed version)
+                    add_artist_with_transforms(collaborator)
+
+        return transformations
 
     @staticmethod
     def validate_path(path: str) -> bool:
