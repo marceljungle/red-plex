@@ -5,17 +5,22 @@ from datetime import datetime, timezone
 from typing import List
 
 
-@dataclass
+@dataclass(frozen=True)
 class Album:
     """
     Represents an album.
     """
     id: str = ""
+    name: str = ""
+    artists: List[str] = field(default_factory=list)
     added_at: datetime = datetime(1970, 1, 1, tzinfo=timezone.utc)
     path: str = ""
 
+    def __hash__(self) -> int:
+        return hash((self.id, tuple(self.artists), self.name, self.added_at, self.path))
 
-@dataclass
+
+@dataclass(frozen=True)
 class TorrentGroup:
     """
     Represents a torrent group with all related file paths, in this case,
@@ -26,8 +31,11 @@ class TorrentGroup:
     album_name: str = ""
     file_paths: List[str] = field(default_factory=list)
 
+    def __hash__(self) -> int:
+        return hash((self.id, tuple(self.artists), self.album_name, tuple(self.file_paths)))
 
-@dataclass
+
+@dataclass(frozen=True)
 class Collection:
     """
     Represents a collection which is going to store the list of torrent groups

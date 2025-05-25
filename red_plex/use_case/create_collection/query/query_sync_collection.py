@@ -175,4 +175,4 @@ class QuerySyncCollectionUseCase:
 
     def _search_plex_for_album(self, torrent_group: TorrentGroup) -> List[Album]:
         """Searches Plex for the album and returns the rating keys if found."""
-        return self.plex_manager.query_rating_keys(torrent_group.album_name, torrent_group.artists)
+        return self.plex_manager.query_for_albums(torrent_group.album_name, torrent_group.artists)
