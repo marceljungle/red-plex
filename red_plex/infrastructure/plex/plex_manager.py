@@ -98,7 +98,7 @@ class PlexManager:
             if len(domain_albums) == 1:
                 return domain_albums
             # Multiple matches found, prompt the user
-            print(f"Multiple matches found for album '{album_name}':")
+            print(f"Multiple matches found for album '{album_name}' by {', '.join(artists)}:")
             for i, album in enumerate(domain_albums, 1):
                 print(f"{i}. {album.name} by {', '.join(album.artists)}")
             while True:
