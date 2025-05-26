@@ -39,13 +39,16 @@ class GazelleMapper:
         """Map individual torrent group data"""
         torrents = torrents or []
         return TorrentGroup(
-            id=data.get('id'),
+            id=data.get('id', {}) or data.get('group', {}).get('id'),
             artists=[
                 GazelleMapper._clean_text(artist.get('name', ''))
-                for artist in (data.get('musicInfo') or {}).get('artists') or []
+                for artist in (data.get('musicInfo')
+                               or data.get('group', {}).get('musicInfo', {})
+                               or {}).get('artists')
+                              or []
             ],
             file_paths=GazelleMapper._map_torrent_group_file_paths(torrents),
-            album_name=GazelleMapper._clean_text(data.get('name', ''))
+            album_name=GazelleMapper._clean_text(data.get('name', '') or data.get('group', {}).get('name', ''))
         )
 
     @staticmethod
