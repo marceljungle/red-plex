@@ -90,6 +90,11 @@ class PlexManager:
         filters = {"album.title": album_names, "artist.title": artist_names}
         try:
             albums = self.library_section.search(libtype='album', filters=filters)
+            if not albums and len(artists) > 1:
+                # Try searching with various artists (bad-tagged albums)
+                albums = self.library_section.search(libtype='album',
+                                                     filters={"album.title": album_names,
+                                                              "artist.title": 'Various Artists'})
             domain_albums = [PlexMapper.map_plex_album_to_domain(album) for album in albums]
             # No matches found
             if not domain_albums:
@@ -326,7 +331,7 @@ class PlexManager:
     def _get_artist_transformations(artists: List[str]) -> List[str]:
         """
         Returns a list of artist name transformations for use in Plex queries.
-        Includes "Various Artists", comma/ampersand splitting, and removal
+        Includes comma/ampersand splitting, and removal
         of any content within parentheses.
         """
         transformations: List[str] = []
@@ -357,12 +362,6 @@ class PlexManager:
                 if lower_paren_removed not in seen_lower:
                     transformations.append(paren_removed_name)
                     seen_lower.add(lower_paren_removed)
-
-        # Handle "Various Artists" if more than one artist
-        if len(artists) > 1:
-            if 'various artists' not in seen_lower:
-                transformations.append('Various Artists')
-                seen_lower.add('various artists')
 
         # Process each artist from the input list
         for artist_name in artists:
