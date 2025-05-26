@@ -48,7 +48,8 @@ class GazelleMapper:
                               or []
             ],
             file_paths=GazelleMapper._map_torrent_group_file_paths(torrents),
-            album_name=GazelleMapper._clean_text(data.get('name', '') or data.get('group', {}).get('name', ''))
+            album_name=GazelleMapper._clean_text(data.get('name', '')
+                                                 or data.get('group', {}).get('name', ''))
         )
 
     @staticmethod
