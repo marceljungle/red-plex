@@ -143,12 +143,12 @@ def update_collages(ctx, fetch_mode: str):
               help='Specify the site: red (Redacted) or ops (Orpheus).')
 @click.option(
     '--fetch-mode', '-fm',
-    type=click.Choice(['normal', 'query'], case_sensitive=False),  # Added case_sensitive
-    default='normal',
+    type=click.Choice(['torrent_name', 'query'], case_sensitive=False),  # Added case_sensitive
+    default='torrent_name',
     show_default=True,
     help=(
             '(Optional) Album lookup strategy:\n'
-            '\n- normal: uses torrent dir name (original behavior).\n'
+            '\n- torrent_name: uses torrent dir name (original behavior).\n'
             '\n- query: uses Plex queries (Beets/Lidarr friendly).\n'
     )
 )
