@@ -42,7 +42,6 @@ red-plex bridges the gap between your curated music collections on private track
 - [Troubleshooting](#troubleshooting)
 - [Important Considerations](#important-considerations)
 - [Contributing](#contributing)
-- [License](#license)
 
 ---
 
@@ -365,10 +364,6 @@ git clone https://github.com/marceljungle/red-plex.git
 cd red-plex
 pip install -e .
 ```
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
