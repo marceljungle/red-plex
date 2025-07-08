@@ -186,7 +186,7 @@ red-plex bookmarks update --fetch-mode [torrent_name|query]
 The `--fetch-mode` (or `-fm`) option controls how red-plex locates albums in Plex:
 
 #### For `collages convert`:
-- **normal** (default): Searches for directories matching the torrent folder name
+- **torrent_name** (default): Searches for directories matching the torrent folder name
 - **query**: Searches using `Artist` and `Album` metadata, ideal for organized libraries managed by tools like Beets or Lidarr
 
 #### For other commands (`collages update`, `bookmarks convert`, `bookmarks update`):
