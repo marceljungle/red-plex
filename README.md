@@ -40,6 +40,7 @@ red-plex bridges the gap between your curated music collections on private track
 - [Configuration Details](#configuration-details)
 - [Configuration Tips](#configuration-tips)
 - [Troubleshooting](#troubleshooting)
+- [Important Considerations](#important-considerations)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -338,6 +339,20 @@ pip install red-plex --upgrade
 2. Verify your configuration with `red-plex config show`
 3. Test your Plex connection by running `red-plex db albums update`
 4. Open an issue on GitHub with detailed error messages
+
+## Important Considerations
+
+- **Album Matching Strategy**:
+  - `torrent_name`/`normal` (default): Matches albums by comparing torrent folder names with Plex directory paths
+  - `query`: Uses artist and album metadata for matching, ideal for libraries organized by Beets, Lidarr, or other tools that rename files
+- **Database Management**: All data is stored in `red_plex.db`. Use database reset commands (`db albums reset`, etc.) to clear specific tables when needed
+- **Site Credentials**: Ensure your API keys are valid and have proper permissions
+- **Rate Limiting**: The tool automatically respects site-specific rate limits to avoid being banned
+- **Logging Levels**: 
+  - `DEBUG`: Verbose output for troubleshooting
+  - `INFO`: Standard information (default)
+  - `WARNING`: Minimal output
+- **Collection Updates**: When you run `collages update` or `bookmarks update`, new albums are added to existing Plex collections, but removed items from tracker collages are not automatically removed from Plex collections
 
 ## Contributing
 
