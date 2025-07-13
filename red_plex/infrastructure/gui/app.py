@@ -170,8 +170,13 @@ def create_app():
                         album_fetch_mode = map_fetch_mode(fetch_mode)
                         
                         # Set up logging to capture all messages
-                        thread_logger = logging.getLogger()
-                        thread_logger.addHandler(ws_handler)
+                        # Add handler to the red_plex logger (where PlexManager logs go)
+                        red_plex_logger = logging.getLogger('red_plex')
+                        red_plex_logger.addHandler(ws_handler)
+                        
+                        # Also add to root logger to catch any other messages
+                        root_logger = logging.getLogger()
+                        root_logger.addHandler(ws_handler)
                         
                         with app.app_context():
                             socketio.emit('status_update', {'message': 'Starting collage conversion process...'})
@@ -205,7 +210,8 @@ def create_app():
                             })
                         
                         # Remove the handler to avoid memory leaks
-                        thread_logger.removeHandler(ws_handler)
+                        red_plex_logger.removeHandler(ws_handler)
+                        root_logger.removeHandler(ws_handler)
                         thread_db.close()
                     except Exception as e:
                         with app.app_context():
@@ -213,8 +219,10 @@ def create_app():
                                 'message': f'Error: {str(e)}', 
                                 'error': True
                             })
-                        if 'thread_logger' in locals():
-                            thread_logger.removeHandler(ws_handler)
+                        if 'red_plex_logger' in locals():
+                            red_plex_logger.removeHandler(ws_handler)
+                        if 'root_logger' in locals():
+                            root_logger.removeHandler(ws_handler)
                 
                 thread = threading.Thread(target=process_collages)
                 thread.daemon = True
@@ -259,8 +267,13 @@ def create_app():
                         album_fetch_mode = map_fetch_mode(fetch_mode)
                         
                         # Set up logging to capture all messages
-                        thread_logger = logging.getLogger()
-                        thread_logger.addHandler(ws_handler)
+                        # Add handler to the red_plex logger (where PlexManager logs go)
+                        red_plex_logger = logging.getLogger('red_plex')
+                        red_plex_logger.addHandler(ws_handler)
+                        
+                        # Also add to root logger to catch any other messages
+                        root_logger = logging.getLogger()
+                        root_logger.addHandler(ws_handler)
                         
                         with app.app_context():
                             socketio.emit('status_update', {'message': 'Starting bookmark conversion process...'})
@@ -293,7 +306,8 @@ def create_app():
                             })
                         
                         # Remove the handler to avoid memory leaks
-                        thread_logger.removeHandler(ws_handler)
+                        red_plex_logger.removeHandler(ws_handler)
+                        root_logger.removeHandler(ws_handler)
                         thread_db.close()
                     except Exception as e:
                         with app.app_context():
@@ -301,8 +315,10 @@ def create_app():
                                 'message': f'Error: {str(e)}', 
                                 'error': True
                             })
-                        if 'thread_logger' in locals():
-                            thread_logger.removeHandler(ws_handler)
+                        if 'red_plex_logger' in locals():
+                            red_plex_logger.removeHandler(ws_handler)
+                        if 'root_logger' in locals():
+                            root_logger.removeHandler(ws_handler)
                 
                 thread = threading.Thread(target=process_bookmarks)
                 thread.daemon = True
@@ -357,8 +373,13 @@ def create_app():
                     thread_db = LocalDatabase()
                     
                     # Set up logging to capture all messages
-                    thread_logger = logging.getLogger()
-                    thread_logger.addHandler(ws_handler)
+                    # Add handler to the red_plex logger (where PlexManager logs go)
+                    red_plex_logger = logging.getLogger('red_plex')
+                    red_plex_logger.addHandler(ws_handler)
+                    
+                    # Also add to root logger to catch any other messages
+                    root_logger = logging.getLogger()
+                    root_logger.addHandler(ws_handler)
                     
                     with app.app_context():
                         socketio.emit('status_update', {'message': 'Starting albums update from Plex...'})
@@ -397,7 +418,8 @@ def create_app():
                         })
                     
                     # Remove the handler to avoid memory leaks
-                    thread_logger.removeHandler(ws_handler)
+                    red_plex_logger.removeHandler(ws_handler)
+                    root_logger.removeHandler(ws_handler)
                     thread_db.close()
                 except Exception as e:
                     with app.app_context():
@@ -405,8 +427,10 @@ def create_app():
                             'message': f'Error updating albums: {str(e)}', 
                             'error': True
                         })
-                    if 'thread_logger' in locals():
-                        thread_logger.removeHandler(ws_handler)
+                    if 'red_plex_logger' in locals():
+                        red_plex_logger.removeHandler(ws_handler)
+                    if 'root_logger' in locals():
+                        root_logger.removeHandler(ws_handler)
             
             thread = threading.Thread(target=update_albums)
             thread.daemon = True
