@@ -172,17 +172,32 @@ def create_app():
                         thread_db = LocalDatabase()
                         album_fetch_mode = map_fetch_mode(fetch_mode)
                         
-                        # Set up logging to capture all messages
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Starting collage conversion process...'})
+                        
+                        # Set up logging to capture all messages BEFORE any logging happens
                         # Add handler to the red_plex logger (where PlexManager logs go)
                         red_plex_logger = logging.getLogger('red_plex')
-                        red_plex_logger.addHandler(ws_handler)
+                        # Ensure the handler isn't already added to avoid duplicates
+                        if ws_handler not in red_plex_logger.handlers:
+                            red_plex_logger.addHandler(ws_handler)
+                            # Make sure logger level is not higher than INFO
+                            if red_plex_logger.level > logging.INFO:
+                                red_plex_logger.setLevel(logging.INFO)
                         
                         # Also add to root logger to catch any other messages
                         root_logger = logging.getLogger()
-                        root_logger.addHandler(ws_handler)
+                        if ws_handler not in root_logger.handlers:
+                            root_logger.addHandler(ws_handler)
+                            if root_logger.level > logging.INFO:
+                                root_logger.setLevel(logging.INFO)
                         
+                        # Test WebSocket logging is working
                         with app.app_context():
-                            socketio.emit('status_update', {'message': 'Starting collage conversion process...'})
+                            socketio.emit('status_update', {'message': 'WebSocket logging configured'})
+                        
+                        # Test that red_plex logger is working via WebSocket
+                        red_plex_logger.info('Testing red_plex logger WebSocket integration')
                         
                         # Try to create PlexManager - this might fail if Plex server is not accessible
                         with app.app_context():
@@ -295,17 +310,32 @@ def create_app():
                         thread_db = LocalDatabase()
                         album_fetch_mode = map_fetch_mode(fetch_mode)
                         
-                        # Set up logging to capture all messages
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Starting bookmark conversion process...'})
+                        
+                        # Set up logging to capture all messages BEFORE any logging happens
                         # Add handler to the red_plex logger (where PlexManager logs go)
                         red_plex_logger = logging.getLogger('red_plex')
-                        red_plex_logger.addHandler(ws_handler)
+                        # Ensure the handler isn't already added to avoid duplicates
+                        if ws_handler not in red_plex_logger.handlers:
+                            red_plex_logger.addHandler(ws_handler)
+                            # Make sure logger level is not higher than INFO
+                            if red_plex_logger.level > logging.INFO:
+                                red_plex_logger.setLevel(logging.INFO)
                         
                         # Also add to root logger to catch any other messages
                         root_logger = logging.getLogger()
-                        root_logger.addHandler(ws_handler)
+                        if ws_handler not in root_logger.handlers:
+                            root_logger.addHandler(ws_handler)
+                            if root_logger.level > logging.INFO:
+                                root_logger.setLevel(logging.INFO)
                         
+                        # Test WebSocket logging is working
                         with app.app_context():
-                            socketio.emit('status_update', {'message': 'Starting bookmark conversion process...'})
+                            socketio.emit('status_update', {'message': 'WebSocket logging configured'})
+                        
+                        # Test that red_plex logger is working via WebSocket
+                        red_plex_logger.info('Testing red_plex logger WebSocket integration')
                         
                         # Try to create PlexManager - this might fail if Plex server is not accessible
                         with app.app_context():
@@ -427,17 +457,32 @@ def create_app():
                     # Create new database connection for this thread
                     thread_db = LocalDatabase()
                     
-                    # Set up logging to capture all messages
+                    with app.app_context():
+                        socketio.emit('status_update', {'message': 'Starting albums update from Plex...'})
+                    
+                    # Set up logging to capture all messages BEFORE any logging happens
                     # Add handler to the red_plex logger (where PlexManager logs go)
                     red_plex_logger = logging.getLogger('red_plex')
-                    red_plex_logger.addHandler(ws_handler)
+                    # Ensure the handler isn't already added to avoid duplicates
+                    if ws_handler not in red_plex_logger.handlers:
+                        red_plex_logger.addHandler(ws_handler)
+                        # Make sure logger level is not higher than INFO
+                        if red_plex_logger.level > logging.INFO:
+                            red_plex_logger.setLevel(logging.INFO)
                     
                     # Also add to root logger to catch any other messages
                     root_logger = logging.getLogger()
-                    root_logger.addHandler(ws_handler)
+                    if ws_handler not in root_logger.handlers:
+                        root_logger.addHandler(ws_handler)
+                        if root_logger.level > logging.INFO:
+                            root_logger.setLevel(logging.INFO)
                     
+                    # Test WebSocket logging is working
                     with app.app_context():
-                        socketio.emit('status_update', {'message': 'Starting albums update from Plex...'})
+                        socketio.emit('status_update', {'message': 'WebSocket logging configured'})
+                    
+                    # Test that red_plex logger is working via WebSocket
+                    red_plex_logger.info('Testing red_plex logger WebSocket integration')
                     
                     # Try to create PlexManager - this might fail if Plex server is not accessible
                     with app.app_context():
