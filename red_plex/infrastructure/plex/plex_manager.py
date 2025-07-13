@@ -77,7 +77,10 @@ class PlexManager:
             if tracks:
                 media_path = tracks[0].media[0].parts[0].file
                 album_folder_path = os.path.dirname(media_path)
-                domain_albums.append(Album(album.ratingKey, album.addedAt, album_folder_path))
+                domain_albums.append(Album(id=album.ratingKey,
+                                           name=album.title,
+                                           added_at=album.addedAt,
+                                           path=album_folder_path))
         return domain_albums
 
     # If multiple matches are found, prompt the user to choose
