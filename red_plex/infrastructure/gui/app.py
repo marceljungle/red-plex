@@ -164,6 +164,9 @@ def create_app():
                 
                 # Start processing in background
                 def process_collages():
+                    red_plex_logger = None
+                    root_logger = None
+                    thread_db = None
                     try:
                         # Create new database connection for this thread
                         thread_db = LocalDatabase()
@@ -181,7 +184,24 @@ def create_app():
                         with app.app_context():
                             socketio.emit('status_update', {'message': 'Starting collage conversion process...'})
                         
-                        plex_manager = PlexManager(db=thread_db)
+                        # Try to create PlexManager - this might fail if Plex server is not accessible
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Connecting to Plex server...'})
+                        
+                        try:
+                            plex_manager = PlexManager(db=thread_db)
+                        except Exception as e:
+                            with app.app_context():
+                                socketio.emit('status_update', {
+                                    'message': f'Failed to connect to Plex server: {str(e)}', 
+                                    'error': True
+                                })
+                            logger.error(f'Failed to initialize PlexManager: {str(e)}')
+                            return
+                        
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Successfully connected to Plex server'})
+                        
                         gazelle_api = GazelleAPI(site)
                         processor = CollectionProcessingService(thread_db, plex_manager, gazelle_api)
                         
@@ -210,19 +230,25 @@ def create_app():
                             })
                         
                         # Remove the handler to avoid memory leaks
-                        red_plex_logger.removeHandler(ws_handler)
-                        root_logger.removeHandler(ws_handler)
-                        thread_db.close()
+                        if red_plex_logger:
+                            red_plex_logger.removeHandler(ws_handler)
+                        if root_logger:
+                            root_logger.removeHandler(ws_handler)
+                        if thread_db:
+                            thread_db.close()
                     except Exception as e:
                         with app.app_context():
                             socketio.emit('status_update', {
                                 'message': f'Error: {str(e)}', 
                                 'error': True
                             })
-                        if 'red_plex_logger' in locals():
+                        # Clean up resources
+                        if red_plex_logger:
                             red_plex_logger.removeHandler(ws_handler)
-                        if 'root_logger' in locals():
+                        if root_logger:
                             root_logger.removeHandler(ws_handler)
+                        if thread_db:
+                            thread_db.close()
                 
                 thread = threading.Thread(target=process_collages)
                 thread.daemon = True
@@ -261,6 +287,9 @@ def create_app():
                 
                 # Start processing in background
                 def process_bookmarks():
+                    red_plex_logger = None
+                    root_logger = None
+                    thread_db = None
                     try:
                         # Create new database connection for this thread
                         thread_db = LocalDatabase()
@@ -278,7 +307,24 @@ def create_app():
                         with app.app_context():
                             socketio.emit('status_update', {'message': 'Starting bookmark conversion process...'})
                         
-                        plex_manager = PlexManager(db=thread_db)
+                        # Try to create PlexManager - this might fail if Plex server is not accessible
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Connecting to Plex server...'})
+                        
+                        try:
+                            plex_manager = PlexManager(db=thread_db)
+                        except Exception as e:
+                            with app.app_context():
+                                socketio.emit('status_update', {
+                                    'message': f'Failed to connect to Plex server: {str(e)}', 
+                                    'error': True
+                                })
+                            logger.error(f'Failed to initialize PlexManager: {str(e)}')
+                            return
+                        
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Successfully connected to Plex server'})
+                        
                         gazelle_api = GazelleAPI(site)
                         processor = CollectionProcessingService(thread_db, plex_manager, gazelle_api)
                         
@@ -306,19 +352,25 @@ def create_app():
                             })
                         
                         # Remove the handler to avoid memory leaks
-                        red_plex_logger.removeHandler(ws_handler)
-                        root_logger.removeHandler(ws_handler)
-                        thread_db.close()
+                        if red_plex_logger:
+                            red_plex_logger.removeHandler(ws_handler)
+                        if root_logger:
+                            root_logger.removeHandler(ws_handler)
+                        if thread_db:
+                            thread_db.close()
                     except Exception as e:
                         with app.app_context():
                             socketio.emit('status_update', {
                                 'message': f'Error: {str(e)}', 
                                 'error': True
                             })
-                        if 'red_plex_logger' in locals():
+                        # Clean up resources
+                        if red_plex_logger:
                             red_plex_logger.removeHandler(ws_handler)
-                        if 'root_logger' in locals():
+                        if root_logger:
                             root_logger.removeHandler(ws_handler)
+                        if thread_db:
+                            thread_db.close()
                 
                 thread = threading.Thread(target=process_bookmarks)
                 thread.daemon = True
@@ -368,6 +420,9 @@ def create_app():
         """Update albums from Plex and update collections from collages."""
         try:
             def update_albums():
+                red_plex_logger = None
+                root_logger = None
+                thread_db = None
                 try:
                     # Create new database connection for this thread
                     thread_db = LocalDatabase()
@@ -384,8 +439,25 @@ def create_app():
                     with app.app_context():
                         socketio.emit('status_update', {'message': 'Starting albums update from Plex...'})
                     
+                    # Try to create PlexManager - this might fail if Plex server is not accessible
+                    with app.app_context():
+                        socketio.emit('status_update', {'message': 'Connecting to Plex server...'})
+                    
+                    try:
+                        plex_manager = PlexManager(db=thread_db)
+                    except Exception as e:
+                        with app.app_context():
+                            socketio.emit('status_update', {
+                                'message': f'Failed to connect to Plex server: {str(e)}', 
+                                'error': True
+                            })
+                        logger.error(f'Failed to initialize PlexManager: {str(e)}')
+                        return
+                    
+                    with app.app_context():
+                        socketio.emit('status_update', {'message': 'Successfully connected to Plex server'})
+                    
                     # Step 1: Update albums from Plex
-                    plex_manager = PlexManager(db=thread_db)
                     plex_manager.populate_album_table()
                     
                     with app.app_context():
@@ -418,19 +490,25 @@ def create_app():
                         })
                     
                     # Remove the handler to avoid memory leaks
-                    red_plex_logger.removeHandler(ws_handler)
-                    root_logger.removeHandler(ws_handler)
-                    thread_db.close()
+                    if red_plex_logger:
+                        red_plex_logger.removeHandler(ws_handler)
+                    if root_logger:
+                        root_logger.removeHandler(ws_handler)
+                    if thread_db:
+                        thread_db.close()
                 except Exception as e:
                     with app.app_context():
                         socketio.emit('status_update', {
                             'message': f'Error updating albums: {str(e)}', 
                             'error': True
                         })
-                    if 'red_plex_logger' in locals():
+                    # Clean up resources
+                    if red_plex_logger:
                         red_plex_logger.removeHandler(ws_handler)
-                    if 'root_logger' in locals():
+                    if root_logger:
                         root_logger.removeHandler(ws_handler)
+                    if thread_db:
+                        thread_db.close()
             
             thread = threading.Thread(target=update_albums)
             thread.daemon = True
