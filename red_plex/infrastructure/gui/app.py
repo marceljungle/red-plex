@@ -19,6 +19,7 @@ from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.infrastructure.service.collection_processor import CollectionProcessingService
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
+from red_plex.infrastructure.cli.cli import update_collections_from_collages
 
 
 class WebSocketHandler(logging.Handler):
@@ -348,7 +349,7 @@ def create_app():
 
     @app.route('/database/albums/update', methods=['POST'])
     def database_albums_update():
-        """Update albums from Plex."""
+        """Update albums from Plex and update collections from collages."""
         try:
             def update_albums():
                 try:
@@ -362,12 +363,36 @@ def create_app():
                     with app.app_context():
                         socketio.emit('status_update', {'message': 'Starting albums update from Plex...'})
                     
+                    # Step 1: Update albums from Plex
                     plex_manager = PlexManager(db=thread_db)
                     plex_manager.populate_album_table()
                     
                     with app.app_context():
+                        socketio.emit('status_update', {'message': 'Albums update completed. Starting collections update...'})
+                    
+                    # Step 2: Update collections from stored collages (same as CLI update command)
+                    all_collages = thread_db.get_all_collage_collections()
+                    if all_collages:
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': f'Updating {len(all_collages)} collage collections...'})
+                        
+                        update_collections_from_collages(
+                            local_database=thread_db,
+                            collage_list=all_collages,
+                            plex_manager=plex_manager,
+                            fetch_bookmarks=False,
+                            fetch_mode=AlbumFetchMode.TORRENT_NAME
+                        )
+                        
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Collections update completed!'})
+                    else:
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'No stored collages found to update.'})
+                    
+                    with app.app_context():
                         socketio.emit('status_update', {
-                            'message': 'Albums update completed successfully!', 
+                            'message': 'Albums and collections update completed successfully!', 
                             'finished': True
                         })
                     
@@ -387,7 +412,7 @@ def create_app():
             thread.daemon = True
             thread.start()
             
-            flash('Albums update started!', 'info')
+            flash('Albums and collections update started!', 'info')
         except Exception as e:
             flash(f'Error starting albums update: {str(e)}', 'error')
         
