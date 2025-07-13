@@ -47,6 +47,8 @@ setup(
         'pyrate-limiter',
         'click',
         'pyyaml',
+        'flask',
+        'flask-socketio',
     ],
     entry_points='''
         [console_scripts]

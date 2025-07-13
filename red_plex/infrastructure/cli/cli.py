@@ -446,6 +446,24 @@ def update_collections_from_collages(local_database: LocalDatabase,
                         collage.name, len(result.albums))
 
 
+# gui
+@cli.command()
+@click.option('--host', '-h', default='127.0.0.1', help='Host to bind to (default: 127.0.0.1)')
+@click.option('--port', '-p', default=5000, type=int, help='Port to bind to (default: 5000)')
+@click.option('--debug', is_flag=True, help='Run in debug mode')
+def gui(host, port, debug):
+    """Launch the web-based GUI interface."""
+    try:
+        from red_plex.infrastructure.gui.app import run_gui
+        run_gui(host=host, port=port, debug=debug)
+    except ImportError as e:
+        logger.error("GUI dependencies not available: %s", e)
+        click.echo("Error: GUI dependencies not installed. Please install with: pip install flask flask-socketio")
+    except Exception as e:
+        logger.error("Failed to start GUI: %s", e)
+        click.echo(f"Error starting GUI: {e}")
+
+
 @cli.result_callback()
 @click.pass_context
 def finalize_cli(ctx, _result, *_args, **_kwargs):

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Convert Collages - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-plus-lg"></i> Convert Collages
+        </h1>
+        <a href="{{ url_for('collages') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Collages
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Convert New Collage</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="collage_ids" class="form-label">Collage IDs</label>
+                            <textarea class="form-control" id="collage_ids" name="collage_ids" rows="3" 
+                                      placeholder="Enter one or more collage IDs (one per line or space-separated)
+Example: 12345 67890
+Or:
+12345
+67890" required>{{ request.args.get('collage_id', '') }}</textarea>
+                            <div class="form-text">
+                                Enter the collage ID(s) from the URL. Example: if the URL is 
+                                <code>https://redacted.sh/collages.php?id=12345</code>, enter <code>12345</code>.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="site" class="form-label">Site</label>
+                            <select class="form-select" id="site" name="site" required>
+                                <option value="">Select a site...</option>
+                                <option value="red" {% if request.args.get('site') == 'red' %}selected{% endif %}>RED (Redacted)</option>
+                                <option value="ops" {% if request.args.get('site') == 'ops' %}selected{% endif %}>OPS (Orpheus)</option>
+                            </select>
+                            <div class="form-text">Choose which tracker site the collage is from.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="fetch_mode" class="form-label">Fetch Mode</label>
+                            <select class="form-select" id="fetch_mode" name="fetch_mode">
+                                <option value="torrent_name">Torrent Name (Default)</option>
+                                <option value="query">Query (Beets/Lidarr)</option>
+                            </select>
+                            <div class="form-text">
+                                <strong>Torrent Name:</strong> Matches albums by directory/filename (original behavior)<br>
+                                <strong>Query:</strong> Matches albums by artist and album metadata (better for organized libraries)
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-play-fill"></i> Start Conversion
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-question-circle"></i> How to Find Collage IDs
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>RED (Redacted):</strong></p>
+                    <ol>
+                        <li>Go to a collage page</li>
+                        <li>Look at the URL: <code>collages.php?id=XXXXX</code></li>
+                        <li>Use the number after <code>id=</code></li>
+                    </ol>
+                    
+                    <p><strong>OPS (Orpheus):</strong></p>
+                    <ol>
+                        <li>Go to a collage page</li>
+                        <li>Look at the URL: <code>collages.php?id=XXXXX</code></li>
+                        <li>Use the number after <code>id=</code></li>
+                    </ol>
+                    
+                    <div class="alert alert-warning alert-sm" role="alert">
+                        <small>
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Make sure your API keys are configured before converting!
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-gear"></i> Fetch Mode Guide
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>When to use each mode:</strong></p>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-primary">Torrent Name</h6>
+                        <ul class="small">
+                            <li>Default behavior</li>
+                            <li>Matches by folder names</li>
+                            <li>Use if you download and keep original folder structure</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h6 class="text-success">Query</h6>
+                        <ul class="small">
+                            <li>Matches by artist/album metadata</li>
+                            <li>Use if you organize with Beets, Lidarr, or similar tools</li>
+                            <li>Better for renamed/reorganized libraries</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if processing %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-clock"></i> Processing Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="status-output" class="status-output">
+                            <div class="status-message">
+                                <i class="bi bi-hourglass-split"></i> Starting conversion process...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h6 class="alert-heading">
+                    <i class="bi bi-info-circle"></i> What Happens During Conversion?
+                </h6>
+                <ol class="mb-0">
+                    <li>red-plex fetches the collage data from the tracker</li>
+                    <li>It searches your Plex library for matching albums</li>
+                    <li>A new collection is created in Plex with found albums</li>
+                    <li>The collection info is stored in the local database for future updates</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Auto-submit form when collage_id and site are provided via URL parameters
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const collageId = urlParams.get('collage_id');
+        const site = urlParams.get('site');
+        
+        if (collageId && site) {
+            // Pre-fill and potentially auto-submit for updates
+            const form = document.querySelector('form');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Update Collage';
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-warning');
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}
