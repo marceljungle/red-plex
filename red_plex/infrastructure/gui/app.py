@@ -1,6 +1,7 @@
 """Flask web application for red-plex GUI."""
 import os
 import threading
+import logging
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, g
 from flask_socketio import SocketIO, emit
 import yaml
@@ -20,6 +21,25 @@ from red_plex.infrastructure.service.collection_processor import CollectionProce
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 
 
+class WebSocketHandler(logging.Handler):
+    """Custom logging handler that sends log messages via WebSocket."""
+    
+    def __init__(self, socketio_instance, app_instance):
+        super().__init__()
+        self.socketio = socketio_instance
+        self.app = app_instance
+        
+    def emit(self, record):
+        """Emit a log record via WebSocket."""
+        try:
+            msg = self.format(record)
+            with self.app.app_context():
+                self.socketio.emit('status_update', {'message': msg})
+        except Exception:
+            # Avoid recursion if there's an error in the handler
+            pass
+
+
 def get_db():
     """Get database connection for current thread."""
     if 'db' not in g:
@@ -32,6 +52,12 @@ def create_app():
     app = Flask(__name__)
     app.secret_key = os.urandom(24)
     socketio = SocketIO(app, cors_allowed_origins="*")
+    
+    # Set up WebSocket logging handler
+    ws_handler = WebSocketHandler(socketio, app)
+    ws_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ws_handler.setFormatter(formatter)
     
     @app.teardown_appcontext
     def close_db(error):
@@ -142,18 +168,26 @@ def create_app():
                         thread_db = LocalDatabase()
                         album_fetch_mode = map_fetch_mode(fetch_mode)
                         
+                        # Set up logging to capture all messages
+                        thread_logger = logging.getLogger()
+                        thread_logger.addHandler(ws_handler)
+                        
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Starting collage conversion process...'})
+                        
                         plex_manager = PlexManager(db=thread_db)
                         gazelle_api = GazelleAPI(site)
                         processor = CollectionProcessingService(thread_db, plex_manager, gazelle_api)
                         
-                        # Custom echo and confirm functions for web interface
+                        # Custom echo function for web interface
                         def web_echo(message):
-                            socketio.emit('status_update', {'message': message})
+                            with app.app_context():
+                                socketio.emit('status_update', {'message': message})
                             logger.info(message)
                         
                         def web_confirm(message):
                             # For web interface, we'll assume 'yes' for confirmations
-                            web_echo(f"Confirming: {message}")
+                            web_echo(f"Auto-confirming: {message}")
                             return True
                         
                         processor.process_collages(
@@ -163,10 +197,23 @@ def create_app():
                             confirm_func=web_confirm
                         )
                         
-                        socketio.emit('status_update', {'message': 'Processing completed successfully!', 'finished': True})
+                        with app.app_context():
+                            socketio.emit('status_update', {
+                                'message': 'Collage processing completed successfully!', 
+                                'finished': True
+                            })
+                        
+                        # Remove the handler to avoid memory leaks
+                        thread_logger.removeHandler(ws_handler)
                         thread_db.close()
                     except Exception as e:
-                        socketio.emit('status_update', {'message': f'Error: {str(e)}', 'error': True})
+                        with app.app_context():
+                            socketio.emit('status_update', {
+                                'message': f'Error: {str(e)}', 
+                                'error': True
+                            })
+                        if 'thread_logger' in locals():
+                            thread_logger.removeHandler(ws_handler)
                 
                 thread = threading.Thread(target=process_collages)
                 thread.daemon = True
@@ -210,18 +257,26 @@ def create_app():
                         thread_db = LocalDatabase()
                         album_fetch_mode = map_fetch_mode(fetch_mode)
                         
+                        # Set up logging to capture all messages
+                        thread_logger = logging.getLogger()
+                        thread_logger.addHandler(ws_handler)
+                        
+                        with app.app_context():
+                            socketio.emit('status_update', {'message': 'Starting bookmark conversion process...'})
+                        
                         plex_manager = PlexManager(db=thread_db)
                         gazelle_api = GazelleAPI(site)
                         processor = CollectionProcessingService(thread_db, plex_manager, gazelle_api)
                         
-                        # Custom echo and confirm functions for web interface
+                        # Custom echo function for web interface
                         def web_echo(message):
-                            socketio.emit('status_update', {'message': message})
+                            with app.app_context():
+                                socketio.emit('status_update', {'message': message})
                             logger.info(message)
                         
                         def web_confirm(message):
                             # For web interface, we'll assume 'yes' for confirmations
-                            web_echo(f"Confirming: {message}")
+                            web_echo(f"Auto-confirming: {message}")
                             return True
                         
                         processor.process_bookmarks(
@@ -230,10 +285,23 @@ def create_app():
                             confirm_func=web_confirm
                         )
                         
-                        socketio.emit('status_update', {'message': 'Bookmark processing completed successfully!', 'finished': True})
+                        with app.app_context():
+                            socketio.emit('status_update', {
+                                'message': 'Bookmark processing completed successfully!', 
+                                'finished': True
+                            })
+                        
+                        # Remove the handler to avoid memory leaks
+                        thread_logger.removeHandler(ws_handler)
                         thread_db.close()
                     except Exception as e:
-                        socketio.emit('status_update', {'message': f'Error: {str(e)}', 'error': True})
+                        with app.app_context():
+                            socketio.emit('status_update', {
+                                'message': f'Error: {str(e)}', 
+                                'error': True
+                            })
+                        if 'thread_logger' in locals():
+                            thread_logger.removeHandler(ws_handler)
                 
                 thread = threading.Thread(target=process_bookmarks)
                 thread.daemon = True
@@ -286,13 +354,34 @@ def create_app():
                 try:
                     # Create new database connection for this thread
                     thread_db = LocalDatabase()
-                    socketio.emit('status_update', {'message': 'Starting albums update from Plex...'})
+                    
+                    # Set up logging to capture all messages
+                    thread_logger = logging.getLogger()
+                    thread_logger.addHandler(ws_handler)
+                    
+                    with app.app_context():
+                        socketio.emit('status_update', {'message': 'Starting albums update from Plex...'})
+                    
                     plex_manager = PlexManager(db=thread_db)
                     plex_manager.populate_album_table()
-                    socketio.emit('status_update', {'message': 'Albums update completed successfully!', 'finished': True})
+                    
+                    with app.app_context():
+                        socketio.emit('status_update', {
+                            'message': 'Albums update completed successfully!', 
+                            'finished': True
+                        })
+                    
+                    # Remove the handler to avoid memory leaks
+                    thread_logger.removeHandler(ws_handler)
                     thread_db.close()
                 except Exception as e:
-                    socketio.emit('status_update', {'message': f'Error updating albums: {str(e)}', 'error': True})
+                    with app.app_context():
+                        socketio.emit('status_update', {
+                            'message': f'Error updating albums: {str(e)}', 
+                            'error': True
+                        })
+                    if 'thread_logger' in locals():
+                        thread_logger.removeHandler(ws_handler)
             
             thread = threading.Thread(target=update_albums)
             thread.daemon = True
@@ -328,7 +417,7 @@ def create_app():
     @socketio.on('connect')
     def handle_connect():
         """Handle WebSocket connection."""
-        emit('status_update', {'message': 'Connected to server'})
+        emit('status_update', {'message': 'Connected to red-plex server'})
 
     return app, socketio
 

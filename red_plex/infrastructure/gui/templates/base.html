@@ -129,7 +129,16 @@
                     messageDiv.className += ' success-message';
                 }
                 
-                messageDiv.textContent = new Date().toLocaleTimeString() + ' - ' + data.message;
+                // Handle log messages that might already include timestamps
+                let message = data.message;
+                if (message.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}/)) {
+                    // Message already has a timestamp, use as-is
+                    messageDiv.textContent = message;
+                } else {
+                    // Add our own timestamp
+                    messageDiv.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+                }
+                
                 statusOutput.appendChild(messageDiv);
                 statusOutput.scrollTop = statusOutput.scrollHeight;
             }
