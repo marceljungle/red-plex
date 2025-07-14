@@ -6,3 +6,5 @@ click
 pyyaml
 flask
 flask-socketio
+gunicorn
+eventlet

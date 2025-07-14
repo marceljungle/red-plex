@@ -139,11 +139,8 @@ Or:
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div id="status-output" class="status-output">
-                            <div class="status-message">
-                                <i class="bi bi-hourglass-split"></i> Starting conversion process...
+                        <div id="status-output" class="status-output" style="max-height: 400px; overflow-y: auto; font-family: monospace; background-color: #f5f5f5; padding: 15px; border-radius: 4px;">
                             </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -168,22 +165,6 @@ Or:
 </div>
 
 {% block scripts %}
-<script>
-    // Auto-submit form when collage_id and site are provided via URL parameters
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const collageId = urlParams.get('collage_id');
-        const site = urlParams.get('site');
-        
-        if (collageId && site) {
-            // Pre-fill and potentially auto-submit for updates
-            const form = document.querySelector('form');
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Update Collage';
-            submitBtn.classList.remove('btn-primary');
-            submitBtn.classList.add('btn-warning');
-        }
-    });
-</script>
 {% endblock %}
+
 {% endblock %}
