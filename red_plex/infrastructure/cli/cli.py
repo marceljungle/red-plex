@@ -477,7 +477,7 @@ def gui(host, port, debug):
 
     try:
         # Execute the Gunicorn command
-        subprocess.run(command)
+        subprocess.run(command, check=True)
     except FileNotFoundError:
         click.echo(
             "Error: 'gunicorn' command not found.",

@@ -116,6 +116,7 @@ class QuerySyncCollectionUseCase:
         matched_torrents = set()
 
         for torrent_group in new_torrents:
+            torrent_group = self.gazelle_api.get_torrent_group(str(torrent_group.id))
             found_albums = self._search_plex_for_album(torrent_group)
             if found_albums:
                 matched_albums.update(found_albums)

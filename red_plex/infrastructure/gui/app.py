@@ -1,13 +1,10 @@
 """Flask web application for red-plex GUI."""
 import logging
 import os
-import sys
-import threading
 
 from flask import Flask, render_template, request, redirect, url_for, flash, g
 from flask_socketio import SocketIO, emit
 
-from red_plex.infrastructure.logger.logger import configure_logger
 from red_plex.infrastructure.cli.cli import update_collections_from_collages
 from red_plex.infrastructure.config.config import (
     load_config,
@@ -15,12 +12,13 @@ from red_plex.infrastructure.config.config import (
 )
 from red_plex.infrastructure.config.models import Configuration
 from red_plex.infrastructure.db.local_database import LocalDatabase
+from red_plex.infrastructure.logger.logger import configure_logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.infrastructure.service.collection_processor import CollectionProcessingService
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 
-
+# pylint: disable=W0703,W0718,R0914,R0915
 class WebSocketHandler(logging.Handler):
     """Custom logging handler that sends log messages via WebSocket."""
 
@@ -38,6 +36,7 @@ class WebSocketHandler(logging.Handler):
         except Exception:
             # Avoid recursion if there's an error in the handler
             pass
+
 
 def get_db():
     """Get database connection for current thread."""
@@ -72,6 +71,9 @@ def create_app():
         db = g.pop('db', None)
         if db is not None:
             db.close()
+
+        if error is not None:
+            logger.error("Error during request teardown: %s", error)
 
     def map_fetch_mode(fetch_mode_str) -> AlbumFetchMode:
         """Map the fetch mode string to an AlbumFetchMode enum."""
@@ -170,15 +172,15 @@ def create_app():
 
                 # Start processing in background
                 def process_collages():
+                    logger = logging.getLogger('red_plex')
                     thread_db = None
                     try:
                         thread_db = LocalDatabase()
                         album_fetch_mode = map_fetch_mode(fetch_mode)
 
-                        logger = logging.getLogger('red_plex')
-
                         with app.app_context():
-                            socketio.emit('status_update', {'message': 'Starting collage conversion process...'})
+                            socketio.emit('status_update',
+                                          {'message': 'Starting collage conversion process...'})
 
                         logger.info("WebSocket logging is configured and ready.")
                         logger.info("Connecting to Plex server...")
@@ -186,7 +188,7 @@ def create_app():
                         try:
                             plex_manager = PlexManager(db=thread_db)
                         except Exception as e:
-                            logger.error(f'Failed to initialize PlexManager: {str(e)}')
+                            logger.error('Failed to initialize PlexManager: %s', e)
                             with app.app_context():
                                 socketio.emit('status_update', {
                                     'message': f'Failed to connect to Plex server: {str(e)}',
@@ -197,13 +199,15 @@ def create_app():
                         logger.info("Successfully connected to Plex server.")
 
                         gazelle_api = GazelleAPI(site)
-                        processor = CollectionProcessingService(thread_db, plex_manager, gazelle_api)
+                        processor = CollectionProcessingService(thread_db,
+                                                                plex_manager,
+                                                                gazelle_api)
 
                         def web_echo(message):
                             logger.info(message)
 
                         def web_confirm(message):
-                            logger.info(f"Auto-confirming: {message}")
+                            logger.info('Auto-confirming: %s', message)
                             return True
 
                         processor.process_collages(
@@ -220,7 +224,7 @@ def create_app():
                             })
 
                     except Exception as e:
-                        logger.critical(f'An unhandled error occurred: {str(e)}', exc_info=True)
+                        logger.critical('An unhandled error occurred: %s', e, exc_info=True)
                         with app.app_context():
                             socketio.emit('status_update', {
                                 'message': f'Error: {str(e)}',
@@ -233,7 +237,8 @@ def create_app():
                 socketio.start_background_task(target=process_collages)
 
                 flash('Processing started! Check the status below.', 'info')
-                return render_template('collages_convert.html', processing=True)
+                return render_template('collages_convert.html',
+                                       processing=True)
 
             except Exception as e:
                 flash(f'Error starting collage conversion: {str(e)}', 'error')
@@ -265,25 +270,27 @@ def create_app():
 
                 # Start processing in background
                 def process_bookmarks():
+                    logger = logging.getLogger('red_plex')
                     thread_db = None
                     try:
                         thread_db = LocalDatabase()
                         album_fetch_mode = map_fetch_mode(fetch_mode)
 
-                        logger = logging.getLogger('red_plex')
-
                         with app.app_context():
-                            socketio.emit('status_update', {'message': 'Starting bookmark conversion process...'})
+                            socketio.emit('status_update',
+                                          {'message': 'Starting bookmark conversion process...'})
 
                         gazelle_api = GazelleAPI(site)
                         plex_manager = PlexManager(db=thread_db)
-                        processor = CollectionProcessingService(thread_db, plex_manager, gazelle_api)
+                        processor = CollectionProcessingService(thread_db,
+                                                                plex_manager,
+                                                                gazelle_api)
 
                         def web_echo(message):
                             logger.info(message)
 
                         def web_confirm(message):
-                            logger.info(f"Auto-confirming: {message}")
+                            logger.info('Auto-confirming: %s', message)
                             return True
 
                         processor.process_bookmarks(
@@ -298,8 +305,10 @@ def create_app():
                                 'finished': True
                             })
                     except Exception as e:
-                        logger.critical(f'An unhandled error occurred during bookmark processing: {str(e)}',
-                                        exc_info=True)
+                        logger.critical(
+                            'An unhandled error occurred during bookmark processing: %s',
+                            e,
+                            exc_info=True)
                         with app.app_context():
                             socketio.emit('status_update', {
                                 'message': f'Error: {str(e)}',
@@ -312,7 +321,8 @@ def create_app():
                 socketio.start_background_task(target=process_bookmarks)
 
                 flash('Processing started! Check the status below.', 'info')
-                return render_template('bookmarks_convert.html', processing=True)
+                return render_template('bookmarks_convert.html',
+                                       processing=True)
 
             except Exception as e:
                 flash(f'Error starting bookmark conversion: {str(e)}', 'error')
@@ -334,7 +344,8 @@ def create_app():
                     stats['albums'] = len(db.get_all_albums())
                     stats['collages'] = len(db.get_all_collage_collections())
                     stats['bookmarks'] = len(db.get_all_bookmark_collections())
-                except:
+                except Exception as e:
+                    logger.warning('Error getting database stats: %s', e)
                     stats = {'albums': 0, 'collages': 0, 'bookmarks': 0}
             else:
                 stats = {'albums': 0, 'collages': 0, 'bookmarks': 0}
@@ -355,14 +366,14 @@ def create_app():
         """Update albums from Plex and update collections from collages."""
         try:
             def update_albums():
+                logger = logging.getLogger('red_plex')
                 thread_db = None
                 try:
                     thread_db = LocalDatabase()
 
-                    logger = logging.getLogger('red_plex')
-
                     with app.app_context():
-                        socketio.emit('status_update', {'message': 'Starting albums update from Plex...'})
+                        socketio.emit('status_update',
+                                      {'message': 'Starting albums update from Plex...'})
 
                     plex_manager = PlexManager(db=thread_db)
 
@@ -370,11 +381,12 @@ def create_app():
 
                     with app.app_context():
                         socketio.emit('status_update',
-                                      {'message': 'Albums update completed. Starting collections update...'})
+                                      {'message': 'Albums update completed. '
+                                                  'Starting collections update...'})
 
                     all_collages = thread_db.get_all_collage_collections()
                     if all_collages:
-                        logger.info(f'Updating {len(all_collages)} collage collections...')
+                        logger.info('Updating %s collage collections...', len(all_collages))
 
                         update_collections_from_collages(
                             local_database=thread_db,
@@ -393,7 +405,9 @@ def create_app():
                             'finished': True
                         })
                 except Exception as e:
-                    logger.critical(f'An unhandled error occurred during album update: {str(e)}', exc_info=True)
+                    logger.critical('An unhandled error occurred during album update: %s',
+                                    e,
+                                    exc_info=True)
                     with app.app_context():
                         socketio.emit('status_update', {
                             'message': f'Error updating albums: {str(e)}',
