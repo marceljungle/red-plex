@@ -49,6 +49,8 @@ setup(
         'pyyaml',
         'flask',
         'flask-socketio',
+        'gunicorn',
+        'eventlet'
     ],
     entry_points='''
         [console_scripts]
