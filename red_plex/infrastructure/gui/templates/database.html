@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Database - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">
+        <i class="bi bi-database"></i> Database Management
+    </h1>
+
+    <div class="row">
+        <!-- Database Status -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Database Status</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Database Path</strong></td>
+                            <td><code>{{ db_path }}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status</strong></td>
+                            <td>
+                                {% if db_exists %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Exists
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> Not Found
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Statistics -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Database Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <i class="bi bi-music-note text-primary" style="font-size: 2rem;"></i>
+                            </div>
+                            <h4 class="mb-0">{{ stats.get('albums', 0) }}</h4>
+                            <small class="text-muted">Albums</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <i class="bi bi-collection text-success" style="font-size: 2rem;"></i>
+                            </div>
+                            <h4 class="mb-0">{{ stats.get('collages', 0) }}</h4>
+                            <small class="text-muted">Collages</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <i class="bi bi-bookmark text-warning" style="font-size: 2rem;"></i>
+                            </div>
+                            <h4 class="mb-0">{{ stats.get('bookmarks', 0) }}</h4>
+                            <small class="text-muted">Bookmarks</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Albums Management -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-music-note text-primary"></i> Albums
+                    </h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text">
+                        Manage your Plex album database. Albums are used to match collages and bookmarks.
+                    </p>
+                    <div class="mt-auto">
+                        <form method="POST" action="{{ url_for('database_albums_update') }}" class="d-inline">
+                            <button type="submit" class="btn btn-primary w-100 mb-2">
+                                <i class="bi bi-arrow-clockwise"></i> Update from Plex
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('database_reset', table='albums') }}" 
+                              onsubmit="return confirm('Are you sure you want to reset the albums table? This will remove all album data.')" 
+                              class="d-inline">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-trash"></i> Reset Albums
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collages Management -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-collection text-success"></i> Collages
+                    </h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text">
+                        Manage stored collage collections. This includes all converted collages from RED and OPS.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="{{ url_for('collages') }}" class="btn btn-outline-success w-100 mb-2">
+                            <i class="bi bi-eye"></i> View Collages
+                        </a>
+                        <form method="POST" action="{{ url_for('database_reset', table='collages') }}" 
+                              onsubmit="return confirm('Are you sure you want to reset the collages table? This will remove all collage collection data.')" 
+                              class="d-inline">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-trash"></i> Reset Collages
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bookmarks Management -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bookmark text-warning"></i> Bookmarks
+                    </h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text">
+                        Manage stored bookmark collections. This includes all converted bookmarks from RED and OPS.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="{{ url_for('bookmarks') }}" class="btn btn-outline-warning w-100 mb-2">
+                            <i class="bi bi-eye"></i> View Bookmarks
+                        </a>
+                        <form method="POST" action="{{ url_for('database_reset', table='bookmarks') }}" 
+                              onsubmit="return confirm('Are you sure you want to reset the bookmarks table? This will remove all bookmark collection data.')" 
+                              class="d-inline">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-trash"></i> Reset Bookmarks
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Output for Updates -->
+    <div class="row mt-4" id="status-row" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock"></i> Update Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="status-output" class="status-output"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Database Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Album Database</h6>
+                            <p>
+                                Contains information about all albums in your Plex music library. 
+                                This is used to match albums from collages and bookmarks.
+                            </p>
+                            <ul>
+                                <li><strong>Update from Plex:</strong> Scans your Plex library and updates the local database</li>
+                                <li><strong>Reset:</strong> Clears all album data (you'll need to update from Plex again)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Collections Database</h6>
+                            <p>
+                                Stores information about converted collages and bookmark collections. 
+                                This allows for updates and tracking of your collections.
+                            </p>
+                            <ul>
+                                <li><strong>Collages:</strong> Individual collage collections from RED/OPS</li>
+                                <li><strong>Bookmarks:</strong> Collections based on your personal bookmarks</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning" role="alert">
+                <h6 class="alert-heading">
+                    <i class="bi bi-exclamation-triangle"></i> Important Notes
+                </h6>
+                <ul class="mb-0">
+                    <li><strong>Album Updates:</strong> Run "Update from Plex" after adding new music to your library</li>
+                    <li><strong>Reset Operations:</strong> Cannot be undone - make sure you understand what you're doing</li>
+                    <li><strong>Database Location:</strong> The database is stored locally and contains no sensitive information</li>
+                    <li><strong>Performance:</strong> Large libraries may take time to update</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Show status output when album update starts
+    document.querySelector('form[action*="albums/update"] button').addEventListener('click', function() {
+        const statusRow = document.getElementById('status-row');
+        const statusOutput = document.getElementById('status-output');
+        
+        statusRow.style.display = 'block';
+        statusOutput.innerHTML = '<div class="status-message"><i class="bi bi-hourglass-split"></i> Starting album update from Plex...</div>';
+        
+        // Scroll to status output
+        statusRow.scrollIntoView({ behavior: 'smooth' });
+    });
+</script>
+{% endblock %}
+{% endblock %}

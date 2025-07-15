@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">
+        <i class="bi bi-house"></i> Dashboard
+    </h1>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h4 class="alert-heading">
+                    <i class="bi bi-info-circle"></i> Welcome to red-plex GUI
+                </h4>
+                <p>
+                    This web interface provides a user-friendly way to manage your Plex collections 
+                    from RED and OPS collages and bookmarks.
+                </p>
+                <hr>
+                <p class="mb-0">
+                    Use the sidebar navigation to access different features:
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Configuration Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-gear text-secondary"></i> Configuration
+                    </h5>
+                    <p class="card-text">
+                        View and edit your API keys, Plex settings, and other configuration options.
+                    </p>
+                    <a href="{{ url_for('config_view') }}" class="btn btn-outline-secondary">
+                        Manage Config
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collages Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-collection text-primary"></i> Collages
+                    </h5>
+                    <p class="card-text">
+                        Create and update Plex collections from RED and OPS collages.
+                    </p>
+                    <a href="{{ url_for('collages') }}" class="btn btn-outline-primary">
+                        Manage Collages
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bookmarks Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-bookmark text-warning"></i> Bookmarks
+                    </h5>
+                    <p class="card-text">
+                        Create collections from your personal bookmarks on RED and OPS.
+                    </p>
+                    <a href="{{ url_for('bookmarks') }}" class="btn btn-outline-warning">
+                        Manage Bookmarks
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-database text-success"></i> Database
+                    </h5>
+                    <p class="card-text">
+                        View database status and manage your local albums, collages, and bookmarks data.
+                    </p>
+                    <a href="{{ url_for('database') }}" class="btn btn-outline-success">
+                        Manage Database
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-lightning text-danger"></i> Quick Actions
+                    </h5>
+                    <p class="card-text">
+                        Common tasks you might want to perform:
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('collages_convert') }}" class="btn btn-sm btn-outline-primary">
+                            Convert Collage
+                        </a>
+                        <a href="{{ url_for('bookmarks_convert') }}" class="btn btn-sm btn-outline-warning">
+                            Convert Bookmarks
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLI Info Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-terminal text-dark"></i> CLI Available
+                    </h5>
+                    <p class="card-text">
+                        You can still use the command-line interface alongside this GUI.
+                    </p>
+                    <code>red-plex --help</code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-question-circle"></i> Getting Started
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li><strong>Configure your settings:</strong> Go to Configuration and add your API keys for RED/OPS and Plex token.</li>
+                        <li><strong>Update your album database:</strong> Visit Database and click "Update Albums from Plex" to populate your library.</li>
+                        <li><strong>Convert your first collage:</strong> Go to Collages → Convert and enter a collage ID from RED or OPS.</li>
+                        <li><strong>Check your Plex:</strong> Your new collection should appear in your Plex music library!</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

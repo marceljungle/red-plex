@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Collages - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-collection"></i> Collages
+        </h1>
+        <a href="{{ url_for('collages_convert') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Convert New Collage
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Stored Collages</h5>
+                </div>
+                <div class="card-body">
+                    {% if collages %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Site</th>
+                                        <th>External ID</th>
+                                        <th>Created</th>
+                                        <th>Last Updated</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for collage in collages %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ collage.name or 'Unnamed Collage' }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ 'danger' if collage.site == 'red' else 'warning' }}">
+                                                {{ collage.site.upper() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <code>{{ collage.external_id }}</code>
+                                        </td>
+                                        <td>
+                                            {% if collage.created_at %}
+                                                {{ collage.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if collage.updated_at %}
+                                                {{ collage.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('collages_convert') }}?collage_id={{ collage.external_id }}&site={{ collage.site }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Update this collage">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-collection text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3 text-muted">No Collages Found</h5>
+                            <p class="text-muted">You haven't converted any collages yet.</p>
+                            <a href="{{ url_for('collages_convert') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-lg"></i> Convert Your First Collage
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if collages %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Bulk Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Update all stored collages to sync with the latest changes from their source sites.
+                        </p>
+                        <form method="POST" action="{{ url_for('collages_convert') }}" class="d-inline">
+                            <input type="hidden" name="action" value="update_all">
+                            <div class="row align-items-end">
+                                <div class="col-md-4">
+                                    <label for="fetch_mode_bulk" class="form-label">Fetch Mode</label>
+                                    <select class="form-select" id="fetch_mode_bulk" name="fetch_mode">
+                                        <option value="torrent_name">Torrent Name (Default)</option>
+                                        <option value="query">Query (Beets/Lidarr)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="bi bi-arrow-clockwise"></i> Update All Collages
+                                    </button>
+                                    <div class="form-text">This will check all stored collages for updates.</div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h6 class="alert-heading">
+                    <i class="bi bi-info-circle"></i> About Collages
+                </h6>
+                <p>
+                    Collages are curated collections of music on RED and OPS. When you convert a collage, 
+                    red-plex creates a matching collection in your Plex library with albums found in your music library.
+                </p>
+                <ul class="mb-0">
+                    <li><strong>Convert:</strong> Create a new Plex collection from a collage ID</li>
+                    <li><strong>Update:</strong> Refresh existing collections with new albums</li>
+                    <li><strong>Fetch Modes:</strong> Choose how albums are matched (by filename or metadata)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

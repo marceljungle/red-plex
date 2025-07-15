@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Convert Bookmarks - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-plus-lg"></i> Convert Bookmarks
+        </h1>
+        <a href="{{ url_for('bookmarks') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Bookmarks
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Convert Bookmarks to Plex Collection</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="site" class="form-label">Site</label>
+                            <select class="form-select" id="site" name="site" required>
+                                <option value="">Select a site...</option>
+                                <option value="red" {% if request.args.get('site') == 'red' %}selected{% endif %}>RED (Redacted)</option>
+                                <option value="ops" {% if request.args.get('site') == 'ops' %}selected{% endif %}>OPS (Orpheus)</option>
+                            </select>
+                            <div class="form-text">Choose which tracker site to fetch bookmarks from.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="fetch_mode" class="form-label">Fetch Mode</label>
+                            <select class="form-select" id="fetch_mode" name="fetch_mode">
+                                <option value="torrent_name">Torrent Name (Default)</option>
+                                <option value="query">Query (Beets/Lidarr)</option>
+                            </select>
+                            <div class="form-text">
+                                <strong>Torrent Name:</strong> Matches albums by directory/filename (original behavior)<br>
+                                <strong>Query:</strong> Matches albums by artist and album metadata (better for organized libraries)
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-play-fill"></i> Convert Bookmarks
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-question-circle"></i> How Bookmark Conversion Works
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Fetches your bookmarked releases from the selected site</li>
+                        <li>Searches your Plex library for matching albums</li>
+                        <li>Creates a collection named "Site Bookmarks" (e.g., "RED Bookmarks")</li>
+                        <li>Adds all found albums to the collection</li>
+                    </ol>
+                    
+                    <div class="alert alert-info alert-sm mt-3" role="alert">
+                        <small>
+                            <i class="bi bi-info-circle"></i>
+                            This will create or update your bookmark collection with the latest bookmarks.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-gear"></i> Requirements
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Before converting bookmarks:</strong></p>
+                    <ul class="small">
+                        <li>Configure your API key for the selected site</li>
+                        <li>Make sure your Plex server is accessible</li>
+                        <li>Update your album database if needed</li>
+                        <li>Have some bookmarked releases on the tracker</li>
+                    </ul>
+                    
+                    <div class="d-grid">
+                        <a href="{{ url_for('config_view') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-gear"></i> Check Configuration
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if processing %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-clock"></i> Processing Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="status-output" class="status-output">
+                            <div class="status-message">
+                                <i class="bi bi-hourglass-split"></i> Starting bookmark conversion...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning" role="alert">
+                <h6 class="alert-heading">
+                    <i class="bi bi-exclamation-triangle"></i> Important Notes
+                </h6>
+                <ul class="mb-0">
+                    <li><strong>API Rate Limits:</strong> The process respects site rate limits to avoid being banned</li>
+                    <li><strong>Processing Time:</strong> May take several minutes depending on bookmark count</li>
+                    <li><strong>Collection Updates:</strong> Running this again will update the existing collection</li>
+                    <li><strong>Missing Albums:</strong> Only albums found in your Plex library will be added</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Auto-submit logic for updates
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const site = urlParams.get('site');
+        
+        if (site) {
+            // Pre-fill and potentially auto-submit for updates
+            const form = document.querySelector('form');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Update Bookmarks';
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-warning');
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

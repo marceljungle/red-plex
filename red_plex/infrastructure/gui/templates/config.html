@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-gear"></i> Configuration
+        </h1>
+        <a href="{{ url_for('config_edit') }}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Edit Configuration
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Current Configuration</h5>
+                </div>
+                <div class="card-body">
+                    {% if config %}
+                        <div class="row">
+                            <!-- General Settings -->
+                            <div class="col-md-6">
+                                <h6 class="text-muted">General Settings</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Log Level</strong></td>
+                                        <td><span class="badge bg-secondary">{{ config.get('LOG_LEVEL', 'INFO') }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Section Name</strong></td>
+                                        <td>{{ config.get('SECTION_NAME', 'Music') }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Plex Settings -->
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Plex Settings</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Plex URL</strong></td>
+                                        <td>
+                                            {% if config.get('PLEX_URL') %}
+                                                <span class="text-success">
+                                                    <i class="bi bi-check-circle"></i> {{ config.PLEX_URL }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-danger">
+                                                    <i class="bi bi-x-circle"></i> Not configured
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Plex Token</strong></td>
+                                        <td>
+                                            {% if config.get('PLEX_TOKEN') %}
+                                                <span class="text-success">
+                                                    <i class="bi bi-check-circle"></i> Configured
+                                                </span>
+                                            {% else %}
+                                                <span class="text-danger">
+                                                    <i class="bi bi-x-circle"></i> Not configured
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="row">
+                            <!-- RED Settings -->
+                            <div class="col-md-6">
+                                <h6 class="text-muted">RED (Redacted) Settings</h6>
+                                <table class="table table-sm">
+                                    {% if config.get('RED') %}
+                                        <tr>
+                                            <td><strong>Base URL</strong></td>
+                                            <td>{{ config.RED.get('BASE_URL', 'Not set') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>API Key</strong></td>
+                                            <td>
+                                                {% if config.RED.get('API_KEY') %}
+                                                    <span class="text-success">
+                                                        <i class="bi bi-check-circle"></i> Configured
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-danger">
+                                                        <i class="bi bi-x-circle"></i> Not configured
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Rate Limit</strong></td>
+                                            <td>
+                                                {% if config.RED.get('RATE_LIMIT') %}
+                                                    {{ config.RED.RATE_LIMIT.get('calls', 10) }} calls / 
+                                                    {{ config.RED.RATE_LIMIT.get('seconds', 10) }} seconds
+                                                {% else %}
+                                                    Default limits
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="2">
+                                                <span class="text-muted">RED configuration not found</span>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+
+                            <!-- OPS Settings -->
+                            <div class="col-md-6">
+                                <h6 class="text-muted">OPS (Orpheus) Settings</h6>
+                                <table class="table table-sm">
+                                    {% if config.get('OPS') %}
+                                        <tr>
+                                            <td><strong>Base URL</strong></td>
+                                            <td>{{ config.OPS.get('BASE_URL', 'Not set') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>API Key</strong></td>
+                                            <td>
+                                                {% if config.OPS.get('API_KEY') %}
+                                                    <span class="text-success">
+                                                        <i class="bi bi-check-circle"></i> Configured
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-danger">
+                                                        <i class="bi bi-x-circle"></i> Not configured
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Rate Limit</strong></td>
+                                            <td>
+                                                {% if config.OPS.get('RATE_LIMIT') %}
+                                                    {{ config.OPS.RATE_LIMIT.get('calls', 4) }} calls / 
+                                                    {{ config.OPS.RATE_LIMIT.get('seconds', 15) }} seconds
+                                                {% else %}
+                                                    Default limits
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="2">
+                                                <span class="text-muted">OPS configuration not found</span>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            No configuration found. Please set up your configuration first.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if config %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Configuration Status</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    {% if config.get('PLEX_URL') and config.get('PLEX_TOKEN') %}
+                                        <i class="bi bi-check-circle-fill text-success fs-2"></i>
+                                        <p class="mt-2 mb-0"><strong>Plex</strong></p>
+                                        <small class="text-success">Configured</small>
+                                    {% else %}
+                                        <i class="bi bi-x-circle-fill text-danger fs-2"></i>
+                                        <p class="mt-2 mb-0"><strong>Plex</strong></p>
+                                        <small class="text-danger">Missing settings</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    {% if config.get('RED', {}).get('API_KEY') %}
+                                        <i class="bi bi-check-circle-fill text-success fs-2"></i>
+                                        <p class="mt-2 mb-0"><strong>RED</strong></p>
+                                        <small class="text-success">Configured</small>
+                                    {% else %}
+                                        <i class="bi bi-x-circle-fill text-warning fs-2"></i>
+                                        <p class="mt-2 mb-0"><strong>RED</strong></p>
+                                        <small class="text-warning">No API key</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    {% if config.get('OPS', {}).get('API_KEY') %}
+                                        <i class="bi bi-check-circle-fill text-success fs-2"></i>
+                                        <p class="mt-2 mb-0"><strong>OPS</strong></p>
+                                        <small class="text-success">Configured</small>
+                                    {% else %}
+                                        <i class="bi bi-x-circle-fill text-warning fs-2"></i>
+                                        <p class="mt-2 mb-0"><strong>OPS</strong></p>
+                                        <small class="text-warning">No API key</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    {% set ready = config.get('PLEX_URL') and config.get('PLEX_TOKEN') and (config.get('RED', {}).get('API_KEY') or config.get('OPS', {}).get('API_KEY')) %}
+                                    {% if ready %}
+                                        <i class="bi bi-check-circle-fill text-success fs-2"></i>
+                                        <p class="mt-2 mb-0"><strong>Status</strong></p>
+                                        <small class="text-success">Ready to use</small>
+                                    {% else %}
+                                        <i class="bi bi-exclamation-triangle-fill text-warning fs-2"></i>
+                                        <p class="mt-2 mb-0"><strong>Status</strong></p>
+                                        <small class="text-warning">Needs setup</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
