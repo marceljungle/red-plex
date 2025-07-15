@@ -1,7 +1,8 @@
 """Setup script for installing the package."""
 
-import re
 import pathlib
+import re
+
 from setuptools import setup, find_namespace_packages
 
 # Resolve the absolute path to the directory containing setup.py
@@ -38,6 +39,7 @@ setup(
     },
     keywords='plex music collections red ops redacted orpheus gazelle tracker',
     packages=find_namespace_packages(include=['red_plex*']),
+    py_modules=['wsgi'],
     python_requires='>=3.8',
     include_package_data=True,
     install_requires=[
