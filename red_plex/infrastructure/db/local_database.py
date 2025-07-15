@@ -86,6 +86,35 @@ class LocalDatabase:
           group_id INTEGER
         );
         """)
+        
+        # Tables for site tag mappings
+        self.conn.execute("""
+        CREATE TABLE IF NOT EXISTS site_tag_mappings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          rating_key TEXT NOT NULL,
+          group_id INTEGER NOT NULL,
+          site TEXT NOT NULL,
+          UNIQUE(rating_key, group_id, site)
+        );
+        """)
+        
+        self.conn.execute("""
+        CREATE TABLE IF NOT EXISTS site_tags (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tag_name TEXT NOT NULL UNIQUE
+        );
+        """)
+        
+        self.conn.execute("""
+        CREATE TABLE IF NOT EXISTS mapping_tags (
+          mapping_id INTEGER,
+          tag_id INTEGER,
+          PRIMARY KEY (mapping_id, tag_id),
+          FOREIGN KEY (mapping_id) REFERENCES site_tag_mappings(id) ON DELETE CASCADE,
+          FOREIGN KEY (tag_id) REFERENCES site_tags(id) ON DELETE CASCADE
+        );
+        """)
+        
         self.conn.execute("DROP TABLE IF EXISTS beets_mappings;")
 
     @staticmethod
@@ -538,3 +567,111 @@ class LocalDatabase:
         )
         rows = cur.fetchall()
         return [row[0] for row in rows]
+
+    # --------------------------------------------------------------------------
+    #                           SITE TAG MAPPINGS
+    # --------------------------------------------------------------------------
+    def insert_site_tag_mapping(self, rating_key: str, group_id: int, site: str, tags: List[str]) -> None:
+        """
+        Insert or update a site tag mapping with its associated tags.
+        """
+        logger.debug("Inserting site tag mapping: rating_key=%s, group_id=%s, site=%s", 
+                    rating_key, group_id, site)
+        
+        with self.conn:
+            # Insert or ignore the mapping
+            cur = self.conn.cursor()
+            cur.execute("""
+                INSERT OR IGNORE INTO site_tag_mappings(rating_key, group_id, site) 
+                VALUES (?, ?, ?)
+            """, (rating_key, group_id, site))
+            
+            # Get the mapping ID
+            cur.execute("""
+                SELECT id FROM site_tag_mappings 
+                WHERE rating_key = ? AND group_id = ? AND site = ?
+            """, (rating_key, group_id, site))
+            mapping_id = cur.fetchone()[0]
+            
+            # Delete existing tag associations for this mapping
+            cur.execute("DELETE FROM mapping_tags WHERE mapping_id = ?", (mapping_id,))
+            
+            if tags:
+                # Insert tags if they don't exist
+                self.conn.executemany(
+                    "INSERT OR IGNORE INTO site_tags(tag_name) VALUES (?)",
+                    [(tag,) for tag in tags]
+                )
+                
+                # Get tag IDs
+                tag_ids = dict(cur.execute(
+                    f"SELECT tag_name, id FROM site_tags WHERE tag_name IN "
+                    f"({','.join('?' * len(tags))})",
+                    tags
+                ))
+                
+                # Insert tag associations
+                self.conn.executemany(
+                    "INSERT INTO mapping_tags(mapping_id, tag_id) VALUES (?, ?)",
+                    [(mapping_id, tag_ids[tag]) for tag in tags]
+                )
+
+    def get_rating_keys_by_tags(self, tags: List[str], site: str) -> List[str]:
+        """
+        Get rating keys that have mappings containing all specified tags for a given site.
+        """
+        if not tags:
+            return []
+            
+        cur = self.conn.cursor()
+        
+        # Build query to find mappings that contain all specified tags
+        placeholders = ','.join('?' * len(tags))
+        cur.execute(f"""
+            SELECT DISTINCT stm.rating_key
+            FROM site_tag_mappings stm
+            JOIN mapping_tags mt ON stm.id = mt.mapping_id
+            JOIN site_tags st ON mt.tag_id = st.id
+            WHERE stm.site = ? AND st.tag_name IN ({placeholders})
+            GROUP BY stm.rating_key
+            HAVING COUNT(DISTINCT st.tag_name) = ?
+        """, [site] + tags + [len(tags)])
+        
+        return [row[0] for row in cur.fetchall()]
+    
+    def get_unscanned_albums(self, site: str) -> List[str]:
+        """
+        Get rating keys from albums table that are not present in site_tag_mappings for the given site.
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            SELECT a.album_id
+            FROM albums a
+            LEFT JOIN site_tag_mappings stm ON a.album_id = stm.rating_key AND stm.site = ?
+            WHERE stm.rating_key IS NULL
+        """, (site,))
+        
+        return [row[0] for row in cur.fetchall()]
+    
+    def reset_site_tag_mappings(self, site: str = None):
+        """
+        Reset site tag mappings. If site is provided, only reset for that site.
+        """
+        logger.info("Resetting site tag mappings%s", f" for site {site}" if site else "")
+        
+        with self.conn:
+            if site:
+                # Get mapping IDs for the site
+                cur = self.conn.cursor()
+                cur.execute("SELECT id FROM site_tag_mappings WHERE site = ?", (site,))
+                mapping_ids = [row[0] for row in cur.fetchall()]
+                
+                if mapping_ids:
+                    placeholders = ','.join('?' * len(mapping_ids))
+                    self.conn.execute(f"DELETE FROM mapping_tags WHERE mapping_id IN ({placeholders})", mapping_ids)
+                
+                self.conn.execute("DELETE FROM site_tag_mappings WHERE site = ?", (site,))
+            else:
+                self.conn.execute("DELETE FROM mapping_tags")
+                self.conn.execute("DELETE FROM site_tag_mappings")
+                self.conn.execute("DELETE FROM site_tags")

@@ -135,3 +135,14 @@ class GazelleAPI:
             return None
         logger.debug('Retrieved user bookmarks')
         return GazelleMapper.map_bookmarks(bookmarks_response, site)
+
+    def browse_by_filelist(self, filename: str) -> Optional[Dict[str, Any]]:
+        """Browse torrents by filename using the filelist endpoint."""
+        logger.debug('Browsing torrents by filename: %s', filename)
+        params = {'filelist': filename}
+        try:
+            response = self.api_call('browse', params)
+            return response
+        except Exception as e:  # pylint: disable=W0703
+            logger.error('Error browsing torrents by filename %s: %s', filename, e)
+            return None
