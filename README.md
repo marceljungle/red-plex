@@ -210,7 +210,7 @@ red-plex config reset
 
 ```bash
 # Create Plex collections for specific collage IDs
-red-plex collages convert [COLLAGE_IDS] --site [red|ops] --fetch-mode [normal|query]
+red-plex collages convert [COLLAGE_IDS] --site [red|ops] --fetch-mode [torrent_name|query]
 
 # Update all collages in the database, re-checking the site data
 red-plex collages update --fetch-mode [torrent_name|query]
@@ -230,15 +230,9 @@ red-plex bookmarks update --fetch-mode [torrent_name|query]
 
 The `--fetch-mode` (or `-fm`) option controls how red-plex locates albums in Plex:
 
-#### For `collages convert`:
+#### For all commands (`collages convert`, `collages update`, `bookmarks convert`, `bookmarks update`):
 - **torrent_name** (default): Searches for directories matching the torrent folder name
 - **query**: Searches using `Artist` and `Album` metadata, ideal for organized libraries managed by tools like Beets or Lidarr
-
-#### For other commands (`collages update`, `bookmarks convert`, `bookmarks update`):
-- **torrent_name** (default): Searches for directories matching the torrent folder name
-- **query**: Searches using `Artist` and `Album` metadata, ideal for organized libraries managed by tools like Beets or Lidarr
-
-> **Note**: There's a terminology difference between commands - `collages convert` uses "normal" while other commands use "torrent_name", but both refer to the same functionality.
 
 ### Database Commands
 
