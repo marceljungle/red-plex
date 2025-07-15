@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Bookmarks - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-bookmark"></i> Bookmarks
+        </h1>
+        <a href="{{ url_for('bookmarks_convert') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Convert Bookmarks
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Stored Bookmark Collections</h5>
+                </div>
+                <div class="card-body">
+                    {% if bookmarks %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Site</th>
+                                        <th>Created</th>
+                                        <th>Last Updated</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bookmark in bookmarks %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ bookmark.name or 'Bookmarks Collection' }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ 'danger' if bookmark.site == 'red' else 'warning' }}">
+                                                {{ bookmark.site.upper() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if bookmark.created_at %}
+                                                {{ bookmark.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if bookmark.updated_at %}
+                                                {{ bookmark.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('bookmarks_convert') }}?site={{ bookmark.site }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Update bookmarks">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-bookmark text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3 text-muted">No Bookmark Collections Found</h5>
+                            <p class="text-muted">You haven't converted any bookmarks yet.</p>
+                            <a href="{{ url_for('bookmarks_convert') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-lg"></i> Convert Your Bookmarks
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h6 class="alert-heading">
+                    <i class="bi bi-info-circle"></i> About Bookmarks
+                </h6>
+                <p>
+                    Bookmarks are your personal saved releases on RED and OPS. When you convert bookmarks, 
+                    red-plex creates a Plex collection containing all albums from your bookmarked releases 
+                    that are found in your music library.
+                </p>
+                <ul class="mb-0">
+                    <li><strong>Personal Collections:</strong> Based on your own bookmarked releases</li>
+                    <li><strong>Auto-Update:</strong> Keep your collections in sync with your bookmark changes</li>
+                    <li><strong>Site-Specific:</strong> Separate collections for RED and OPS bookmarks</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,7 +4,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A command-line tool for creating and updating Plex collections based on collages and bookmarks from Gazelle-based music trackers like **Redacted** ("RED") and **Orpheus Network** ("OPS"). 
+A command-line tool and web interface for creating and updating Plex collections based on collages and bookmarks from Gazelle-based music trackers like **Redacted** ("RED") and **Orpheus Network** ("OPS"). 
 
 red-plex bridges the gap between your curated music collections on private trackers and your personal Plex media server, automatically creating and maintaining Plex collections that mirror your tracker collages and bookmarks.
 
@@ -12,7 +12,38 @@ red-plex bridges the gap between your curated music collections on private track
 
 1. **Install red-plex**: `pip install red-plex`
 2. **Configure your API keys**: `red-plex config edit`
-3. **Create your first collection**: `red-plex collages convert 12345 --site red`
+3. **Create your first collection**: 
+   - **CLI**: `red-plex collages convert 12345 --site red`
+   - **Web GUI**: `red-plex gui` (then visit http://127.0.0.1:8000)
+
+## Web Interface
+
+red-plex now includes a comprehensive web-based GUI for users who prefer a visual interface over command-line operations.
+
+### Features
+
+- **🌐 Dashboard**: Clean overview with feature cards and navigation
+- **⚙️ Configuration Management**: View and edit all settings (API keys, Plex config, rate limits) through web forms
+- **🎨 Collage Operations**: Convert new collages and view existing collections
+- **🔖 Bookmark Operations**: Convert bookmarks from RED and OPS trackers
+- **🗄️ Database Management**: View statistics, update albums, reset tables
+- **⚡ Real-time Updates**: Live status updates during long operations via WebSocket
+- **📱 Mobile-Responsive**: Bootstrap-based design that works on all devices
+
+### Usage
+
+```bash
+# Launch GUI server (default: http://127.0.0.1:8000)
+red-plex gui
+
+# Custom host/port
+red-plex gui --host 0.0.0.0 --port 8080
+
+# Debug mode with auto-reload
+red-plex gui --debug
+```
+
+The web interface provides the same functionality as the CLI commands but with a user-friendly visual interface, real-time progress updates, and intuitive navigation.
 
 ## What are RED and OPS?
 
@@ -25,6 +56,7 @@ red-plex bridges the gap between your curated music collections on private track
 - [Installation](#installation)
 - [Getting API Keys](#getting-api-keys)
 - [Configuration](#configuration)
+- [Web Interface](#web-interface)
 - [Overview](#overview)
 - [Features](#features)
 - [Usage & Commands](#usage--commands)
@@ -135,17 +167,31 @@ Visit: https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={YOUR_TOKEN}
 ## Features
 
 - **Multi-Site**: Works with Redacted ("red") and Orpheus Network ("ops").
+- **Web Interface**: Modern Flask-based GUI with Bootstrap styling and real-time updates.
 - **Collections from Collages/Bookmarks**: Create or update entire Plex collections for each collage or bookmarked set.
 - **Local SQLite Database**: All data (albums, collages, bookmarks) is kept in one DB, no more CSV.
 - **Two Fetch Modes**: Choose between `torrent_name` (default) for direct path matching or `query` for metadata-based searches in Plex.
 - **Configurable Logging**: Choose between INFO, DEBUG, etc., in `config.yml`.
 - **Rate Limiting**: Respects site rate limits and retries on errors.
-- **Simple CLI**: All major tasks are accessed via subcommands like `collages`, `bookmarks`, `db`, etc.
+- **Dual Interface**: Access all functionality via both command-line interface and web GUI.
 - **Python 3.8+ Compatible**: Runs on modern Python versions with no external database dependencies.
 
 ## Usage & Commands
 
 Type `red-plex --help` for detailed usage. Below is a summary of the main commands.
+
+### Web Interface Commands
+
+```bash
+# Launch web GUI server
+red-plex gui [--host HOST] [--port PORT] [--debug]
+
+# Examples:
+red-plex gui                           # Default: http://127.0.0.1:8000
+red-plex gui --host 0.0.0.0            # Bind to all interfaces
+red-plex gui --port 8080               # Custom port
+red-plex gui --debug                   # Debug mode with auto-reload
+```
 
 ### Configuration Commands
 
@@ -164,7 +210,7 @@ red-plex config reset
 
 ```bash
 # Create Plex collections for specific collage IDs
-red-plex collages convert [COLLAGE_IDS] --site [red|ops] --fetch-mode [normal|query]
+red-plex collages convert [COLLAGE_IDS] --site [red|ops] --fetch-mode [torrent_name|query]
 
 # Update all collages in the database, re-checking the site data
 red-plex collages update --fetch-mode [torrent_name|query]
@@ -184,15 +230,9 @@ red-plex bookmarks update --fetch-mode [torrent_name|query]
 
 The `--fetch-mode` (or `-fm`) option controls how red-plex locates albums in Plex:
 
-#### For `collages convert`:
+#### For all commands (`collages convert`, `collages update`, `bookmarks convert`, `bookmarks update`):
 - **torrent_name** (default): Searches for directories matching the torrent folder name
 - **query**: Searches using `Artist` and `Album` metadata, ideal for organized libraries managed by tools like Beets or Lidarr
-
-#### For other commands (`collages update`, `bookmarks convert`, `bookmarks update`):
-- **torrent_name** (default): Searches for directories matching the torrent folder name
-- **query**: Searches using `Artist` and `Album` metadata, ideal for organized libraries managed by tools like Beets or Lidarr
-
-> **Note**: There's a terminology difference between commands - `collages convert` uses "normal" while other commands use "torrent_name", but both refer to the same functionality.
 
 ### Database Commands
 
@@ -251,6 +291,7 @@ red-plex bookmarks update --site ops -fm query
 
 ### Complete Workflow Example
 
+#### Command Line Interface
 ```bash
 # 1. First time setup
 red-plex config edit  # Add your API keys and Plex details
@@ -267,6 +308,24 @@ red-plex bookmarks convert --site red
 # 5. Later, update all collections with new releases
 red-plex collages update
 red-plex bookmarks update
+```
+
+#### Web Interface
+```bash
+# 1. Launch the web interface
+red-plex gui
+
+# 2. Open http://127.0.0.1:8000 in your browser
+
+# 3. Navigate to Configuration to add your API keys and Plex details
+
+# 4. Use the Database page to update your local album database
+
+# 5. Use the Collages page to convert specific collages
+
+# 6. Use the Bookmarks page to convert your bookmarks
+
+# 7. Return to Database page later to update all collections
 ```
 
 ## Configuration Details
@@ -328,9 +387,15 @@ pip install red-plex --upgrade
 - If you encounter issues, try reducing the rate limit values in your config
 
 #### Fetch Mode Issues
-- Use `torrent_name`/`normal` mode if your library structure matches torrent folder names
+- Use `torrent_name` mode if your library structure matches torrent folder names
 - Use `query` mode if you use Beets, Lidarr, or have renamed your music files
 - Try both modes to see which works better for your library
+
+#### Web Interface Issues
+- **GUI won't start**: Ensure `gunicorn` and `eventlet` are installed: `pip install gunicorn eventlet`
+- **Can't access GUI**: Check if the port is available and not blocked by firewall
+- **GUI stuck on "Starting..."**: Check terminal logs for error messages
+- **WebSocket connection failed**: Ensure your browser supports WebSockets and isn't blocking them
 
 ### Getting Help
 
@@ -342,7 +407,7 @@ pip install red-plex --upgrade
 ## Important Considerations
 
 - **Album Matching Strategy**:
-  - `torrent_name`/`normal` (default): Matches albums by comparing torrent folder names with Plex directory paths
+  - `torrent_name` (default): Matches albums by comparing torrent folder names with Plex directory paths
   - `query`: Uses artist and album metadata for matching, ideal for libraries organized by Beets, Lidarr, or other tools that rename files
 - **Database Management**: All data is stored in `red_plex.db`. Use database reset commands (`db albums reset`, etc.) to clear specific tables when needed
 - **Site Credentials**: Ensure your API keys are valid and have proper permissions

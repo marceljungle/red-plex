@@ -20,8 +20,8 @@ class GazelleMapper:
             external_id=str(collage_id),
             name=GazelleMapper._clean_text(collage_data.get('name', f'Collage {collage_id}')),
             torrent_groups=[
-                GazelleMapper.map_torrent_group(tg)
-                for tg in collage_data.get('torrentgroups', [])
+                TorrentGroup(id=tg_id)
+                for tg_id in collage_data.get('torrentGroupIDList', [])
             ]
         )
 
@@ -36,20 +36,32 @@ class GazelleMapper:
 
     @staticmethod
     def map_torrent_group(data: Dict[str, Any], torrents: List[Dict] = None) -> TorrentGroup:
-        """Map individual torrent group data"""
+        """Map individual torrent group data."""
         torrents = torrents or []
+
+        group_data = data.get('group') or {}
+        music_info = data.get('musicInfo') or group_data.get('musicInfo') or {}
+
+        person_roles = [
+            'artists', 'composers', 'conductor',
+            'dj', 'producer', 'arranger', 'remixedBy'
+            'with'
+        ]
+
         return TorrentGroup(
-            id=data.get('id', {}) or data.get('group', {}).get('id'),
+            id=data.get('id') or group_data.get('id'),
+
+            album_name=GazelleMapper._clean_text(
+                data.get('name') or group_data.get('name') or ''
+            ),
+
             artists=[
-                GazelleMapper._clean_text(artist.get('name', ''))
-                for artist in (data.get('musicInfo')
-                               or data.get('group', {}).get('musicInfo', {})
-                               or {}).get('artists')
-                              or []
+                GazelleMapper._clean_text(person.get('name', ''))
+                for role in person_roles
+                for person in music_info.get(role, [])
             ],
-            file_paths=GazelleMapper._map_torrent_group_file_paths(torrents),
-            album_name=GazelleMapper._clean_text(data.get('name', '')
-                                                 or data.get('group', {}).get('name', ''))
+
+            file_paths=GazelleMapper._map_torrent_group_file_paths(torrents)
         )
 
     @staticmethod

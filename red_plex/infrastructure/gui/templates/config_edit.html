@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Configuration - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-pencil"></i> Edit Configuration
+        </h1>
+        <a href="{{ url_for('config_view') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to View
+        </a>
+    </div>
+
+    <form method="POST">
+        <div class="row">
+            <!-- General Settings -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">General Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="LOG_LEVEL" class="form-label">Log Level</label>
+                            <select class="form-select" id="LOG_LEVEL" name="LOG_LEVEL">
+                                <option value="DEBUG" {% if config.get('LOG_LEVEL') == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                <option value="INFO" {% if config.get('LOG_LEVEL') == 'INFO' or not config.get('LOG_LEVEL') %}selected{% endif %}>INFO</option>
+                                <option value="WARNING" {% if config.get('LOG_LEVEL') == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                <option value="ERROR" {% if config.get('LOG_LEVEL') == 'ERROR' %}selected{% endif %}>ERROR</option>
+                            </select>
+                            <div class="form-text">Set the logging level for the application.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="SECTION_NAME" class="form-label">Plex Music Section Name</label>
+                            <input type="text" class="form-control" id="SECTION_NAME" name="SECTION_NAME" 
+                                   value="{{ config.get('SECTION_NAME', 'Music') }}" required>
+                            <div class="form-text">The name of your music library section in Plex.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plex Settings -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Plex Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="PLEX_URL" class="form-label">Plex URL</label>
+                            <input type="url" class="form-control" id="PLEX_URL" name="PLEX_URL" 
+                                   value="{{ config.get('PLEX_URL', 'http://localhost:32400') }}" 
+                                   placeholder="http://localhost:32400" required>
+                            <div class="form-text">The URL where your Plex server is accessible.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="PLEX_TOKEN" class="form-label">Plex Token</label>
+                            <input type="text" class="form-control" id="PLEX_TOKEN" name="PLEX_TOKEN" 
+                                   value="{{ config.get('PLEX_TOKEN', '') }}" required>
+                            <div class="form-text">
+                                Your Plex authentication token. 
+                                <a href="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/" 
+                                   target="_blank" class="text-decoration-none">
+                                    How to find your token <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <!-- RED Settings -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">RED (Redacted) Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="RED_BASE_URL" class="form-label">Base URL</label>
+                            <input type="url" class="form-control" id="RED_BASE_URL" name="RED_BASE_URL" 
+                                   value="{{ config.get('RED', {}).get('BASE_URL', 'https://redacted.sh') }}">
+                            <div class="form-text">The base URL for the RED site.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="RED_API_KEY" class="form-label">API Key</label>
+                            <input type="password" class="form-control" id="RED_API_KEY" name="RED_API_KEY" 
+                                   value="{{ config.get('RED', {}).get('API_KEY', '') }}">
+                            <div class="form-text">Your RED API key. Keep this secure!</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="RED_RATE_LIMIT_CALLS" class="form-label">Rate Limit Calls</label>
+                                <input type="number" class="form-control" id="RED_RATE_LIMIT_CALLS" name="RED_RATE_LIMIT_CALLS" 
+                                       value="{{ config.get('RED', {}).get('RATE_LIMIT', {}).get('calls', 10) }}" min="1">
+                            </div>
+                            <div class="col-6">
+                                <label for="RED_RATE_LIMIT_SECONDS" class="form-label">Rate Limit Seconds</label>
+                                <input type="number" class="form-control" id="RED_RATE_LIMIT_SECONDS" name="RED_RATE_LIMIT_SECONDS" 
+                                       value="{{ config.get('RED', {}).get('RATE_LIMIT', {}).get('seconds', 10) }}" min="1">
+                            </div>
+                        </div>
+                        <div class="form-text">API rate limiting to avoid being banned.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OPS Settings -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">OPS (Orpheus) Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="OPS_BASE_URL" class="form-label">Base URL</label>
+                            <input type="url" class="form-control" id="OPS_BASE_URL" name="OPS_BASE_URL" 
+                                   value="{{ config.get('OPS', {}).get('BASE_URL', 'https://orpheus.network') }}">
+                            <div class="form-text">The base URL for the OPS site.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="OPS_API_KEY" class="form-label">API Key</label>
+                            <input type="password" class="form-control" id="OPS_API_KEY" name="OPS_API_KEY" 
+                                   value="{{ config.get('OPS', {}).get('API_KEY', '') }}">
+                            <div class="form-text">Your OPS API key. Keep this secure!</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="OPS_RATE_LIMIT_CALLS" class="form-label">Rate Limit Calls</label>
+                                <input type="number" class="form-control" id="OPS_RATE_LIMIT_CALLS" name="OPS_RATE_LIMIT_CALLS" 
+                                       value="{{ config.get('OPS', {}).get('RATE_LIMIT', {}).get('calls', 4) }}" min="1">
+                            </div>
+                            <div class="col-6">
+                                <label for="OPS_RATE_LIMIT_SECONDS" class="form-label">Rate Limit Seconds</label>
+                                <input type="number" class="form-control" id="OPS_RATE_LIMIT_SECONDS" name="OPS_RATE_LIMIT_SECONDS" 
+                                       value="{{ config.get('OPS', {}).get('RATE_LIMIT', {}).get('seconds', 15) }}" min="1">
+                            </div>
+                        </div>
+                        <div class="form-text">API rate limiting to avoid being banned.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('config_view') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Save Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h6 class="alert-heading">
+                    <i class="bi bi-info-circle"></i> Configuration Tips
+                </h6>
+                <ul class="mb-0">
+                    <li><strong>Plex Token:</strong> You can find this in your Plex settings or by visiting the URL provided in the help text.</li>
+                    <li><strong>API Keys:</strong> Get these from your RED and OPS user settings/profile pages.</li>
+                    <li><strong>Rate Limits:</strong> These prevent you from being banned. Default values are conservative.</li>
+                    <li><strong>Security:</strong> Your configuration is stored locally and never transmitted except to the respective APIs.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Toggle password visibility
+    document.querySelectorAll('input[type="password"]').forEach(input => {
+        const container = input.parentElement;
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'btn btn-outline-secondary position-absolute end-0 top-50 translate-middle-y me-2';
+        toggleBtn.style.zIndex = '10';
+        toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
+        
+        container.style.position = 'relative';
+        container.appendChild(toggleBtn);
+        
+        toggleBtn.addEventListener('click', () => {
+            if (input.type === 'password') {
+                input.type = 'text';
+                toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            } else {
+                input.type = 'password';
+                toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}
