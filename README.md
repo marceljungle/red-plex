@@ -387,7 +387,7 @@ pip install red-plex --upgrade
 - If you encounter issues, try reducing the rate limit values in your config
 
 #### Fetch Mode Issues
-- Use `torrent_name`/`normal` mode if your library structure matches torrent folder names
+- Use `torrent_name` mode if your library structure matches torrent folder names
 - Use `query` mode if you use Beets, Lidarr, or have renamed your music files
 - Try both modes to see which works better for your library
 
@@ -407,7 +407,7 @@ pip install red-plex --upgrade
 ## Important Considerations
 
 - **Album Matching Strategy**:
-  - `torrent_name`/`normal` (default): Matches albums by comparing torrent folder names with Plex directory paths
+  - `torrent_name` (default): Matches albums by comparing torrent folder names with Plex directory paths
   - `query`: Uses artist and album metadata for matching, ideal for libraries organized by Beets, Lidarr, or other tools that rename files
 - **Database Management**: All data is stored in `red_plex.db`. Use database reset commands (`db albums reset`, etc.) to clear specific tables when needed
 - **Site Credentials**: Ensure your API keys are valid and have proper permissions
