@@ -30,6 +30,7 @@ class TorrentGroup:
     artists: List[str] = field(default_factory=list)
     album_name: str = ""
     file_paths: List[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
 
     def __hash__(self) -> int:
         return hash((self.id, tuple(self.artists), self.album_name, tuple(self.file_paths)))

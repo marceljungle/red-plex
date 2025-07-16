@@ -15,6 +15,7 @@ from plexapi.server import PlexServer
 
 from red_plex.domain.models import Collection, Album
 from red_plex.infrastructure.config.config import load_config
+from red_plex.infrastructure.constants.constants import ALBUM_TAGS
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.mapper.plex_mapper import PlexMapper
@@ -82,6 +83,13 @@ class PlexManager:
                                            added_at=album.addedAt,
                                            path=album_folder_path))
         return domain_albums
+
+    def get_album_by_rating_key(self, rating_key: int) -> Optional[Album]:
+        """ Queries Plex for the album that matches the given rating_key """
+        album = self.library_section.fetchItem(rating_key)
+        if album:
+            return PlexMapper.map_plex_album_to_domain(album)
+        return None
 
     # If multiple matches are found, prompt the user to choose
     def query_for_albums(self, album_name: str, artists: List[str]) -> List[Album]:
@@ -259,8 +267,7 @@ class PlexManager:
         else:
             logger.warning('Collection "%s" not found.', collection.name)
 
-    @staticmethod
-    def _get_album_transformations(album_name: str) -> List[str]:
+    def _get_album_transformations(self, album_name: str) -> List[str]:
         """
         Returns a list of album name transformations for use in Plex queries,
         increasing the chances of a successful match.
@@ -274,14 +281,7 @@ class PlexManager:
         if not album_name:
             return []
 
-        tags = [
-            "EP", "E.P", "E.P.", "Single", "Album", "Soundtrack", "Anthology",
-            "Compilation", "Live Album", "Remix", "Bootleg", "Interview",
-            "Mixtape", "Demo", "Concert Recording", "DJ Mix", "Original Mix",
-            "Remastered", "Deluxe Edition", "Limited Edition", "Bonus Track",
-            "Instrumental", "Acapella"
-        ]
-        suffixes = sorted(tags, key=len, reverse=True)
+        suffixes = sorted(ALBUM_TAGS, key=len, reverse=True)
 
         transforms = [album_name]
         seen = {album_name.lower()}

@@ -50,7 +50,8 @@ setup(
         'flask',
         'flask-socketio',
         'gunicorn',
-        'eventlet'
+        'eventlet',
+        'thefuzz[speedup]'
     ],
     entry_points='''
         [console_scripts]

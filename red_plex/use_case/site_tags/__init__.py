@@ -1,1 +1,0 @@
-"""Site tags use case module."""

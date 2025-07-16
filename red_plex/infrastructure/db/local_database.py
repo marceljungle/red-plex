@@ -31,7 +31,6 @@ class LocalDatabase:
             # Create a temp connection for initialization
             self.conn = sqlite3.connect(db_file_path)
             self.conn.execute("PRAGMA journal_mode=WAL;")
-            self._create_tables()
             # Migrate existing CSV data into the new DB
             # This can be removed in future releases
             migrator = CsvToDbMigrator(db_file_path=db_file_path)
@@ -40,6 +39,7 @@ class LocalDatabase:
         else:
             self.conn = sqlite3.connect(db_file_path)
             self.conn.execute("PRAGMA journal_mode=WAL;")
+        self._create_tables()
 
     def _create_tables(self):
         """Create necessary tables if they do not exist."""
