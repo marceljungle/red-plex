@@ -146,7 +146,7 @@ class GazelleAPI:
         """
         logger.debug('Initiating search for album [%s] and artists [%s]', album_name, artists)
 
-        # --- PHASE 1: Collect all possible results (Unchanged) ---
+        # --- PHASE 1: Collect all possible results ---
         all_possible_groups = []
         for artist in artists:
             params = {'groupname': album_name, 'artistname': artist}
@@ -166,7 +166,7 @@ class GazelleAPI:
 
         # --- PHASE 2: Find the best possible match by trying all combinations ---
 
-        # 1. Create the dictionary of choices to compare against (unchanged)
+        # 1. Create the dictionary of choices to compare against
         choices: Dict[str, TorrentGroup] = {}
         for group in all_possible_groups:
             artist_str = ', '.join(group.artists) if group.artists else ''
@@ -177,7 +177,15 @@ class GazelleAPI:
         overall_best_match = None
         highest_score = 0
 
-        for artist_variation in artists:
+        # Create the list of artist candidates to test.
+        # Only if the input list has more than one artist (suggesting a collaboration
+        # or compilation), add 'Various Artists' as a possibility.
+        if len(artists) > 1:
+            artist_candidates = artists + ['Various Artists']
+        else:
+            artist_candidates = artists
+
+        for artist_variation in artist_candidates:
             # Create a query string for this specific variation
             query_string = f"{self._normalize_string(artist_variation)} - {self._normalize_string(album_name)}"
 
@@ -185,7 +193,7 @@ class GazelleAPI:
             current_match = process.extractOne(query_string, choices.keys(), scorer=fuzz.token_set_ratio)
 
             if current_match:
-                current_choice_str, current_score = current_match
+                _, current_score = current_match
                 # If this variation gives a better score, update our overall best
                 if current_score > highest_score:
                     highest_score = current_score
