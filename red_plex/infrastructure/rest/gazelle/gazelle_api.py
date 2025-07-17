@@ -18,7 +18,7 @@ from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
 
-# pylint: disable=W0718
+# pylint: disable=W0718,R0914,R0913,R0917,R0912
 class GazelleAPI:
     """Handles API interactions with Gazelle-based services."""
 
@@ -139,7 +139,9 @@ class GazelleAPI:
         logger.debug('Retrieved user bookmarks')
         return GazelleMapper.map_bookmarks(bookmarks_response, site)
 
-    def browse_by_album_and_artist_names(self, album_name: str, artists: List[str]) -> Optional[List[TorrentGroup]]:
+    def browse_by_album_and_artist_names(self,
+                                         album_name: str,
+                                         artists: List[str]) -> Optional[List[TorrentGroup]]:
         """
         Searches for torrents by finding the best fuzzy match from API results,
         trying all artist variations.
@@ -170,7 +172,8 @@ class GazelleAPI:
         choices: Dict[str, TorrentGroup] = {}
         for group in all_possible_groups:
             artist_str = ', '.join(group.artists) if group.artists else ''
-            choice_string = f"{self._normalize_string(artist_str)} - {self._normalize_string(group.album_name)}"
+            choice_string = (f"{self._normalize_string(artist_str)} - "
+                             f"{self._normalize_string(group.album_name)}")
             choices[choice_string] = group
 
         # 2. Loop through each artist variation to find the one that gives the best score
@@ -187,10 +190,13 @@ class GazelleAPI:
 
         for artist_variation in artist_candidates:
             # Create a query string for this specific variation
-            query_string = f"{self._normalize_string(artist_variation)} - {self._normalize_string(album_name)}"
+            query_string = (f"{self._normalize_string(artist_variation)} - "
+                            f"{self._normalize_string(album_name)}")
 
             # Find the best match for THIS query string
-            current_match = process.extractOne(query_string, choices.keys(), scorer=fuzz.token_set_ratio)
+            current_match = process.extractOne(query_string,
+                                               choices.keys(),
+                                               scorer=fuzz.token_set_ratio)
 
             if current_match:
                 _, current_score = current_match
@@ -205,16 +211,16 @@ class GazelleAPI:
             return all_possible_groups
 
         best_choice_str, score = overall_best_match
-        CONFIDENCE_THRESHOLD = 90
+        confidence_threshold = 90
         logger.info("Highest fuzzy match score found: '%s' with %d%%", best_choice_str, score)
 
-        if score >= CONFIDENCE_THRESHOLD:
+        if score >= confidence_threshold:
             logger.info("Confidence score is high. Returning the best match.")
             best_group = choices[best_choice_str]
             return [best_group]
-        else:
-            logger.info("Best match score is below threshold. Returning all potential results.")
-            return all_possible_groups
+
+        logger.info("Best match score is below threshold. Returning all potential results.")
+        return all_possible_groups
 
     @staticmethod
     def _normalize_string(text: str) -> str:

@@ -11,6 +11,7 @@ from red_plex.infrastructure.db.utils.csv_to_db_migrator import CsvToDbMigrator
 from red_plex.infrastructure.logger.logger import logger
 
 
+# pylint: disable=R0904
 class LocalDatabase:
     """
     A class for managing local persistent storage in a SQLite database.
@@ -86,7 +87,7 @@ class LocalDatabase:
           group_id INTEGER
         );
         """)
-        
+
         # Tables for site tag mappings
         self.conn.execute("""
         CREATE TABLE IF NOT EXISTS site_tag_mappings (
@@ -97,14 +98,14 @@ class LocalDatabase:
           UNIQUE(rating_key, group_id, site)
         );
         """)
-        
+
         self.conn.execute("""
         CREATE TABLE IF NOT EXISTS site_tags (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           tag_name TEXT NOT NULL UNIQUE
         );
         """)
-        
+
         self.conn.execute("""
         CREATE TABLE IF NOT EXISTS mapping_tags (
           mapping_id INTEGER,
@@ -114,7 +115,7 @@ class LocalDatabase:
           FOREIGN KEY (tag_id) REFERENCES site_tags(id) ON DELETE CASCADE
         );
         """)
-        
+
         self.conn.execute("DROP TABLE IF EXISTS beets_mappings;")
 
     @staticmethod
@@ -571,13 +572,16 @@ class LocalDatabase:
     # --------------------------------------------------------------------------
     #                           SITE TAG MAPPINGS
     # --------------------------------------------------------------------------
-    def insert_site_tag_mapping(self, rating_key: str, group_id: int, site: str, tags: List[str]) -> None:
+    def insert_site_tag_mapping(self, rating_key: str,
+                                group_id: int,
+                                site: str,
+                                tags: List[str]) -> None:
         """
         Insert or update a site tag mapping with its associated tags.
         """
-        logger.debug("Inserting site tag mapping: rating_key=%s, group_id=%s, site=%s", 
-                    rating_key, group_id, site)
-        
+        logger.debug("Inserting site tag mapping: rating_key=%s, group_id=%s, site=%s",
+                     rating_key, group_id, site)
+
         with self.conn:
             # Insert or ignore the mapping
             cur = self.conn.cursor()
@@ -585,31 +589,31 @@ class LocalDatabase:
                 INSERT OR IGNORE INTO site_tag_mappings(rating_key, group_id, site) 
                 VALUES (?, ?, ?)
             """, (rating_key, group_id, site))
-            
+
             # Get the mapping ID
             cur.execute("""
                 SELECT id FROM site_tag_mappings 
                 WHERE rating_key = ? AND group_id = ? AND site = ?
             """, (rating_key, group_id, site))
             mapping_id = cur.fetchone()[0]
-            
+
             # Delete existing tag associations for this mapping
             cur.execute("DELETE FROM mapping_tags WHERE mapping_id = ?", (mapping_id,))
-            
+
             if tags:
                 # Insert tags if they don't exist
                 self.conn.executemany(
                     "INSERT OR IGNORE INTO site_tags(tag_name) VALUES (?)",
                     [(tag,) for tag in tags]
                 )
-                
+
                 # Get tag IDs
                 tag_ids = dict(cur.execute(
                     f"SELECT tag_name, id FROM site_tags WHERE tag_name IN "
                     f"({','.join('?' * len(tags))})",
                     tags
                 ))
-                
+
                 # Insert tag associations
                 self.conn.executemany(
                     "INSERT INTO mapping_tags(mapping_id, tag_id) VALUES (?, ?)",
@@ -637,7 +641,7 @@ class LocalDatabase:
         """, tags + [len(tags)])
 
         return [row[0] for row in cur.fetchall()]
-    
+
     def get_unscanned_albums(self) -> List[str]:
         """
         Get rating keys from albums table that are not present in site_tag_mappings.
@@ -649,15 +653,15 @@ class LocalDatabase:
             LEFT JOIN site_tag_mappings stm ON a.album_id = stm.rating_key
             WHERE stm.rating_key IS NULL
         """)
-        
+
         return [row[0] for row in cur.fetchall()]
-    
+
     def reset_tag_mappings(self):
         """
         Reset site tag mappings.
         """
         logger.info("Resetting site tag mappings")
-        
+
         with self.conn:
             self.conn.execute("DELETE FROM mapping_tags")
             self.conn.execute("DELETE FROM site_tag_mappings")

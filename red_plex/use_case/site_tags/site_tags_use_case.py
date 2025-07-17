@@ -1,7 +1,6 @@
 """Use case for managing site tag mappings and collections."""
 
 import re
-import urllib.parse
 from typing import List, Optional, Callable
 
 import click
@@ -12,11 +11,13 @@ from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 
-
+# pylint: disable=R0912,W0718,W0613,R0913,R0917
 class SiteTagsUseCase:
     """Use case for managing site tag mappings and creating collections from tags."""
 
-    def __init__(self, local_database: LocalDatabase, plex_manager: PlexManager, gazelle_api: GazelleAPI = None):
+    def __init__(self, local_database: LocalDatabase,
+                 plex_manager: PlexManager,
+                 gazelle_api: GazelleAPI = None):
         self.local_database = local_database
         self.plex_manager = plex_manager
         self.gazelle_api = gazelle_api
@@ -44,7 +45,8 @@ class SiteTagsUseCase:
         for rating_key in unscanned_rating_keys:
             try:
                 processed_count += 1
-                echo_func(f"Processing album {processed_count}/{len(unscanned_rating_keys)}: {rating_key}")
+                echo_func(f"Processing album {processed_count}/"
+                          f"{len(unscanned_rating_keys)}: {rating_key}")
 
                 # Fetch album from Plex
                 domain_album = self.plex_manager.get_album_by_rating_key(int(rating_key))
@@ -67,7 +69,9 @@ class SiteTagsUseCase:
 
         echo_func(f"Scan completed. Processed: {processed_count}, Successful: {success_count}")
 
-    def _search_by_album_and_artist_names(self, album_name: str, artists: List[str]) -> Optional[List[TorrentGroup]]:
+    def _search_by_album_and_artist_names(self,
+                                          album_name: str,
+                                          artists: List[str]) -> Optional[List[TorrentGroup]]:
         """Search torrent groups matching the album and artist names."""
         try:
             if (album_name is None or album_name == '') or (artists is None or artists == []):
@@ -75,7 +79,7 @@ class SiteTagsUseCase:
             artists = self._parse_plex_artists(artists[0])
             response = self.gazelle_api.browse_by_album_and_artist_names(album_name, artists)
             return response
-        except Exception as ignore:
+        except Exception:
             return None
 
     def _process_search_results(self, rating_key: str, torrent_groups: List[TorrentGroup],
@@ -90,34 +94,36 @@ class SiteTagsUseCase:
             # Single match, process it
             torrent_group = torrent_groups[0]
             return self._create_site_tag_mapping(rating_key, torrent_group, echo_func)
-        else:
-            # Multiple matches, ask user to choose
-            echo_func(
-                f"  Found {len(torrent_groups)} matches for album name "
-                f"[{domain_album.name}] and artists {domain_album.artists}:")
-            for i, torrent_group in enumerate(torrent_groups):
-                artists = torrent_group.artists
-                if isinstance(artists, list):
-                    artists = ', '.join(artists)
-                group_name = torrent_group.album_name
-                echo_func(f"    {i + 1}. {artists} - {group_name}")
 
-            while True:
-                try:
-                    choice = click.prompt(f"  Choose a match (1-{len(torrent_groups)}) or 's' to skip",
-                                          type=str).strip().lower()
-                    if choice == 's':
-                        return False
-                    choice_idx = int(choice) - 1
-                    if 0 <= choice_idx < len(torrent_groups):
-                        return self._create_site_tag_mapping(rating_key, torrent_groups[choice_idx], echo_func)
-                    else:
-                        echo_func("  Invalid choice. Please try again.")
-                except (ValueError, click.Abort):
-                    echo_func("  Invalid input. Please try again.")
-                except KeyboardInterrupt:
-                    echo_func("  Scan interrupted by user.")
+        # Multiple matches, ask user to choose
+        echo_func(
+            f"  Found {len(torrent_groups)} matches for album name "
+            f"[{domain_album.name}] and artists {domain_album.artists}:")
+        for i, torrent_group in enumerate(torrent_groups):
+            artists = torrent_group.artists
+            if isinstance(artists, list):
+                artists = ', '.join(artists)
+            group_name = torrent_group.album_name
+            echo_func(f"    {i + 1}. {artists} - {group_name}")
+
+        while True:
+            try:
+                choice = click.prompt(
+                    f"  Choose a match (1-{len(torrent_groups)}) or 's' to skip",
+                                      type=str).strip().lower()
+                if choice == 's':
                     return False
+                choice_idx = int(choice) - 1
+                if 0 <= choice_idx < len(torrent_groups):
+                    return self._create_site_tag_mapping(rating_key,
+                                                         torrent_groups[choice_idx],
+                                                         echo_func)
+                echo_func("  Invalid choice. Please try again.")
+            except (ValueError, click.Abort):
+                echo_func("  Invalid input. Please try again.")
+            except KeyboardInterrupt:
+                echo_func("  Scan interrupted by user.")
+                return False
 
     def _create_site_tag_mapping(self, rating_key: str, torrent_group: TorrentGroup,
                                  echo_func: Callable[[str], None]) -> bool:
@@ -126,7 +132,10 @@ class SiteTagsUseCase:
             site = self.gazelle_api.site
 
             # Insert the mapping
-            self.local_database.insert_site_tag_mapping(rating_key, torrent_group.id, site, torrent_group.tags)
+            self.local_database.insert_site_tag_mapping(rating_key,
+                                                        torrent_group.id,
+                                                        site,
+                                                        torrent_group.tags)
 
             artists = torrent_group.artists
             if isinstance(artists, list):
@@ -197,7 +206,8 @@ class SiteTagsUseCase:
             else:
                 self.plex_manager.library_section.createCollection(collection_name, plex_albums)
 
-            echo_func(f"✓ Collection '{collection_name}' created/updated with {len(plex_albums)} albums.")
+            echo_func(f"✓ Collection '{collection_name}' "
+                      f"created/updated with {len(plex_albums)} albums.")
             return True
 
         except Exception as e:

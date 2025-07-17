@@ -2,7 +2,6 @@
 
 import click
 
-from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
@@ -12,13 +11,11 @@ from red_plex.use_case.site_tags.site_tags_use_case import SiteTagsUseCase
 @click.group()
 def extras():
     """Extra features and advanced functionality."""
-    pass
 
 
 @extras.group('site-tags')
 def site_tags():
     """Manage site tag mappings and collections."""
-    pass
 
 
 @site_tags.command('scan')
@@ -54,7 +51,7 @@ def scan_albums(ctx, site: str):
             confirm_func=click.confirm
         )
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=W0703
         logger.exception("Error during album scan: %s", e)
         click.echo(f"Error during album scan: {e}", err=True)
         ctx.exit(1)
@@ -90,7 +87,8 @@ def convert_tags_to_collection(ctx, tags: str, collection_name: str):
 
         # Create the use case and execute conversion
         # No need of gazelle_api here since we're using the local database
-        site_tags_use_case = SiteTagsUseCase(local_database=local_database, plex_manager=plex_manager)
+        site_tags_use_case = SiteTagsUseCase(local_database=local_database,
+                                             plex_manager=plex_manager)
         success = site_tags_use_case.create_collection_from_tags(
             tags=tag_list,
             collection_name=collection_name,
@@ -103,7 +101,7 @@ def convert_tags_to_collection(ctx, tags: str, collection_name: str):
             click.echo("Collection creation failed.", err=True)
             ctx.exit(1)
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=W0703
         logger.exception("Error during collection creation: %s", e)
         click.echo(f"Error during collection creation: {e}", err=True)
         ctx.exit(1)
@@ -113,7 +111,7 @@ def convert_tags_to_collection(ctx, tags: str, collection_name: str):
 @click.pass_context
 def reset_site_tag_mappings(ctx):
     """Reset site tag mappings. Use with caution!"""
-    if click.confirm(f'Are you sure you want to reset site tag mappings?'):
+    if click.confirm('Are you sure you want to reset site tag mappings?'):
         try:
             local_database = ctx.obj.get('db')
             if not local_database:
@@ -121,8 +119,8 @@ def reset_site_tag_mappings(ctx):
                 ctx.exit(1)
 
             local_database.reset_tag_mappings()
-            click.echo(f"Tag mappings have been reset successfully.")
-        except Exception as e:
+            click.echo("Tag mappings have been reset successfully.")
+        except Exception as e:  # pylint: disable=W0703
             logger.exception("Error resetting site tag mappings: %s", e)
             click.echo(f"Error resetting site tag mappings: {e}", err=True)
             ctx.exit(1)
