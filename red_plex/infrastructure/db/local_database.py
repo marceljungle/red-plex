@@ -616,62 +616,49 @@ class LocalDatabase:
                     [(mapping_id, tag_ids[tag]) for tag in tags]
                 )
 
-    def get_rating_keys_by_tags(self, tags: List[str], site: str) -> List[str]:
+    def get_rating_keys_by_tags(self, tags: List[str]) -> List[str]:
         """
-        Get rating keys that have mappings containing all specified tags for a given site.
+        Get rating keys that have mappings containing all specified tags.
         """
         if not tags:
             return []
-            
+
         cur = self.conn.cursor()
-        
-        # Build query to find mappings that contain all specified tags
+
         placeholders = ','.join('?' * len(tags))
         cur.execute(f"""
             SELECT DISTINCT stm.rating_key
             FROM site_tag_mappings stm
             JOIN mapping_tags mt ON stm.id = mt.mapping_id
             JOIN site_tags st ON mt.tag_id = st.id
-            WHERE stm.site = ? AND st.tag_name IN ({placeholders})
+            WHERE st.tag_name IN ({placeholders})
             GROUP BY stm.rating_key
             HAVING COUNT(DISTINCT st.tag_name) = ?
-        """, [site] + tags + [len(tags)])
-        
+        """, tags + [len(tags)])
+
         return [row[0] for row in cur.fetchall()]
     
-    def get_unscanned_albums(self, site: str) -> List[str]:
+    def get_unscanned_albums(self) -> List[str]:
         """
-        Get rating keys from albums table that are not present in site_tag_mappings for the given site.
+        Get rating keys from albums table that are not present in site_tag_mappings.
         """
         cur = self.conn.cursor()
         cur.execute("""
             SELECT a.album_id
             FROM albums a
-            LEFT JOIN site_tag_mappings stm ON a.album_id = stm.rating_key AND stm.site = ?
+            LEFT JOIN site_tag_mappings stm ON a.album_id = stm.rating_key
             WHERE stm.rating_key IS NULL
-        """, (site,))
+        """)
         
         return [row[0] for row in cur.fetchall()]
     
-    def reset_site_tag_mappings(self, site: str = None):
+    def reset_tag_mappings(self,):
         """
-        Reset site tag mappings. If site is provided, only reset for that site.
+        Reset site tag mappings.
         """
-        logger.info("Resetting site tag mappings%s", f" for site {site}" if site else "")
+        logger.info("Resetting site tag mappings")
         
         with self.conn:
-            if site:
-                # Get mapping IDs for the site
-                cur = self.conn.cursor()
-                cur.execute("SELECT id FROM site_tag_mappings WHERE site = ?", (site,))
-                mapping_ids = [row[0] for row in cur.fetchall()]
-                
-                if mapping_ids:
-                    placeholders = ','.join('?' * len(mapping_ids))
-                    self.conn.execute(f"DELETE FROM mapping_tags WHERE mapping_id IN ({placeholders})", mapping_ids)
-                
-                self.conn.execute("DELETE FROM site_tag_mappings WHERE site = ?", (site,))
-            else:
-                self.conn.execute("DELETE FROM mapping_tags")
-                self.conn.execute("DELETE FROM site_tag_mappings")
-                self.conn.execute("DELETE FROM site_tags")
+            self.conn.execute("DELETE FROM mapping_tags")
+            self.conn.execute("DELETE FROM site_tag_mappings")
+            self.conn.execute("DELETE FROM site_tags")

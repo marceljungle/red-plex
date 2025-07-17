@@ -30,7 +30,7 @@ class SiteTagsUseCase:
         echo_func(f"Starting scan for site: {site}")
 
         # Get unscanned albums for this site
-        unscanned_rating_keys = self.local_database.get_unscanned_albums(site)
+        unscanned_rating_keys = self.local_database.get_unscanned_albums()
 
         if not unscanned_rating_keys:
             echo_func("No unscanned albums found.")

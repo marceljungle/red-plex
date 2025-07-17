@@ -128,7 +128,7 @@ def reset_site_tag_mappings(ctx, site: str):
                 click.echo("Error: Database not initialized.", err=True)
                 ctx.exit(1)
 
-            local_database.reset_site_tag_mappings(site)
+            local_database.reset_tag_mappings(site)
             click.echo(f"Site tag mappings{site_text} have been reset successfully.")
         except Exception as e:
             logger.exception("Error resetting site tag mappings: %s", e)
