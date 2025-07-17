@@ -16,7 +16,7 @@ from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 class SiteTagsUseCase:
     """Use case for managing site tag mappings and creating collections from tags."""
 
-    def __init__(self, local_database: LocalDatabase, plex_manager: PlexManager, gazelle_api: GazelleAPI):
+    def __init__(self, local_database: LocalDatabase, plex_manager: PlexManager, gazelle_api: GazelleAPI = None):
         self.local_database = local_database
         self.plex_manager = plex_manager
         self.gazelle_api = gazelle_api
@@ -146,11 +146,10 @@ class SiteTagsUseCase:
     def create_collection_from_tags(self, tags: List[str], collection_name: str,
                                     echo_func: Callable[[str], None]) -> bool:
         """Create a Plex collection from albums matching the specified tags."""
-        site = self.gazelle_api.site
         echo_func(f"Creating collection '{collection_name}' with tags: {', '.join(tags)}")
 
         # Get rating keys that match all specified tags
-        matching_rating_keys = self.local_database.get_rating_keys_by_tags(tags, site)
+        matching_rating_keys = self.local_database.get_rating_keys_by_tags(tags)
 
         if not matching_rating_keys:
             echo_func("No albums found matching the specified tags.")

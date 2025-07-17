@@ -652,7 +652,7 @@ class LocalDatabase:
         
         return [row[0] for row in cur.fetchall()]
     
-    def reset_tag_mappings(self,):
+    def reset_tag_mappings(self):
         """
         Reset site tag mappings.
         """

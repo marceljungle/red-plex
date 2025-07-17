@@ -61,10 +61,6 @@ def scan_albums(ctx, site: str):
 
 
 @site_tags.command('convert')
-@click.option('--site', '-s',
-              type=click.Choice(['red', 'ops'], case_sensitive=False),
-              required=True,
-              help='Specify the site: red (Redacted) or ops (Orpheus).')
 @click.option('--tags', '-t',
               required=True,
               help='Comma-separated list of tags to filter by.')
@@ -72,7 +68,7 @@ def scan_albums(ctx, site: str):
               required=True,
               help='Name for the Plex collection to create/update.')
 @click.pass_context
-def convert_tags_to_collection(ctx, site: str, tags: str, collection_name: str):
+def convert_tags_to_collection(ctx, tags: str, collection_name: str):
     """
     Create a Plex collection from albums matching the specified tags.
     """
@@ -91,10 +87,10 @@ def convert_tags_to_collection(ctx, site: str, tags: str, collection_name: str):
 
         # Initialize dependencies
         plex_manager = PlexManager(db=local_database)
-        gazelle_api = GazelleAPI(site)
 
-        # Create use case and execute conversion
-        site_tags_use_case = SiteTagsUseCase(local_database, plex_manager, gazelle_api)
+        # Create the use case and execute conversion
+        # No need of gazelle_api here since we're using the local database
+        site_tags_use_case = SiteTagsUseCase(local_database=local_database, plex_manager=plex_manager)
         success = site_tags_use_case.create_collection_from_tags(
             tags=tag_list,
             collection_name=collection_name,
@@ -114,22 +110,18 @@ def convert_tags_to_collection(ctx, site: str, tags: str, collection_name: str):
 
 
 @site_tags.command('reset')
-@click.option('--site', '-s',
-              type=click.Choice(['red', 'ops'], case_sensitive=False),
-              help='Specify the site to reset mappings for. If not provided, resets all sites.')
 @click.pass_context
-def reset_site_tag_mappings(ctx, site: str):
+def reset_site_tag_mappings(ctx):
     """Reset site tag mappings. Use with caution!"""
-    site_text = f" for site {site}" if site else " for all sites"
-    if click.confirm(f'Are you sure you want to reset site tag mappings{site_text}?'):
+    if click.confirm(f'Are you sure you want to reset site tag mappings?'):
         try:
             local_database = ctx.obj.get('db')
             if not local_database:
                 click.echo("Error: Database not initialized.", err=True)
                 ctx.exit(1)
 
-            local_database.reset_tag_mappings(site)
-            click.echo(f"Site tag mappings{site_text} have been reset successfully.")
+            local_database.reset_tag_mappings()
+            click.echo(f"Tag mappings have been reset successfully.")
         except Exception as e:
             logger.exception("Error resetting site tag mappings: %s", e)
             click.echo(f"Error resetting site tag mappings: {e}", err=True)
