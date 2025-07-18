@@ -23,8 +23,9 @@ def site_tags():
               type=click.Choice(['red', 'ops'], case_sensitive=False),
               required=True,
               help='Specify the site: red (Redacted) or ops (Orpheus).')
+@click.option('--always-skip', is_flag=True, help='Always skip albums with multiple matches.')
 @click.pass_context
-def scan_albums(ctx, site: str):
+def scan_albums(ctx, site: str, always_skip: bool):
     """
     Scan albums and create site tag mappings by searching filenames on the site.
     This is an incremental process - only unscanned albums will be processed.
@@ -48,7 +49,8 @@ def scan_albums(ctx, site: str):
         site_tags_use_case = SiteTagsUseCase(local_database, plex_manager, gazelle_api)
         site_tags_use_case.scan_albums_for_site_tags(
             echo_func=click.echo,
-            confirm_func=click.confirm
+            confirm_func=click.confirm,
+            always_skip = always_skip
         )
 
     except Exception as e:  # pylint: disable=W0703

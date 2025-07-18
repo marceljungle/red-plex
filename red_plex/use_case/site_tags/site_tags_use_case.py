@@ -23,7 +23,8 @@ class SiteTagsUseCase:
         self.gazelle_api = gazelle_api
 
     def scan_albums_for_site_tags(self, echo_func: Callable[[str], None],
-                                  confirm_func: Callable[[str], bool]) -> None:
+                                  confirm_func: Callable[[str], bool],
+                                  always_skip: bool = False):
         """
         Scan albums and create site tag mappings by searching filenames on the site.
         """
@@ -60,7 +61,8 @@ class SiteTagsUseCase:
                                                     torrent_groups=match_data,
                                                     domain_album=domain_album,
                                                     echo_func=echo_func,
-                                                    confirm_func=confirm_func):
+                                                    confirm_func=confirm_func,
+                                                    always_skip=always_skip):
                         success_count += 1
 
             except Exception as e:
@@ -85,7 +87,8 @@ class SiteTagsUseCase:
     def _process_search_results(self, rating_key: str, torrent_groups: List[TorrentGroup],
                                 domain_album: Album,
                                 echo_func: Callable[[str], None],
-                                confirm_func: Callable[[str], bool]) -> bool:
+                                confirm_func: Callable[[str], bool],
+                                always_skip: bool = False) -> bool:
         """Process search results and handle user confirmation for multiple matches."""
         if not torrent_groups:
             return False
@@ -94,6 +97,11 @@ class SiteTagsUseCase:
             # Single match, process it
             torrent_group = torrent_groups[0]
             return self._create_site_tag_mapping(rating_key, torrent_group, echo_func)
+
+        if always_skip:
+            echo_func(f"  Skipping due to multiple matches ({len(torrent_groups)}) "
+                      f"for album [{domain_album.name}] and --always-skip flag.")
+            return False
 
         # Multiple matches, ask user to choose
         echo_func(
