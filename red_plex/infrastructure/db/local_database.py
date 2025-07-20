@@ -620,7 +620,7 @@ class LocalDatabase:
                     [(mapping_id, tag_ids[tag]) for tag in tags]
                 )
 
-    def get_rating_keys_by_tags(self, tags: List[str]) -> List[str]:
+    def get_rating_keys_by_tags(self, tags: List[str]) -> List[int]:
         """
         Get rating keys that have mappings containing all specified tags.
         """
@@ -640,7 +640,7 @@ class LocalDatabase:
             HAVING COUNT(DISTINCT st.tag_name) = ?
         """, tags + [len(tags)])
 
-        return [row[0] for row in cur.fetchall()]
+        return [int(row[0]) for row in cur.fetchall()]
 
     def get_unscanned_albums(self) -> List[str]:
         """
