@@ -7,3 +7,6 @@ ALBUM_TAGS = [
     "Remastered", "Deluxe Edition", "Limited Edition", "Bonus Track",
     "Instrumental", "Acapella"
 ]
+
+VARIOUS_ARTISTS_TAGS = [
+    "various artists", "va", "v.a", "v/a", "various"]

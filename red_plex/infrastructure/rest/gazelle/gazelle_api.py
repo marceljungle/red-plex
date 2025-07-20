@@ -14,6 +14,7 @@ from thefuzz import process, fuzz
 
 from red_plex.domain.models import Collection, TorrentGroup
 from red_plex.infrastructure.config.config import load_config
+from red_plex.infrastructure.constants.constants import ALBUM_TAGS, VARIOUS_ARTISTS_TAGS
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
@@ -139,36 +140,80 @@ class GazelleAPI:
         logger.debug('Retrieved user bookmarks')
         return GazelleMapper.map_bookmarks(bookmarks_response, site)
 
-    def browse_by_album_and_artist_names(self,
-                                         album_name: str,
-                                         artists: List[str]) -> Optional[List[TorrentGroup]]:
+    def _fetch_groups_from_api(self, album_name: str, artists: List[str]) -> List[TorrentGroup]:
         """
-        Searches for torrents by finding the best fuzzy match from API results,
-        trying all artist variations.
+        Helper method to fetch torrent groups from the API for a given album and artists.
         """
-        logger.debug('Initiating search for album [%s] and artists [%s]', album_name, artists)
-
-        # --- PHASE 1: Collect all possible results ---
-        all_possible_groups = []
+        found_groups = []
+        params = {}
         for artist in artists:
-            params = {'groupname': album_name, 'artistname': artist}
+            # If the artist name is 'various artists', we skip it
+            if artist.lower() in VARIOUS_ARTISTS_TAGS:
+                params = {'groupname': album_name}
+            else:
+                params = {'groupname': album_name, 'artistname': artist}
             try:
                 response = self.api_call('browse', params)
                 results = response.get('response', {}).get('results', [])
                 if results:
                     domain_tgs = [GazelleMapper.map_torrent_group(tg) for tg in results]
-                    all_possible_groups.extend(domain_tgs)
+                    found_groups.extend(domain_tgs)
             except Exception as e:
                 logger.error('Error during API call for [%s]-[%s]: %s', album_name, artist, e)
-                return None
+                # We continue here instead of returning None to be more resilient
+        return found_groups
+
+    def _get_fallback_album_name(self, album_name: str) -> str:
+        """
+        Cleans an album name by removing tags and parenthesized content for a fallback search.
+        """
+        # 1: Remove content in parentheses
+        clean_name = re.sub(r'\s*\([^)]*\)', '', album_name)
+
+        # 2: Remove dots and commas from the result
+        clean_name = re.sub(r'[.,]', '', clean_name).strip()
+
+        # 3. Remove common tags like EP, Single, etc.
+        # This regex looks for whole words at the end of the string
+        tag_pattern = r'\s+\b(?:' + '|'.join(re.escape(tag) for tag in ALBUM_TAGS) + r')\b$'
+        clean_name = re.sub(tag_pattern, '', clean_name, flags=re.IGNORECASE).strip()
+
+        return clean_name
+
+    def browse_by_album_and_artist_names(self,
+                                         album_name: str,
+                                         artists: List[str]) -> Optional[List[TorrentGroup]]:
+        """
+        Searches for torrents by finding the best fuzzy match from all possible results,
+        including an initial and a fallback search.
+        """
+        logger.debug('Initiating search for album [%s] and artists [%s]', album_name, artists)
+
+        # --- PHASE 1: Comprehensive Data Fetching ---
+
+        # 1. Initial search with the original album name
+        initial_groups = self._fetch_groups_from_api(album_name, artists)
+
+        # 2. Fallback search with the cleaned album name
+        fallback_album_name = self._get_fallback_album_name(album_name)
+        fallback_groups = []
+        if fallback_album_name.lower() != album_name.lower():
+            logger.debug("Performing fallback search with cleaned name: [%s]", fallback_album_name)
+            fallback_groups = self._fetch_groups_from_api(fallback_album_name, artists)
+
+        # 3. Combine initial and fallback results, removing duplicates
+        combined_groups = {group.id: group for group in initial_groups}
+        for group in fallback_groups:
+            combined_groups[group.id] = group
+
+        all_possible_groups = list(combined_groups.values())
 
         if not all_possible_groups:
-            logger.debug("The API did not return any potential results.")
+            logger.debug("No potential matches found after all searches.")
             return []
 
-        # --- PHASE 2: Find the best possible match by trying all combinations ---
+        # --- PHASE 2: Single Fuzzy Matching Stage on All Collected Results ---
 
-        # 1. Create the dictionary of choices to compare against
         choices: Dict[str, TorrentGroup] = {}
         for group in all_possible_groups:
             artist_str = ', '.join(group.artists) if group.artists else ''
@@ -176,38 +221,28 @@ class GazelleAPI:
                              f"{self._normalize_string(group.album_name)}")
             choices[choice_string] = group
 
-        # 2. Loop through each artist variation to find the one that gives the best score
         overall_best_match = None
         highest_score = 0
 
-        # Create the list of artist candidates to test.
-        # Only if the input list has more than one artist (suggesting a collaboration
-        # or compilation), add 'Various Artists' as a possibility.
         if len(artists) > 1:
             artist_candidates = artists + ['Various Artists']
         else:
             artist_candidates = artists
 
         for artist_variation in artist_candidates:
-            # Create a query string for this specific variation
             query_string = (f"{self._normalize_string(artist_variation)} - "
                             f"{self._normalize_string(album_name)}")
-
-            # Find the best match for THIS query string
             current_match = process.extractOne(query_string,
                                                choices.keys(),
                                                scorer=fuzz.token_set_ratio)
-
             if current_match:
                 _, current_score = current_match
-                # If this variation gives a better score, update our overall best
                 if current_score > highest_score:
                     highest_score = current_score
                     overall_best_match = current_match
 
-        # 3. Now, evaluate the best result found across all variations
         if not overall_best_match:
-            logger.info("Fuzzy matching could not determine a best match.")
+            logger.info("Fuzzy matching could not determine a best match from all results.")
             return all_possible_groups
 
         best_choice_str, score = overall_best_match
