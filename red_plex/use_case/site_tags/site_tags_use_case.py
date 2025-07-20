@@ -185,37 +185,17 @@ class SiteTagsUseCase:
                     break
 
             if existing_collection:
-                echo_func(f"Updating existing collection: {collection_name}")
-                # Clear existing items
-                for item in existing_collection.items():
-                    existing_collection.removeItems(item)
-            else:
-                echo_func(f"Creating new collection: {collection_name}")
-
-            # Fetch Plex albums and add to collection
-            plex_albums = []
-            for rating_key in matching_rating_keys:
-                try:
-                    plex_album = self.plex_manager.library_section.fetchItem(rating_key)
-                    if plex_album:
-                        plex_albums.append(plex_album)
-                    else:
-                        logger.warning("Could not fetch album with rating_key: %s", rating_key)
-                except Exception as e:
-                    logger.warning("Error fetching album %s: %s", rating_key, e)
-
-            if not plex_albums:
-                echo_func("No valid albums found to add to collection.")
+                echo_func(f"Collection {collection_name} already exists.")
                 return False
 
-            # Create or update the collection
-            if existing_collection:
-                existing_collection.addItems(plex_albums)
-            else:
-                self.plex_manager.library_section.createCollection(collection_name, plex_albums)
+            # Fetch Plex albums
+            matching_albums = [Album(id=rating_key) for rating_key in matching_rating_keys]
+
+            # Create the collection
+            self.plex_manager.create_collection(collection_name, matching_albums)
 
             echo_func(f"✓ Collection '{collection_name}' "
-                      f"created/updated with {len(plex_albums)} albums.")
+                      f"created/updated with {len(matching_rating_keys)} albums.")
             return True
 
         except Exception as e:
