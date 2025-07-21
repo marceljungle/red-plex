@@ -185,16 +185,16 @@ class GazelleAPI:
                                          artists: List[str]) -> Optional[List[TorrentGroup]]:
         """
         Searches for torrents by finding the best fuzzy match from all possible results,
-        including an initial and a fallback search.
+        including an initial, a fallback, and an album-only search.
         """
         logger.debug('Initiating search for album [%s] and artists [%s]', album_name, artists)
 
         # --- PHASE 1: Comprehensive Data Fetching ---
 
-        # 1. Initial search with the original album name
+        # 1. Initial search with the original album name and artists
         initial_groups = self._fetch_groups_from_api(album_name, artists)
 
-        # 2. Fallback search with the cleaned album name
+        # 2. Fallback search with the cleaned album name and artists
         fallback_album_name = self._get_fallback_album_name(album_name)
         fallback_groups = []
         if fallback_album_name.lower() != album_name.lower():
@@ -208,6 +208,21 @@ class GazelleAPI:
 
         all_possible_groups = list(combined_groups.values())
 
+        # --- PHASE 1.5: Final Fallback Search (Album Name Only) ---
+        # If we still haven't found anything, try one last time searching only by album name.
+        if not all_possible_groups:
+            logger.info("No results found. Trying a final search with album name only.")
+            try:
+                params = {'groupname': album_name}
+                response = self.api_call('browse', params)
+                results = response.get('response', {}).get('results', [])
+                if results:
+                    all_possible_groups = [GazelleMapper.map_torrent_group(tg) for tg in results]
+            except Exception as e:
+                logger.error('Error during album-only fallback search for [%s]: %s', album_name, e)
+                return None  # Fail on API error
+
+        # If after all attempts there are still no results, exit.
         if not all_possible_groups:
             logger.debug("No potential matches found after all searches.")
             return []

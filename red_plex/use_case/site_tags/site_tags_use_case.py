@@ -215,10 +215,10 @@ class SiteTagsUseCase:
         # Store the original, clean string to add it later
         original_artist = artist_str.strip()
 
-        separators = r'\s*;\s*|\s*x\s*|\s*\+\s*|\s*&\s*|\s*,\s*|\s*/\s*|\s+and\s+'
+        separators = r'\s*;\s*|\s+\bx\b\s+|\s*\+\s*|\s*&\s*|\s*,\s*|\s*/\s*|\s+\band\b\s+'
 
         # Get the split parts
-        split_artists = re.split(separators, original_artist)
+        split_artists = re.split(separators, original_artist, flags=re.IGNORECASE)
 
         # Use a set to easily combine and remove duplicates
         final_artists = {art for art in split_artists if art}
