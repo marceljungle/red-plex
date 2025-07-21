@@ -55,7 +55,8 @@ class SiteTagsUseCase:
                 echo_func(
                     f"Processing album {processed_count}/{len(unscanned_rating_keys)}: "
                     f"Rating Key: {rating_key}. "
-                    f"{domain_album.artists[0] if domain_album.artists else ''} - {domain_album.name}"
+                    f"{domain_album.artists[0] if domain_album.artists else ''}"
+                    f" - {domain_album.name}"
                 )
 
                 match_data = self._search_by_album_and_artist_names(album_name=domain_album.name,
