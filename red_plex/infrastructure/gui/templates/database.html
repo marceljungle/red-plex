@@ -48,26 +48,33 @@
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
-                        <div class="col-4">
+                        <div class="col-3">
                             <div class="mb-2">
                                 <i class="bi bi-music-note text-primary" style="font-size: 2rem;"></i>
                             </div>
                             <h4 class="mb-0">{{ stats.get('albums', 0) }}</h4>
                             <small class="text-muted">Albums</small>
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <div class="mb-2">
                                 <i class="bi bi-collection text-success" style="font-size: 2rem;"></i>
                             </div>
                             <h4 class="mb-0">{{ stats.get('collages', 0) }}</h4>
                             <small class="text-muted">Collages</small>
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <div class="mb-2">
                                 <i class="bi bi-bookmark text-warning" style="font-size: 2rem;"></i>
                             </div>
                             <h4 class="mb-0">{{ stats.get('bookmarks', 0) }}</h4>
                             <small class="text-muted">Bookmarks</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="mb-2">
+                                <i class="bi bi-tags text-info" style="font-size: 2rem;"></i>
+                            </div>
+                            <h4 class="mb-0">{{ stats.get('site_tags', 0) }}</h4>
+                            <small class="text-muted">Site Tags</small>
                         </div>
                     </div>
                 </div>
@@ -77,7 +84,7 @@
 
     <div class="row mt-4">
         <!-- Albums Management -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
@@ -107,7 +114,7 @@
         </div>
 
         <!-- Collages Management -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
@@ -135,7 +142,7 @@
         </div>
 
         <!-- Bookmarks Management -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
@@ -155,6 +162,34 @@
                               class="d-inline">
                             <button type="submit" class="btn btn-outline-danger w-100">
                                 <i class="bi bi-trash"></i> Reset Bookmarks
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Site Tags Management -->
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-tags text-info"></i> Site Tags
+                    </h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text">
+                        Manage site tag mappings. These link your albums to site groups and their tags.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="{{ url_for('site_tags') }}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-eye"></i> View Site Tags
+                        </a>
+                        <form method="POST" action="{{ url_for('database_reset', table='site-tags') }}" 
+                              onsubmit="return confirm('Are you sure you want to reset the site tags mappings? This will remove all site tag mapping data.')" 
+                              class="d-inline">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-trash"></i> Reset Site Tags
                             </button>
                         </form>
                     </div>
@@ -189,7 +224,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <h6>Album Database</h6>
                             <p>
                                 Contains information about all albums in your Plex music library. 
@@ -200,7 +235,7 @@
                                 <li><strong>Reset:</strong> Clears all album data (you'll need to update from Plex again)</li>
                             </ul>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <h6>Collections Database</h6>
                             <p>
                                 Stores information about converted collages and bookmark collections. 
@@ -209,6 +244,17 @@
                             <ul>
                                 <li><strong>Collages:</strong> Individual collage collections from RED/OPS</li>
                                 <li><strong>Bookmarks:</strong> Collections based on your personal bookmarks</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Site Tags Database</h6>
+                            <p>
+                                Stores mappings between your Plex albums and site groups, including 
+                                their associated tags for creating tag-based collections.
+                            </p>
+                            <ul>
+                                <li><strong>Mappings:</strong> Links between Plex albums and site groups</li>
+                                <li><strong>Tags:</strong> Associated metadata for creating collections</li>
                             </ul>
                         </div>
                     </div>

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Albums - Site Tags - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-search"></i> Scan Albums for Site Tags
+        </h1>
+        <a href="{{ url_for('site_tags') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Site Tags
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear"></i> Scan Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" role="alert">
+                        <h6 class="alert-heading">How Album Scanning Works</h6>
+                        <p class="mb-2">
+                            The scan process searches for your Plex albums on RED/OPS using 
+                            <strong>album and artist names</strong> rather than file paths.
+                        </p>
+                        <p class="mb-0">
+                            <small>This process only scans unscanned albums and may take several minutes depending on your library size.</small>
+                        </p>
+                    </div>
+
+                    {% if not processing %}
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="site" class="form-label">Site</label>
+                            <select class="form-select" id="site" name="site" required>
+                                <option value="">Select a site...</option>
+                                <option value="red">Redacted (RED)</option>
+                                <option value="ops">Orpheus Network (OPS)</option>
+                            </select>
+                            <div class="form-text">
+                                Choose which tracker to search on for your albums.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="always_skip" name="always_skip">
+                                <label class="form-check-label" for="always_skip">
+                                    Always skip albums with multiple matches
+                                </label>
+                                <div class="form-text">
+                                    When enabled, albums with multiple potential matches will be automatically skipped instead of prompting for selection.
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Start Scan
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-hourglass-split"></i>
+                        <strong>Scan in Progress</strong><br>
+                        Your album scan is currently running. Check the status output below for real-time updates.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-terminal"></i> Status Output
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="status-output" class="status-output">
+                        {% if processing %}
+                        <div class="status-message">Scan started. Waiting for updates...</div>
+                        {% else %}
+                        <div class="status-message text-muted">Ready to start scanning. Select your settings and click "Start Scan".</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Important Notes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Incremental Process:</strong> Only albums not yet mapped to sites will be processed.</li>
+                        <li><strong>Search Method:</strong> Albums are found by searching album name and artist names on the selected site.</li>
+                        <li><strong>Multiple Matches:</strong> When multiple results are found, you can choose the correct one or skip.</li>
+                        <li><strong>Rate Limiting:</strong> The process respects site API rate limits to avoid being blocked.</li>
+                        <li><strong>Interruption:</strong> You can safely close this page; the scan will continue in the background.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

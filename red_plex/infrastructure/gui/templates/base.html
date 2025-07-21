@@ -84,6 +84,10 @@
                href="{{ url_for('bookmarks') }}">
                 <i class="bi bi-bookmark"></i> Bookmarks
             </a>
+            <a class="nav-link {% if request.endpoint in ['site_tags', 'site_tags_scan', 'site_tags_convert'] %}active{% endif %}" 
+               href="{{ url_for('site_tags') }}">
+                <i class="bi bi-tags"></i> Site Tags
+            </a>
             <a class="nav-link {% if request.endpoint == 'database' %}active{% endif %}" 
                href="{{ url_for('database') }}">
                 <i class="bi bi-database"></i> Database
