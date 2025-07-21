@@ -46,11 +46,14 @@ class SiteTagsUseCase:
         for rating_key in unscanned_rating_keys:
             try:
                 processed_count += 1
-                echo_func(f"Processing album {processed_count}/"
-                          f"{len(unscanned_rating_keys)}: {rating_key}")
-
                 # Fetch album from Plex
                 domain_album = self.plex_manager.get_album_by_rating_key(int(rating_key))
+                if not domain_album:
+                    echo_func(f"  Album with rating key {rating_key} not found in Plex.")
+                    continue
+                echo_func(f"Processing album {processed_count}/"
+                          f"{len(unscanned_rating_keys)}: "
+                          f"Rating Key: {rating_key}. {domain_album.artists} - {domain_album.name}")
 
                 match_data = self._search_by_album_and_artist_names(album_name=domain_album.name,
                                                                     artists=domain_album.artists)

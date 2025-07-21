@@ -80,6 +80,7 @@ class PlexManager:
                 album_folder_path = os.path.dirname(media_path)
                 domain_albums.append(Album(id=album.ratingKey,
                                            name=album.title,
+                                           artists=[album.parentTitle],
                                            added_at=album.addedAt,
                                            path=album_folder_path))
         return domain_albums

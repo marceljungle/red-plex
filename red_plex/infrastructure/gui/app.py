@@ -19,6 +19,7 @@ from red_plex.infrastructure.service.collection_processor import CollectionProce
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 from red_plex.use_case.site_tags.site_tags_use_case import SiteTagsUseCase
 
+
 # pylint: disable=W0703,W0718,R0914,R0915
 class WebSocketHandler(logging.Handler):
     """Custom logging handler that sends log messages via WebSocket."""
@@ -346,7 +347,7 @@ def create_app():
                 LEFT JOIN site_tags st ON mt.tag_id = st.id
             """)
             stats = cur.fetchone()
-            
+
             # Get recent mappings for display
             cur.execute("""
                 SELECT stm.rating_key, stm.group_id, stm.site, 
@@ -359,15 +360,15 @@ def create_app():
                 LIMIT 20
             """)
             recent_mappings = cur.fetchall()
-            
-            return render_template('site_tags.html', 
+
+            return render_template('site_tags.html',
                                    stats={'mapped_albums': stats[0] or 0,
                                           'total_tags': stats[1] or 0,
                                           'total_mappings': stats[2] or 0},
                                    recent_mappings=recent_mappings)
         except Exception as e:
             flash(f'Error loading site tags: {str(e)}', 'error')
-            return render_template('site_tags.html', 
+            return render_template('site_tags.html',
                                    stats={'mapped_albums': 0, 'total_tags': 0, 'total_mappings': 0},
                                    recent_mappings=[])
 
@@ -396,7 +397,7 @@ def create_app():
 
                         logger.info("Connecting to Plex server...")
                         plex_manager = PlexManager(db=thread_db)
-                        
+
                         logger.info("Updating album database from Plex...")
                         plex_manager.populate_album_table()
 
@@ -474,7 +475,8 @@ def create_app():
 
                         with app.app_context():
                             socketio.emit('status_update',
-                                          {'message': 'Starting site tags to collection conversion...'})
+                                          {'message':
+                                               'Starting site tags to collection conversion...'})
 
                         logger.info("Connecting to Plex server...")
                         plex_manager = PlexManager(db=thread_db)
@@ -542,7 +544,7 @@ def create_app():
                     stats['albums'] = len(db.get_all_albums())
                     stats['collages'] = len(db.get_all_collage_collections())
                     stats['bookmarks'] = len(db.get_all_bookmark_collections())
-                    
+
                     # Get site tags stats
                     cur = db.conn.cursor()
                     cur.execute("SELECT COUNT(*) FROM site_tag_mappings")
@@ -562,7 +564,10 @@ def create_app():
             return render_template('database.html',
                                    db_path="Unknown",
                                    db_exists=False,
-                                   stats={'albums': 0, 'collages': 0, 'bookmarks': 0, 'site_tags': 0})
+                                   stats={'albums': 0,
+                                          'collages': 0,
+                                          'bookmarks': 0,
+                                          'site_tags': 0})
 
     @app.route('/database/albums/update', methods=['POST'])
     def database_albums_update():
