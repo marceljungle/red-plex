@@ -20,7 +20,7 @@ from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.mapper.plex_mapper import PlexMapper
 
-
+# pylint: disable=W0718
 class PlexManager:
     """Handles operations related to Plex."""
 
@@ -68,7 +68,7 @@ class PlexManager:
         albums: List[PlexAlbum]
         try:
             albums = self.library_section.searchAlbums(filters=plex_filter)
-        except Exception as e:  # pylint: disable=W0718
+        except Exception as e:
             logger.warning('An error occurred while fetching albums given filter: %s', e)
             return []
         domain_albums: List[Album]
@@ -139,7 +139,7 @@ class PlexManager:
                     "Invalid input. Please enter valid numbers separated by commas or 'A' for all, "
                     "'N' to select none."
                 )
-        except Exception as e:  # pylint: disable=W0718
+        except Exception as e:
             logger.warning('An error occurred while searching for albums: %s', e)
             return []
 
@@ -212,27 +212,78 @@ class PlexManager:
         return matched_rating_keys
 
     def _fetch_albums_by_keys(self, albums: List[Album]) -> List[MediaContainer]:
-        """Fetches album objects from Plex using their rating keys."""
-        logger.debug('Fetching albums from Plex: %s', albums)
-        rating_keys = [int(album.id) for album in albums]
-        try:
-            fetched_albums = self.plex.fetchItems(rating_keys)
-        except Exception as e:  # pylint: disable=W0718
-            logger.warning('An error occurred while fetching albums: %s', e)
+        """Fetches album objects from Plex in batches using their rating keys."""
+        if not albums:
             return []
-        return fetched_albums
+
+        logger.debug('Preparing to fetch %d albums from Plex.', len(albums))
+        rating_keys = [int(album.id) for album in albums]
+        all_fetched_albums = []
+        batch_size = 1000
+
+        for i in range(0, len(rating_keys), batch_size):
+            batch_keys = rating_keys[i:i + batch_size]
+            logger.debug('Fetching batch of %d albums, starting from index %d.', len(batch_keys), i)
+
+            try:
+                # The API call and error handling are now in one place
+                fetched_batch = self.plex.fetchItems(batch_keys)
+                if fetched_batch:
+                    all_fetched_albums.extend(fetched_batch)
+                else:
+                    logger.warning('No albums found for rating keys in this batch.')
+            except Exception as e:
+                logger.warning('An error occurred while fetching a batch of albums: %s', e)
+
+        logger.debug('Finished fetching. Total albums retrieved: %d.', len(all_fetched_albums))
+        return all_fetched_albums
 
     def create_collection(self, name: str, albums: List[Album]) -> Optional[Collection]:
-        """Creates a collection in Plex."""
-        logger.info('Creating collection with name "%s" and %d albums.', name, len(albums))
-        albums_media = self._fetch_albums_by_keys(albums)
-
-        try:
-            collection = self.library_section.createCollection(name, items=albums_media)
-        except Exception as e:  # pylint: disable=W0718
-            logger.warning('An error occurred while creating the collection: %s', e)
+        """
+        Creates a collection in Plex, adding albums in batches to avoid request limits.
+        """
+        if not albums:
+            logger.warning('Cannot create a collection with no albums.')
             return None
-        return PlexMapper.map_plex_collection_to_domain(collection)
+
+        logger.info('Creating collection "%s" with %d total albums.', name, len(albums))
+        batch_size = 1000
+
+        # Step 1: Create the collection with the first batch of albums.
+        first_batch = albums[:batch_size]
+        albums_media = self._fetch_albums_by_keys(first_batch)
+
+        if not albums_media:
+            logger.error('Failed to fetch initial batch of albums. Aborting collection creation.')
+            return None
+        created_collection: Optional[Collection] = None
+        try:
+            logger.debug('Creating collection with the first %d items.', len(albums_media))
+            plex_collection_obj = self.library_section.createCollection(name, items=albums_media)
+            created_collection = PlexMapper.map_plex_collection_to_domain(plex_collection_obj)
+        except Exception as e:
+            logger.error('An error occurred while creating the collection '
+                         'with the first batch: %s', e)
+            return None
+
+        # Step 2: If there are more albums, add them in subsequent batches.
+        if len(albums) > batch_size:
+            for i in range(batch_size, len(albums), batch_size):
+                remaining_batch = albums[i:i + batch_size]
+                logger.debug('Adding batch of %d albums to collection "%s".',
+                             len(remaining_batch), name)
+                try:
+                    self.add_items_to_collection(created_collection,
+                                                 remaining_batch)
+                except Exception as e:
+                    logger.warning(
+                        'Failed to add a batch to collection "%s". '
+                        'The collection may be incomplete. Error: %s',
+                        name, e
+                    )
+
+        logger.info('Successfully finished processing collection "%s".', name)
+        return created_collection
 
     def get_collection_by_name(self, name: str) -> Optional[Collection]:
         """Finds a collection by name."""
@@ -240,7 +291,7 @@ class PlexManager:
         try:
             collection = self.library_section.collection(name)
         # pylint: disable=broad-except
-        # pylint: disable=W0718
+
         except Exception:
             # If the collection doesn't exist, collection will be set to None
             collection = None
@@ -259,7 +310,7 @@ class PlexManager:
         collection_from_plex: Optional[PlexCollection]
         try:
             collection_from_plex = self.library_section.collection(collection.name)
-        except Exception as e:  # pylint: disable=W0718
+        except Exception as e:
             logger.warning('An error occurred while trying to fetch the collection: %s', e)
             collection_from_plex = None
         if collection_from_plex:
