@@ -11,6 +11,7 @@ from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 
+
 # pylint: disable=R0912,W0718,W0613,R0913,R0917
 class SiteTagsUseCase:
     """Use case for managing site tag mappings and creating collections from tags."""
@@ -51,9 +52,11 @@ class SiteTagsUseCase:
                 if not domain_album:
                     echo_func(f"  Album with rating key {rating_key} not found in Plex.")
                     continue
-                echo_func(f"Processing album {processed_count}/"
-                          f"{len(unscanned_rating_keys)}: "
-                          f"Rating Key: {rating_key}. {domain_album.artists} - {domain_album.name}")
+                echo_func(
+                    f"Processing album {processed_count}/{len(unscanned_rating_keys)}: "
+                    f"Rating Key: {rating_key}. "
+                    f"{domain_album.artists[0] if domain_album.artists else ''} - {domain_album.name}"
+                )
 
                 match_data = self._search_by_album_and_artist_names(album_name=domain_album.name,
                                                                     artists=domain_album.artists)
@@ -121,7 +124,7 @@ class SiteTagsUseCase:
             try:
                 choice = click.prompt(
                     f"  Choose a match (1-{len(torrent_groups)}) or 's' to skip",
-                                      type=str).strip().lower()
+                    type=str).strip().lower()
                 if choice == 's':
                     return False
                 choice_idx = int(choice) - 1
