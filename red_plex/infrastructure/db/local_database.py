@@ -90,7 +90,7 @@ class LocalDatabase:
 
         # Tables for site tag mappings
         self.conn.execute("""
-        CREATE TABLE IF NOT EXISTS site_tag_mappings (
+        CREATE TABLE IF NOT EXISTS rating_key_group_id_mappings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           rating_key TEXT NOT NULL,
           group_id INTEGER NOT NULL,
@@ -111,7 +111,7 @@ class LocalDatabase:
           mapping_id INTEGER,
           tag_id INTEGER,
           PRIMARY KEY (mapping_id, tag_id),
-          FOREIGN KEY (mapping_id) REFERENCES site_tag_mappings(id) ON DELETE CASCADE,
+          FOREIGN KEY (mapping_id) REFERENCES rating_key_group_id_mappings(id) ON DELETE CASCADE,
           FOREIGN KEY (tag_id) REFERENCES site_tags(id) ON DELETE CASCADE
         );
         """)
@@ -586,13 +586,13 @@ class LocalDatabase:
             # Insert or ignore the mapping
             cur = self.conn.cursor()
             cur.execute("""
-                INSERT OR IGNORE INTO site_tag_mappings(rating_key, group_id, site) 
+                INSERT OR IGNORE INTO rating_key_group_id_mappings(rating_key, group_id, site) 
                 VALUES (?, ?, ?)
             """, (rating_key, group_id, site))
 
             # Get the mapping ID
             cur.execute("""
-                SELECT id FROM site_tag_mappings 
+                SELECT id FROM rating_key_group_id_mappings 
                 WHERE rating_key = ? AND group_id = ? AND site = ?
             """, (rating_key, group_id, site))
             mapping_id = cur.fetchone()[0]
@@ -632,7 +632,7 @@ class LocalDatabase:
         placeholders = ','.join('?' * len(tags))
         cur.execute(f"""
             SELECT DISTINCT stm.rating_key
-            FROM site_tag_mappings stm
+            FROM rating_key_group_id_mappings stm
             JOIN mapping_tags mt ON stm.id = mt.mapping_id
             JOIN site_tags st ON mt.tag_id = st.id
             WHERE st.tag_name IN ({placeholders})
@@ -644,13 +644,13 @@ class LocalDatabase:
 
     def get_unscanned_albums(self) -> List[str]:
         """
-        Get rating keys from albums table that are not present in site_tag_mappings.
+        Get rating keys from albums table that are not present in rating_key_group_id_mappings.
         """
         cur = self.conn.cursor()
         cur.execute("""
             SELECT a.album_id
             FROM albums a
-            LEFT JOIN site_tag_mappings stm ON a.album_id = stm.rating_key
+            LEFT JOIN rating_key_group_id_mappings stm ON a.album_id = stm.rating_key
             WHERE stm.rating_key IS NULL
         """)
 
@@ -664,5 +664,5 @@ class LocalDatabase:
 
         with self.conn:
             self.conn.execute("DELETE FROM mapping_tags")
-            self.conn.execute("DELETE FROM site_tag_mappings")
+            self.conn.execute("DELETE FROM rating_key_group_id_mappings")
             self.conn.execute("DELETE FROM site_tags")

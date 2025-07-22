@@ -20,7 +20,7 @@ from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 from red_plex.use_case.site_tags.site_tags_use_case import SiteTagsUseCase
 
 
-# pylint: disable=W0703,W0718,R0914,R0915
+# pylint: disable=W0703,W0718,R0914,R0915,W0511
 class WebSocketHandler(logging.Handler):
     """Custom logging handler that sends log messages via WebSocket."""
 
@@ -334,6 +334,7 @@ def create_app():
     @app.route('/site-tags')
     def site_tags():
         """View site tags mappings."""
+        #TODO: this should be a method inside local_database.py, not placed here.
         try:
             db = get_db()
             # Get some basic stats about site tag mappings
@@ -342,7 +343,7 @@ def create_app():
                 SELECT COUNT(DISTINCT stm.rating_key) as mapped_albums,
                        COUNT(DISTINCT st.tag_name) as total_tags,
                        COUNT(stm.id) as total_mappings
-                FROM site_tag_mappings stm
+                FROM rating_key_group_id_mappings stm
                 LEFT JOIN mapping_tags mt ON stm.id = mt.mapping_id
                 LEFT JOIN site_tags st ON mt.tag_id = st.id
             """)
@@ -352,7 +353,7 @@ def create_app():
             cur.execute("""
                 SELECT stm.rating_key, stm.group_id, stm.site, 
                        GROUP_CONCAT(st.tag_name, ', ') as tags
-                FROM site_tag_mappings stm
+                FROM rating_key_group_id_mappings stm
                 LEFT JOIN mapping_tags mt ON stm.id = mt.mapping_id
                 LEFT JOIN site_tags st ON mt.tag_id = st.id
                 GROUP BY stm.id
@@ -547,7 +548,7 @@ def create_app():
 
                     # Get site tags stats
                     cur = db.conn.cursor()
-                    cur.execute("SELECT COUNT(*) FROM site_tag_mappings")
+                    cur.execute("SELECT COUNT(*) FROM rating_key_group_id_mappings")
                     stats['site_tags'] = cur.fetchone()[0]
                 except Exception as e:
                     logger.warning('Error getting database stats: %s', e)

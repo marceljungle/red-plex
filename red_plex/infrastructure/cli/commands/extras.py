@@ -111,7 +111,7 @@ def convert_tags_to_collection(ctx, tags: str, collection_name: str):
 
 @site_tags.command('reset')
 @click.pass_context
-def reset_site_tag_mappings(ctx):
+def reset_rating_key_group_id_mappings(ctx):
     """Reset site tag mappings. Use with caution!"""
     if click.confirm('Are you sure you want to reset site tag mappings?'):
         try:
