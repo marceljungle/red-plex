@@ -50,7 +50,7 @@ def scan_albums(ctx, site: str, always_skip: bool):
         site_tags_use_case.scan_albums_for_site_tags(
             echo_func=click.echo,
             confirm_func=click.confirm,
-            always_skip = always_skip
+            always_skip=always_skip
         )
 
     except Exception as e:  # pylint: disable=W0703

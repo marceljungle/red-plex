@@ -3,9 +3,9 @@
 from typing import List, Optional
 
 from red_plex.domain.models import Album, Collection
-from red_plex.infrastructure.db.base import BaseDatabaseManager
 from red_plex.infrastructure.db.albums import AlbumDatabaseManager
-from red_plex.infrastructure.db.collections import CollectionDatabaseManager
+from red_plex.infrastructure.db.base import BaseDatabaseManager
+from red_plex.infrastructure.db.collection import CollectionDatabaseManager
 from red_plex.infrastructure.db.site_tags import SiteTagDatabaseManager
 
 

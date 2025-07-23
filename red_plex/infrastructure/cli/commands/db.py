@@ -7,7 +7,6 @@ import click
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
-from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 
 
 @click.group()

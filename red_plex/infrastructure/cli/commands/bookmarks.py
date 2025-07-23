@@ -2,6 +2,7 @@
 
 import click
 
+from red_plex.infrastructure.cli.cli import update_collections_from_collages
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
@@ -37,11 +38,11 @@ def bookmarks():
             '(if you use Beets/Lidarr)\n'
     )
 )
+# pylint: disable=R0801
 def update_bookmarks_collection(ctx, fetch_mode: str):
     """Synchronize all stored bookmarks with their source collages."""
     # Import here to avoid circular imports with cli.py
-    from red_plex.infrastructure.cli.cli import update_collections_from_collages
-    
+
     fetch_mode = map_fetch_mode(fetch_mode)
     try:
         local_database = ctx.obj.get('db', None)
@@ -85,6 +86,7 @@ def update_bookmarks_collection(ctx, fetch_mode: str):
     )
 )
 @click.pass_context
+# pylint: disable=R0801
 def convert_collection_from_bookmarks(ctx, site: str, fetch_mode: str):
     """
     Create/Update a Plex collection based on your site bookmarks.
@@ -101,7 +103,7 @@ def convert_collection_from_bookmarks(ctx, site: str, fetch_mode: str):
     try:
         plex_manager = PlexManager(db=local_database)
         gazelle_api = GazelleAPI(site)  # Create GazelleAPI based on site
-    except Exception as e: # pylint: disable=W0718
+    except Exception as e:  # pylint: disable=W0718
         logger.error("Failed to initialize dependencies: %s", e, exc_info=True)
         click.echo(f"Error: Failed to initialize dependencies - {e}", err=True)
         ctx.exit(1)

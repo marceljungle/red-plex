@@ -4,9 +4,9 @@ import os
 import sqlite3
 
 from red_plex.infrastructure.db.utils.csv_to_db_migrator import CsvToDbMigrator
-from red_plex.infrastructure.logger.logger import logger
 
 
+#pylint: disable=R0903
 class BaseDatabaseManager:
     """Base database manager with connection and table creation functionality."""
 

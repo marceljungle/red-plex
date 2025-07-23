@@ -199,4 +199,5 @@ class AlbumDatabaseManager:
             self.conn.execute("DROP TABLE IF EXISTS album_artists")
             self.conn.execute("DROP TABLE IF EXISTS artists")
             self.conn.execute("DROP TABLE IF EXISTS albums")
-        # Note: We need to recreate tables elsewhere since this manager doesn't handle table creation
+        # Note: We need to recreate tables elsewhere since this manager
+        # doesn't handle table creation

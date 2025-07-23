@@ -1,15 +1,16 @@
 """Collection creator CLI."""
+import sys
 from typing import List
 
 import click
 
 from red_plex.domain.models import Collection
-from red_plex.infrastructure.cli.commands.config import config
-from red_plex.infrastructure.cli.commands.collages import collages
 from red_plex.infrastructure.cli.commands.bookmarks import bookmarks
+from red_plex.infrastructure.cli.commands.collages import collages
+from red_plex.infrastructure.cli.commands.config import config
 from red_plex.infrastructure.cli.commands.db import db
-from red_plex.infrastructure.cli.commands.gui import gui
 from red_plex.infrastructure.cli.commands.extras import extras
+from red_plex.infrastructure.cli.commands.gui import gui
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger, configure_logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
@@ -90,7 +91,6 @@ def finalize_cli(ctx, _result, *_args, **_kwargs):
 
 def main():
     """Actual entry point for the CLI when installed."""
-    import sys
     if 'gui' not in sys.argv:
         configure_logger()
     cli(obj={})  # pylint: disable=no-value-for-parameter
