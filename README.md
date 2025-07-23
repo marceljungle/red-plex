@@ -26,6 +26,7 @@ red-plex now includes a comprehensive web-based GUI for users who prefer a visua
 - **⚙️ Configuration Management**: View and edit all settings (API keys, Plex config, rate limits) through web forms
 - **🎨 Collage Operations**: Convert new collages and view existing collections
 - **🔖 Bookmark Operations**: Convert bookmarks from RED and OPS trackers
+- **🏷️ Site Tags Operations**: Scan albums using album/artist names and create tag-based collections
 - **🗄️ Database Management**: View statistics, update albums, reset tables
 - **⚡ Real-time Updates**: Live status updates during long operations via WebSocket
 - **📱 Mobile-Responsive**: Bootstrap-based design that works on all devices
@@ -63,6 +64,7 @@ The web interface provides the same functionality as the CLI commands but with a
   - [Configuration Commands](#configuration-commands)
   - [Collages](#collages)
   - [Bookmarks](#bookmarks)
+  - [Site Tags](#site-tags)
   - [Fetch Mode (-fm)](#fetch-mode--fm)
   - [Database Commands](#database-commands)
 - [Examples](#examples)
@@ -169,7 +171,8 @@ Visit: https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={YOUR_TOKEN}
 - **Multi-Site**: Works with Redacted ("red") and Orpheus Network ("ops").
 - **Web Interface**: Modern Flask-based GUI with Bootstrap styling and real-time updates.
 - **Collections from Collages/Bookmarks**: Create or update entire Plex collections for each collage or bookmarked set.
-- **Local SQLite Database**: All data (albums, collages, bookmarks) is kept in one DB, no more CSV.
+- **Site Tags Mapping**: Map your Plex albums to site groups using album and artist names, then create collections based on specific tags.
+- **Local SQLite Database**: All data (albums, collages, bookmarks, site mappings) is kept in one DB, no more CSV.
 - **Two Fetch Modes**: Choose between `torrent_name` (default) for direct path matching or `query` for metadata-based searches in Plex.
 - **Configurable Logging**: Choose between INFO, DEBUG, etc., in `config.yml`.
 - **Rate Limiting**: Respects site rate limits and retries on errors.
@@ -226,6 +229,19 @@ red-plex bookmarks convert --site [red|ops] --fetch-mode [torrent_name|query]
 red-plex bookmarks update --fetch-mode [torrent_name|query]
 ```
 
+### Site Tags
+
+```bash
+# Scan albums and create site tag mappings using album and artist names
+red-plex extras site-tags scan --site [red|ops] [--always-skip]
+
+# Create collections from albums matching specific tags
+red-plex extras site-tags convert --tags [tag1,tag2,...] --collection-name [name]
+
+# Reset site tag mappings
+red-plex extras site-tags reset
+```
+
 ### Fetch Mode (-fm)
 
 The `--fetch-mode` (or `-fm`) option controls how red-plex locates albums in Plex:
@@ -264,6 +280,12 @@ red-plex collages convert 1111 2222 3333 --site ops
 
 # From bookmarks (RED or OPS), default mode
 red-plex bookmarks convert --site red
+
+# Site tags - scan albums and create mappings using album/artist names
+red-plex extras site-tags scan --site red
+
+# Site tags - create collection from specific tags
+red-plex extras site-tags convert --tags "electronic,ambient" --collection-name "Electronic Ambient"
 ```
 
 ### Updating Collections
@@ -305,7 +327,13 @@ red-plex collages convert 12345 67890 --site red
 # 4. Create collection from your bookmarks
 red-plex bookmarks convert --site red
 
-# 5. Later, update all collections with new releases
+# 5. Scan albums for site tag mappings
+red-plex extras site-tags scan --site red
+
+# 6. Create collections from specific tags
+red-plex extras site-tags convert --tags "electronic,downtempo" --collection-name "Electronic Downtempo"
+
+# 7. Later, update all collections with new releases
 red-plex collages update
 red-plex bookmarks update
 ```
@@ -325,7 +353,11 @@ red-plex gui
 
 # 6. Use the Bookmarks page to convert your bookmarks
 
-# 7. Return to Database page later to update all collections
+# 7. Use the Site Tags page to scan albums and create tag mappings
+
+# 8. Use Site Tags to create collections from specific tags
+
+# 9. Return to Database page later to update all collections
 ```
 
 ## Configuration Details

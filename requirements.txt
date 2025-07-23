@@ -8,3 +8,4 @@ flask
 flask-socketio
 gunicorn
 eventlet
+thefuzz[speedup]

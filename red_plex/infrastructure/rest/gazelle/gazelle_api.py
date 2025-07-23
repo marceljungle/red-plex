@@ -1,21 +1,25 @@
 """Module for interacting with Gazelle-based APIs."""
 
 import asyncio
+import re
 import time
+import unicodedata
 from inspect import isawaitable
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 import requests
 from pyrate_limiter import Limiter, Rate, Duration
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+from thefuzz import process, fuzz
 
 from red_plex.domain.models import Collection, TorrentGroup
 from red_plex.infrastructure.config.config import load_config
+from red_plex.infrastructure.constants.constants import ALBUM_TAGS, VARIOUS_ARTISTS_TAGS
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
 
-# pylint: disable=W0718
+# pylint: disable=W0718,R0914,R0913,R0917,R0912
 class GazelleAPI:
     """Handles API interactions with Gazelle-based services."""
 
@@ -135,3 +139,156 @@ class GazelleAPI:
             return None
         logger.debug('Retrieved user bookmarks')
         return GazelleMapper.map_bookmarks(bookmarks_response, site)
+
+    def _fetch_groups_from_api(self, album_name: str, artists: List[str]) -> List[TorrentGroup]:
+        """
+        Helper method to fetch torrent groups from the API for a given album and artists.
+        """
+        found_groups = []
+        params = {}
+        for artist in artists:
+            # If the artist name is 'various artists', we skip it
+            if artist.lower() in VARIOUS_ARTISTS_TAGS:
+                params = {'groupname': album_name}
+            else:
+                params = {'groupname': album_name, 'artistname': artist}
+            try:
+                response = self.api_call('browse', params)
+                results = response.get('response', {}).get('results', [])
+                if results:
+                    domain_tgs = [GazelleMapper.map_torrent_group(tg) for tg in results]
+                    found_groups.extend(domain_tgs)
+            except Exception as e:
+                logger.error('Error during API call for [%s]-[%s]: %s', album_name, artist, e)
+                # We continue here instead of returning None to be more resilient
+        return found_groups
+
+    def _get_fallback_album_name(self, album_name: str) -> str:
+        """
+        Cleans an album name by removing tags and parenthesized content for a fallback search.
+        """
+        # 1: Remove content in parentheses
+        clean_name = re.sub(r'\s*\([^)]*\)', '', album_name)
+
+        # 2: Remove dots and commas from the result
+        clean_name = re.sub(r'[.,]', '', clean_name).strip()
+
+        # 3. Remove common tags like EP, Single, etc.
+        # This regex looks for whole words at the end of the string
+        tag_pattern = r'\s+\b(?:' + '|'.join(re.escape(tag) for tag in ALBUM_TAGS) + r')\b$'
+        clean_name = re.sub(tag_pattern, '', clean_name, flags=re.IGNORECASE).strip()
+
+        return clean_name
+
+    def browse_by_album_and_artist_names(self,
+                                         album_name: str,
+                                         artists: List[str]) -> Optional[List[TorrentGroup]]:
+        """
+        Searches for torrents by finding the best fuzzy match from all possible results,
+        including an initial, a fallback, and an album-only search.
+        """
+        logger.debug('Initiating search for album [%s] and artists [%s]', album_name, artists)
+
+        # --- PHASE 1: Comprehensive Data Fetching ---
+
+        # 1. Initial search with the original album name and artists
+        initial_groups = self._fetch_groups_from_api(album_name, artists)
+
+        # 2. Fallback search with the cleaned album name and artists
+        fallback_album_name = self._get_fallback_album_name(album_name)
+        fallback_groups = []
+        if fallback_album_name.lower() != album_name.lower():
+            logger.debug("Performing fallback search with cleaned name: [%s]", fallback_album_name)
+            fallback_groups = self._fetch_groups_from_api(fallback_album_name, artists)
+
+        # 3. Combine initial and fallback results, removing duplicates
+        combined_groups = {group.id: group for group in initial_groups}
+        for group in fallback_groups:
+            combined_groups[group.id] = group
+
+        all_possible_groups = list(combined_groups.values())
+
+        # --- PHASE 1.5: Final Fallback Search (Album Name Only) ---
+        # If we still haven't found anything, try one last time searching only by album name.
+        if not all_possible_groups:
+            logger.info("No results found. Trying a final search with album name only.")
+            try:
+                params = {'groupname': album_name}
+                response = self.api_call('browse', params)
+                results = response.get('response', {}).get('results', [])
+                if results:
+                    all_possible_groups = [GazelleMapper.map_torrent_group(tg) for tg in results]
+            except Exception as e:
+                logger.error('Error during album-only fallback search for [%s]: %s', album_name, e)
+                return None  # Fail on API error
+
+        # If after all attempts there are still no results, exit.
+        if not all_possible_groups:
+            logger.debug("No potential matches found after all searches.")
+            return []
+
+        # --- PHASE 2: Single Fuzzy Matching Stage on All Collected Results ---
+
+        choices: Dict[str, TorrentGroup] = {}
+        for group in all_possible_groups:
+            artist_str = ', '.join(group.artists) if group.artists else ''
+            choice_string = (f"{self._normalize_string(artist_str)} - "
+                             f"{self._normalize_string(group.album_name)}")
+            choices[choice_string] = group
+
+        overall_best_match = None
+        highest_score = 0
+
+        if len(artists) > 1:
+            artist_candidates = artists + ['Various Artists']
+        else:
+            artist_candidates = artists
+
+        for artist_variation in artist_candidates:
+            query_string = (f"{self._normalize_string(artist_variation)} - "
+                            f"{self._normalize_string(album_name)}")
+            current_match = process.extractOne(query_string,
+                                               choices.keys(),
+                                               scorer=fuzz.token_set_ratio)
+            if current_match:
+                _, current_score = current_match
+                if current_score > highest_score:
+                    highest_score = current_score
+                    overall_best_match = current_match
+
+        if not overall_best_match:
+            logger.info("Fuzzy matching could not determine a best match from all results.")
+            return all_possible_groups
+
+        best_choice_str, score = overall_best_match
+        confidence_threshold = 90
+        logger.info("Highest fuzzy match score found: '%s' with %d%%", best_choice_str, score)
+
+        if score >= confidence_threshold:
+            logger.info("Confidence score is high. Returning the best match.")
+            best_group = choices[best_choice_str]
+            return [best_group]
+
+        logger.info("Best match score is below threshold. Returning all potential results.")
+        return all_possible_groups
+
+    @staticmethod
+    def _normalize_string(text: str) -> str:
+        """
+        Normalizes a string to a simple, comparable form.
+        """
+        if not text:
+            return ""
+
+        # Step 1: Replace dashes
+        text = text.replace('–', '-').replace('—', '-')
+
+        # Step 2: Normalize unicode characters (accents, etc.)
+        text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+
+        # Step 3: Normalize whitespace
+        # Replaces multiple spaces with a single space and strips ends
+        text = re.sub(r'\s+', ' ', text).strip()
+
+        # Step 4: Convert to lowercase
+        return text.lower()

@@ -25,7 +25,8 @@ with open(init_py_path, 'r', encoding="utf-8") as f:
 setup(
     name='red_plex',
     version=version,
-    description='A CLI and web GUI tool for creating Plex collections from RED and OPS collages and bookmarks',
+    description='A CLI and web GUI tool for creating '
+                'Plex collections from RED and OPS collages and bookmarks',
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='marceljungle',
@@ -50,7 +51,8 @@ setup(
         'flask',
         'flask-socketio',
         'gunicorn',
-        'eventlet'
+        'eventlet',
+        'thefuzz[speedup]'
     ],
     entry_points='''
         [console_scripts]

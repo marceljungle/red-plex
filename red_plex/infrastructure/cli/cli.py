@@ -8,6 +8,7 @@ import click
 import yaml
 
 from red_plex.domain.models import Collection
+from red_plex.infrastructure.cli.commands.extras import extras
 from red_plex.infrastructure.config.config import (
     CONFIG_FILE_PATH,
     load_config,
@@ -33,6 +34,10 @@ def cli(ctx):
     """A CLI tool for creating Plex collections from RED and OPS collages."""
     if 'db' not in ctx.obj:
         ctx.obj['db'] = LocalDatabase()
+
+
+# Add the extras command group
+cli.add_command(extras)
 
 
 # config

@@ -78,6 +78,23 @@
             </div>
         </div>
 
+        <!-- Site Tags Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-tags text-info"></i> Site Tags
+                    </h5>
+                    <p class="card-text">
+                        Map albums to site groups using album/artist names and create collections from tags.
+                    </p>
+                    <a href="{{ url_for('site_tags') }}" class="btn btn-outline-info">
+                        Manage Site Tags
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- Database Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card h-100">
@@ -111,6 +128,9 @@
                         </a>
                         <a href="{{ url_for('bookmarks_convert') }}" class="btn btn-sm btn-outline-warning">
                             Convert Bookmarks
+                        </a>
+                        <a href="{{ url_for('site_tags_scan') }}" class="btn btn-sm btn-outline-info">
+                            Scan Albums for Tags
                         </a>
                     </div>
                 </div>
