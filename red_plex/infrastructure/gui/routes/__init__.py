@@ -1,0 +1,1 @@
+"""Routes package for Flask web application."""

@@ -2,20 +2,13 @@
 
 import click
 
-from red_plex.infrastructure.cli.cli import update_collections_from_collages
+from red_plex.infrastructure.cli.utils import update_collections_from_collages, map_fetch_mode
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.infrastructure.service.collection_processor import CollectionProcessingService
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
-
-
-def map_fetch_mode(fetch_mode) -> AlbumFetchMode:
-    """Map the fetch mode string to an AlbumFetchMode enum."""
-    if fetch_mode == 'query':
-        return AlbumFetchMode.QUERY
-    return AlbumFetchMode.TORRENT_NAME
 
 
 @click.group()
