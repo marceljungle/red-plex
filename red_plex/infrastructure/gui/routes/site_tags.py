@@ -9,6 +9,7 @@ from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.use_case.site_tags.site_tags_use_case import SiteTagsUseCase
 
 
+# pylint: disable=W0718,R0915
 def register_site_tags_routes(app, socketio, get_db):
     """Register site tags-related routes."""
 

@@ -4,7 +4,7 @@ from flask import render_template, request, redirect, url_for, flash
 from red_plex.infrastructure.config.config import load_config, save_config
 from red_plex.infrastructure.config.models import Configuration
 
-
+# pylint: disable=W0718
 def register_config_routes(app):
     """Register configuration-related routes."""
 

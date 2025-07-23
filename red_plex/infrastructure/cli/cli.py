@@ -1,6 +1,5 @@
 """Collection creator CLI."""
 import sys
-from typing import List
 
 import click
 

@@ -17,6 +17,7 @@ def map_fetch_mode(fetch_mode_str) -> AlbumFetchMode:
     return AlbumFetchMode.TORRENT_NAME
 
 
+# pylint: disable=R0801,W0718
 def register_collages_routes(app, socketio, get_db):
     """Register collage-related routes."""
 

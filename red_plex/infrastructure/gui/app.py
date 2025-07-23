@@ -6,12 +6,12 @@ from flask import Flask, render_template, g
 from flask_socketio import SocketIO, emit
 
 from red_plex.infrastructure.db.local_database import LocalDatabase
-from red_plex.infrastructure.logger.logger import configure_logger
-from red_plex.infrastructure.gui.routes.config import register_config_routes
-from red_plex.infrastructure.gui.routes.collages import register_collages_routes
 from red_plex.infrastructure.gui.routes.bookmarks import register_bookmarks_routes
-from red_plex.infrastructure.gui.routes.site_tags import register_site_tags_routes
+from red_plex.infrastructure.gui.routes.collages import register_collages_routes
+from red_plex.infrastructure.gui.routes.config import register_config_routes
 from red_plex.infrastructure.gui.routes.database import register_database_routes
+from red_plex.infrastructure.gui.routes.site_tags import register_site_tags_routes
+from red_plex.infrastructure.logger.logger import configure_logger
 
 
 # pylint: disable=W0703,W0718,R0914,R0915,W0511
@@ -88,5 +88,4 @@ def create_app():
         """Handle WebSocket connection."""
         emit('status_update', {'message': 'Connected to red-plex server'})
 
-    return app, socketio
     return app, socketio

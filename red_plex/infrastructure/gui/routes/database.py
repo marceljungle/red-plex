@@ -1,5 +1,4 @@
 """Database route handlers."""
-import logging
 import os
 
 from flask import render_template, flash, redirect, url_for
@@ -11,6 +10,7 @@ from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 
 
+# pylint: disable=R0801,W0718,R0915
 def register_database_routes(app, socketio, get_db):
     """Register database-related routes."""
 
@@ -59,7 +59,6 @@ def register_database_routes(app, socketio, get_db):
         """Update albums from Plex and update collections from collages."""
         try:
             def update_albums():
-                logger = logging.getLogger('red_plex')
                 thread_db = None
                 try:
                     thread_db = LocalDatabase()
@@ -119,6 +118,7 @@ def register_database_routes(app, socketio, get_db):
         return redirect(url_for('database'))
 
     @app.route('/database/<table>/reset', methods=['POST'])
+    # pylint: disable=W0718
     def database_reset(table):
         """Reset database table."""
         try:
