@@ -644,7 +644,8 @@ class LocalDatabase:
 
     def get_unscanned_albums(self) -> List[str]:
         """
-        Get rating keys from albums table that are not present in rating_key_group_id_mappings.
+        Get rating keys from albums table that are not present in
+        rating_key_group_id_mappings, ordered by most recently added.
         """
         cur = self.conn.cursor()
         cur.execute("""
@@ -652,6 +653,7 @@ class LocalDatabase:
             FROM albums a
             LEFT JOIN rating_key_group_id_mappings stm ON a.album_id = stm.rating_key
             WHERE stm.rating_key IS NULL
+            ORDER BY a.added_at DESC
         """)
 
         return [row[0] for row in cur.fetchall()]
