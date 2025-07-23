@@ -334,38 +334,21 @@ def create_app():
     @app.route('/site-tags')
     def site_tags():
         """View site tags mappings."""
-        #TODO: this should be a method inside local_database.py, not placed here.
         try:
             db = get_db()
-            # Get some basic stats about site tag mappings
-            cur = db.conn.cursor()
-            cur.execute("""
-                SELECT COUNT(DISTINCT stm.rating_key) as mapped_albums,
-                       COUNT(DISTINCT st.tag_name) as total_tags,
-                       COUNT(stm.id) as total_mappings
-                FROM rating_key_group_id_mappings stm
-                LEFT JOIN mapping_tags mt ON stm.id = mt.mapping_id
-                LEFT JOIN site_tags st ON mt.tag_id = st.id
-            """)
-            stats = cur.fetchone()
+            # Get basic stats about site tag mappings
+            mapped_albums, total_tags, total_mappings = db.get_site_tags_stats()
+            stats = {
+                'mapped_albums': mapped_albums,
+                'total_tags': total_tags,
+                'total_mappings': total_mappings
+            }
 
             # Get recent mappings for display
-            cur.execute("""
-                SELECT stm.rating_key, stm.group_id, stm.site, 
-                       GROUP_CONCAT(st.tag_name, ', ') as tags
-                FROM rating_key_group_id_mappings stm
-                LEFT JOIN mapping_tags mt ON stm.id = mt.mapping_id
-                LEFT JOIN site_tags st ON mt.tag_id = st.id
-                GROUP BY stm.id
-                ORDER BY stm.id DESC
-                LIMIT 20
-            """)
-            recent_mappings = cur.fetchall()
+            recent_mappings = db.get_recent_site_tag_mappings(limit=20)
 
             return render_template('site_tags.html',
-                                   stats={'mapped_albums': stats[0] or 0,
-                                          'total_tags': stats[1] or 0,
-                                          'total_mappings': stats[2] or 0},
+                                   stats=stats,
                                    recent_mappings=recent_mappings)
         except Exception as e:
             flash(f'Error loading site tags: {str(e)}', 'error')

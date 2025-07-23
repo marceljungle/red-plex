@@ -658,6 +658,41 @@ class LocalDatabase:
 
         return [row[0] for row in cur.fetchall()]
 
+    def get_site_tags_stats(self):
+        """
+        Get statistics about site tag mappings.
+        Returns a tuple of (mapped_albums, total_tags, total_mappings).
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            SELECT COUNT(DISTINCT stm.rating_key) as mapped_albums,
+                   COUNT(DISTINCT st.tag_name) as total_tags,
+                   COUNT(stm.id) as total_mappings
+            FROM rating_key_group_id_mappings stm
+            LEFT JOIN mapping_tags mt ON stm.id = mt.mapping_id
+            LEFT JOIN site_tags st ON mt.tag_id = st.id
+        """)
+        stats = cur.fetchone()
+        return (stats[0] or 0, stats[1] or 0, stats[2] or 0)
+
+    def get_recent_site_tag_mappings(self, limit: int = 20):
+        """
+        Get recent site tag mappings for display.
+        Returns a list of tuples (rating_key, group_id, site, tags).
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            SELECT stm.rating_key, stm.group_id, stm.site, 
+                   GROUP_CONCAT(st.tag_name, ', ') as tags
+            FROM rating_key_group_id_mappings stm
+            LEFT JOIN mapping_tags mt ON stm.id = mt.mapping_id
+            LEFT JOIN site_tags st ON mt.tag_id = st.id
+            GROUP BY stm.id
+            ORDER BY stm.id DESC
+            LIMIT ?
+        """, (limit,))
+        return cur.fetchall()
+
     def reset_tag_mappings(self):
         """
         Reset site tag mappings.
