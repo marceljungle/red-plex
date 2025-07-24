@@ -155,26 +155,6 @@ class SiteTagDatabaseManager:
         """, rating_keys + [site])
         
         return [str(row[0]) for row in cur.fetchall()]
-    
-    def get_rating_keys_by_collection_id(self, collection_id: str) -> List[str]:
-        """
-        Get rating keys for a collection from the collections table.
-        This method gets rating keys from stored collections.
-        
-        Args:
-            collection_id: The collection ID to look up
-            
-        Returns:
-            List of rating keys associated with the collection
-        """
-        cur = self.conn.cursor()
-        cur.execute("""
-            SELECT DISTINCT ctg.rating_key
-            FROM collection_torrent_groups ctg
-            WHERE ctg.rating_key = ?
-        """, (collection_id,))
-        
-        return [row[0] for row in cur.fetchall()]
 
     def reset_tag_mappings(self):
         """
