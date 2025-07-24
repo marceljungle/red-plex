@@ -1,6 +1,8 @@
 """Shared utilities for CLI commands."""
 from typing import List, Optional
 
+import click
+
 from red_plex.domain.models import Collection
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
@@ -108,7 +110,7 @@ def push_collections_to_upstream(local_database: LocalDatabase,
             # Check if the collage exists and belongs to this user
             target_collage = None
             for user_collage in user_collages:
-                if str(user_collage.get('id')) == collage.external_id:
+                if user_collage.external_id == collage.external_id:
                     target_collage = user_collage
                     break
                     
@@ -167,6 +169,27 @@ def push_collections_to_upstream(local_database: LocalDatabase,
                 success_count += 1
                 continue
             
+            # Show confirmation with details of what will be added
+            click.echo(f'\nCollage "{collage.name}" ({collage.external_id}) will have {len(missing_group_ids)} new items added:')
+            
+            for i, group_id in enumerate(missing_group_ids, 1):
+                try:
+                    # Get torrent group details for confirmation
+                    torrent_group = gazelle_api.get_torrent_group(group_id)
+                    if torrent_group:
+                        artists_str = ', '.join(torrent_group.artists) if torrent_group.artists else 'Unknown Artist'
+                        click.echo(f'  {i}. {artists_str} - {torrent_group.album_name}')
+                    else:
+                        click.echo(f'  {i}. Group ID {group_id} (unable to get details)')
+                except Exception as e:
+                    logger.debug('Error getting details for group %s: %s', group_id, e)
+                    click.echo(f'  {i}. Group ID {group_id} (unable to get details)')
+            
+            # Ask for confirmation
+            if not click.confirm(f'\nProceed with adding these {len(missing_group_ids)} items to the upstream collage?'):
+                click.echo('Skipping this collage.')
+                continue
+
             # Add missing groups to the collage
             logger.info('Adding %d new items to collage "%s"', len(missing_group_ids), collage.name)
             add_result = gazelle_api.add_to_collage(collage.external_id, missing_group_ids)
