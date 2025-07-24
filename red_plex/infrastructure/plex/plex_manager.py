@@ -304,6 +304,18 @@ class PlexManager:
         logger.info('No existing collection found with name "%s" in Plex.', name)
         return None
 
+    def get_collection_by_rating_key(self, rating_key: str) -> Optional[PlexCollection]:
+        """Finds a Plex collection by rating key."""
+        try:
+            collection = self.library_section.fetchItem(int(rating_key))
+            if collection and hasattr(collection, 'TYPE') and collection.TYPE == 'collection':
+                return collection
+            logger.warning('Item with rating key "%s" is not a collection or does not exist.', rating_key)
+            return None
+        except Exception as e:
+            logger.error('Error fetching collection with rating key "%s": %s', rating_key, e)
+            return None
+
     def add_items_to_collection(self, collection: Collection, albums: List[Album]) -> None:
         """Adds albums to an existing collection."""
         logger.debug('Adding %d albums to collection "%s".', len(albums), collection.name)

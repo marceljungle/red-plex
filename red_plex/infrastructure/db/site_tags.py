@@ -132,6 +132,50 @@ class SiteTagDatabaseManager:
         """, (limit,))
         return cur.fetchall()
 
+    def get_group_ids_by_rating_keys(self, rating_keys: List[str], site: str) -> List[str]:
+        """
+        Get group IDs for given rating keys from a specific site.
+        
+        Args:
+            rating_keys: List of rating keys to look up
+            site: Site to filter by
+            
+        Returns:
+            List of group IDs as strings
+        """
+        if not rating_keys:
+            return []
+            
+        cur = self.conn.cursor()
+        placeholders = ','.join('?' * len(rating_keys))
+        cur.execute(f"""
+            SELECT DISTINCT group_id
+            FROM rating_key_group_id_mappings
+            WHERE rating_key IN ({placeholders}) AND site = ?
+        """, rating_keys + [site])
+        
+        return [str(row[0]) for row in cur.fetchall()]
+    
+    def get_rating_keys_by_collection_id(self, collection_id: str) -> List[str]:
+        """
+        Get rating keys for a collection from the collections table.
+        This method gets rating keys from stored collections.
+        
+        Args:
+            collection_id: The collection ID to look up
+            
+        Returns:
+            List of rating keys associated with the collection
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            SELECT DISTINCT ctg.rating_key
+            FROM collection_torrent_groups ctg
+            WHERE ctg.rating_key = ?
+        """, (collection_id,))
+        
+        return [row[0] for row in cur.fetchall()]
+
     def reset_tag_mappings(self):
         """
         Reset site tag mappings.

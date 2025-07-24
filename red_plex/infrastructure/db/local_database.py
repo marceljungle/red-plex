@@ -117,6 +117,14 @@ class LocalDatabase(BaseDatabaseManager):
         """Get rating keys that have mappings containing all specified tags."""
         return self._site_tag_manager.get_rating_keys_by_tags(tags)
 
+    def get_group_ids_by_rating_keys(self, rating_keys: List[str], site: str) -> List[str]:
+        """Get group IDs for given rating keys from a specific site."""
+        return self._site_tag_manager.get_group_ids_by_rating_keys(rating_keys, site)
+
+    def get_rating_keys_by_collection_id(self, collection_id: str) -> List[str]:
+        """Get rating keys for a collection from the collections table."""
+        return self._site_tag_manager.get_rating_keys_by_collection_id(collection_id)
+
     def get_unscanned_albums(self) -> List[str]:
         """Get rating keys from albums table that are not present in mappings."""
         return self._site_tag_manager.get_unscanned_albums()

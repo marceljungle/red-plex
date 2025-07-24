@@ -2,7 +2,7 @@
 
 import click
 
-from red_plex.infrastructure.cli.utils import update_collections_from_collages, map_fetch_mode
+from red_plex.infrastructure.cli.utils import update_collections_from_collages, map_fetch_mode, push_collections_to_upstream
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
@@ -17,6 +17,7 @@ def collages():
 
 @collages.command('update')
 @click.pass_context
+@click.argument('collage_ids', nargs=-1)
 @click.option(
     '--fetch-mode', '-fm',
     type=click.Choice(['torrent_name', 'query']),
@@ -30,18 +31,49 @@ def collages():
             '(if you use Beets/Lidarr)\n'
     )
 )
-def update_collages(ctx, fetch_mode: str):
-    """Synchronize all stored collections with their source collages."""
+@click.option(
+    '--push', '--update-upstream',
+    is_flag=True,
+    default=False,
+    help='Push local collection changes back to upstream collages on the site'
+)
+def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
+    """
+    Synchronize stored collections with their source collages.
+    
+    If COLLAGE_IDS are provided, only those collages will be processed.
+    If no COLLAGE_IDS are provided, all stored collages will be processed.
+    """
     # Import here to avoid circular imports with cli.py
 
     fetch_mode = map_fetch_mode(fetch_mode)
     try:
         local_database = ctx.obj.get('db', None)
         local_database: LocalDatabase
-        all_collages = local_database.get_all_collage_collections()
+        
+        if collage_ids:
+            # Filter to only the specified collage IDs
+            all_collages = local_database.get_all_collage_collections()
+            collage_ids_set = set(collage_ids)
+            filtered_collages = [c for c in all_collages if c.external_id in collage_ids_set]
+            
+            if not filtered_collages:
+                click.echo(f"No collages found in the database with IDs: {', '.join(collage_ids)}")
+                return
+                
+            # Check if any requested IDs were not found
+            found_ids = {c.external_id for c in filtered_collages}
+            missing_ids = collage_ids_set - found_ids
+            if missing_ids:
+                click.echo(f"Warning: Collage IDs not found in database: {', '.join(missing_ids)}")
+                
+            target_collages = filtered_collages
+        else:
+            # Process all collages
+            target_collages = local_database.get_all_collage_collections()
 
-        if not all_collages:
-            click.echo("No collages found in the db.")
+        if not target_collages:
+            click.echo("No collages found to process.")
             return
 
         # Initialize PlexManager once, populate its db once
@@ -50,12 +82,30 @@ def update_collages(ctx, fetch_mode: str):
             return
         plex_manager.populate_album_table()
 
-        update_collections_from_collages(
-            local_database=local_database,
-            collage_list=all_collages,
-            plex_manager=plex_manager,
-            fetch_bookmarks=False,
-            fetch_mode=fetch_mode)
+        if push:
+            # Push mode: sync local collections to upstream
+            click.echo("Pushing local collection updates to upstream collages...")
+            if collage_ids:
+                click.echo(f"Processing specific collages: {', '.join(c.name for c in target_collages)}")
+            success = push_collections_to_upstream(
+                local_database=local_database,
+                collage_list=target_collages,
+                plex_manager=plex_manager
+            )
+            if success:
+                click.echo("All collections successfully synced to upstream.")
+            else:
+                click.echo("Some collections failed to sync. Check logs for details.")
+        else:
+            # Normal mode: update local collections from upstream
+            if collage_ids:
+                click.echo(f"Updating specific collages: {', '.join(c.name for c in target_collages)}")
+            update_collections_from_collages(
+                local_database=local_database,
+                collage_list=target_collages,
+                plex_manager=plex_manager,
+                fetch_bookmarks=False,
+                fetch_mode=fetch_mode)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update stored collections: %s', exc)
         click.echo(f"An error occurred while updating stored collections: {exc}")

@@ -272,6 +272,84 @@ class GazelleAPI:
         logger.info("Best match score is below threshold. Returning all potential results.")
         return all_possible_groups
 
+    def get_user_info(self) -> Optional[Dict[str, Any]]:
+        """Retrieves current user information including user ID."""
+        try:
+            response = self.api_call('index', {})
+            if response.get('status') == 'success':
+                return response.get('response', {})
+            logger.error('Failed to get user info: %s', response)
+            return None
+        except Exception as e:
+            logger.error('Error retrieving user info: %s', e)
+            return None
+
+    def get_user_collages(self, user_id: str) -> Optional[List[Dict[str, Any]]]:
+        """Retrieves collages created by the specified user."""
+        params = {'userid': str(user_id)}
+        try:
+            response = self.api_call('collages', params)
+            if response.get('status') == 'success':
+                return response.get('response', [])
+            logger.error('Failed to get user collages: %s', response)
+            return None
+        except Exception as e:
+            logger.error('Error retrieving user collages for user_id %s: %s', user_id, e)
+            return None
+
+    def add_to_collage(self, collage_id: str, group_ids: List[str]) -> Optional[Dict[str, Any]]:
+        """
+        Adds group IDs to a collage.
+        
+        Args:
+            collage_id: The ID of the collage to add to
+            group_ids: List of group IDs to add
+            
+        Returns:
+            Response dict containing status and results, or None on error
+        """
+        if not group_ids:
+            logger.warning('No group IDs provided to add to collage %s', collage_id)
+            return None
+            
+        # Format group IDs as comma-separated string
+        group_ids_str = ','.join(group_ids)
+        
+        # This is a POST request, so we need to use requests.post
+        url = f'{self.base_url}addtocollage'
+        params = {'collageid': str(collage_id)}
+        data = {'groupids': group_ids_str}
+        
+        logger.debug('Adding groups %s to collage %s', group_ids_str, collage_id)
+        
+        try:
+            while True:
+                did_acquire = self.limiter.try_acquire('api_call')
+                if did_acquire:
+                    response = requests.post(url, headers=self.headers, params=params, data=data, timeout=10)
+                    response.raise_for_status()
+                    result = response.json()
+                    
+                    if result.get('status') == 'success':
+                        logger.info('Successfully added groups to collage %s: added=%s, rejected=%s, duplicated=%s',
+                                   collage_id,
+                                   result.get('response', {}).get('groupsadded', []),
+                                   result.get('response', {}).get('groupsrejected', []),
+                                   result.get('response', {}).get('groupsduplicated', []))
+                    return result
+                    
+                delay_ms = self.get_retry_after()
+                delay_seconds = delay_ms / 1000.0
+                if delay_seconds > 0.001:
+                    logger.debug('Rate limit exceeded. Sleeping for %.2f seconds.', delay_seconds)
+                    time.sleep(delay_seconds)
+                else:
+                    time.sleep(0.001)
+                    
+        except Exception as e:
+            logger.error('Error adding groups %s to collage %s: %s', group_ids_str, collage_id, e)
+            return None
+
     @staticmethod
     def _normalize_string(text: str) -> str:
         """
