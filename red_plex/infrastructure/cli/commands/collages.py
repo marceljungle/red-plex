@@ -2,7 +2,9 @@
 
 import click
 
-from red_plex.infrastructure.cli.utils import update_collections_from_collages, map_fetch_mode, push_collections_to_upstream
+from red_plex.infrastructure.cli.utils import (update_collections_from_collages,
+                                               map_fetch_mode,
+                                               push_collections_to_upstream)
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
@@ -37,6 +39,7 @@ def collages():
     default=False,
     help='Push local collection changes back to upstream collages on the site'
 )
+# pylint: disable=R0912
 def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
     """
     Synchronize stored collections with their source collages.
@@ -50,23 +53,23 @@ def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
     try:
         local_database = ctx.obj.get('db', None)
         local_database: LocalDatabase
-        
+
         if collage_ids:
             # Filter to only the specified collage IDs
             all_collages = local_database.get_all_collage_collections()
             collage_ids_set = set(collage_ids)
             filtered_collages = [c for c in all_collages if c.external_id in collage_ids_set]
-            
+
             if not filtered_collages:
                 click.echo(f"No collages found in the database with IDs: {', '.join(collage_ids)}")
                 return
-                
+
             # Check if any requested IDs were not found
             found_ids = {c.external_id for c in filtered_collages}
             missing_ids = collage_ids_set - found_ids
             if missing_ids:
                 click.echo(f"Warning: Collage IDs not found in database: {', '.join(missing_ids)}")
-                
+
             target_collages = filtered_collages
         else:
             # Process all collages
@@ -86,7 +89,8 @@ def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
             # Push mode: sync local collections to upstream
             click.echo("Pushing local collection updates to upstream collages...")
             if collage_ids:
-                click.echo(f"Processing specific collages: {', '.join(c.name for c in target_collages)}")
+                click.echo(f"Processing specific collages: "
+                           f"{', '.join(c.name for c in target_collages)}")
             success = push_collections_to_upstream(
                 local_database=local_database,
                 collage_list=target_collages,
@@ -99,7 +103,8 @@ def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
         else:
             # Normal mode: update local collections from upstream
             if collage_ids:
-                click.echo(f"Updating specific collages: {', '.join(c.name for c in target_collages)}")
+                click.echo(f"Updating specific collages: "
+                           f"{', '.join(c.name for c in target_collages)}")
             update_collections_from_collages(
                 local_database=local_database,
                 collage_list=target_collages,

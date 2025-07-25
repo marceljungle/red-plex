@@ -293,6 +293,91 @@
         // Scroll to status output
         statusRow.scrollIntoView({ behavior: 'smooth' });
     });
+
+    // Extended status update handler (extends the base.html one)
+    socket.on('status_update', function(data) {
+        const statusOutput = document.getElementById('status-output');
+        const statusRow = document.getElementById('status-row');
+
+        // Make sure status row is visible
+        if (statusRow) {
+            statusRow.style.display = 'block';
+        }
+
+        if (statusOutput) {
+            let messageClass = 'status-message';
+            let icon = 'bi-info-circle';
+
+            if (data.error) {
+                messageClass = 'status-message status-error';
+                icon = 'bi-exclamation-triangle text-danger';
+            } else if (data.finished) {
+                messageClass = 'status-message status-success';
+                icon = 'bi-check-circle text-success';
+            } else {
+                icon = 'bi-clock text-primary';
+            }
+
+            // Append new message
+            const messageDiv = document.createElement('div');
+            messageDiv.className = messageClass;
+            messageDiv.innerHTML = `<i class="bi ${icon}"></i> ${data.message}`;
+
+            statusOutput.appendChild(messageDiv);
+
+            // Scroll to bottom
+            statusOutput.scrollTop = statusOutput.scrollHeight;
+
+            // If finished or error, show a button to hide the status
+            if (data.finished || data.error) {
+                const hideButton = document.createElement('button');
+                hideButton.className = 'btn btn-sm btn-outline-secondary mt-2';
+                hideButton.innerHTML = '<i class="bi bi-x"></i> Hide Status';
+                hideButton.onclick = function() {
+                    statusRow.style.display = 'none';
+                };
+                statusOutput.appendChild(hideButton);
+            }
+        }
+    });
 </script>
+
+<style>
+.status-output {
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+}
+
+.status-message {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.status-message:last-child {
+    border-bottom: none;
+}
+
+.status-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin: 0.25rem 0;
+}
+
+.status-success {
+    background-color: #d1edce;
+    color: #155724;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin: 0.25rem 0;
+}
+</style>
 {% endblock %}
 {% endblock %}

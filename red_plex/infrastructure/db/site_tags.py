@@ -145,7 +145,7 @@ class SiteTagDatabaseManager:
         """
         if not rating_keys:
             return []
-            
+
         cur = self.conn.cursor()
         placeholders = ','.join('?' * len(rating_keys))
         cur.execute(f"""
@@ -153,7 +153,7 @@ class SiteTagDatabaseManager:
             FROM rating_key_group_id_mappings
             WHERE rating_key IN ({placeholders}) AND site = ?
         """, rating_keys + [site])
-        
+
         return [str(row[0]) for row in cur.fetchall()]
 
     def reset_tag_mappings(self):

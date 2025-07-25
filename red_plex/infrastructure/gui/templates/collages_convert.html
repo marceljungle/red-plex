@@ -165,6 +165,31 @@ Or:
 </div>
 
 {% block scripts %}
+<script>
+    // Listen for status updates for collage conversion
+    socket.on('status_update', function(data) {
+        const statusOutput = document.getElementById('status-output');
+
+        if (statusOutput) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'status-message';
+
+            if (data.error) {
+                messageDiv.style.color = '#dc3545';
+                messageDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + data.message;
+            } else if (data.finished) {
+                messageDiv.style.color = '#198754';
+                messageDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
+            } else {
+                messageDiv.style.color = '#0d6efd';
+                messageDiv.innerHTML = '<i class="bi bi-info-circle"></i> ' + data.message;
+            }
+
+            statusOutput.appendChild(messageDiv);
+            statusOutput.scrollTop = statusOutput.scrollHeight; // Auto-scroll
+        }
+    });
+</script>
 {% endblock %}
 
 {% endblock %}

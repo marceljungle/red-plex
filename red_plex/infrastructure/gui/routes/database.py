@@ -1,4 +1,5 @@
 """Database route handlers."""
+import asyncio
 import os
 
 from flask import render_template, flash, redirect, url_for
@@ -58,17 +59,33 @@ def register_database_routes(app, socketio, get_db):
     def database_albums_update():
         """Update albums from Plex and update collections from collages."""
         try:
-            def update_albums():
+            def run_update():
+                """Run the update in a background thread with asyncio isolation."""
+
+                # Force no event loop in this thread by setting the policy
+                if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy'):
+                    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+                # Clear any existing event loop
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        asyncio.set_event_loop(None)
+                except RuntimeError:
+                    pass
+
+                # Disable PyrateLimiter async features by setting environment variable
+                os.environ['PYRATE_LIMITER_DISABLE_ASYNC'] = '1'
+
                 thread_db = None
                 try:
                     thread_db = LocalDatabase()
 
                     with app.app_context():
-                        socketio.emit('status_update',
-                                      {'message': 'Starting albums update from Plex...'})
+                        socketio.emit('status_update', {'message':
+                                                            'Starting albums update from Plex...'})
 
                     plex_manager = PlexManager(db=thread_db)
-
                     plex_manager.populate_album_table()
 
                     with app.app_context():
@@ -96,10 +113,10 @@ def register_database_routes(app, socketio, get_db):
                             'message': 'Albums and collections update completed successfully!',
                             'finished': True
                         })
+
                 except Exception as e:
                     logger.critical('An unhandled error occurred during album update: %s',
-                                    e,
-                                    exc_info=True)
+                                    e, exc_info=True)
                     with app.app_context():
                         socketio.emit('status_update', {
                             'message': f'Error updating albums: {str(e)}',
@@ -108,8 +125,11 @@ def register_database_routes(app, socketio, get_db):
                 finally:
                     if thread_db:
                         thread_db.close()
+                    # Clean up environment variable
+                    os.environ.pop('PYRATE_LIMITER_DISABLE_ASYNC', None)
 
-            socketio.start_background_task(target=update_albums)
+            # Use socketio's background task instead of threading
+            socketio.start_background_task(target=run_update)
 
             flash('Albums and collections update started!', 'info')
         except Exception as e:

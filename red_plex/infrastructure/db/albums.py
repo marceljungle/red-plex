@@ -39,7 +39,9 @@ class AlbumDatabaseManager:
             # 3. Insert artists and their new associations
             if album.artists:
                 # Filter out None and empty artist names
-                valid_artists = [artist for artist in album.artists if artist is not None and artist.strip()]
+                valid_artists = [artist
+                                 for artist in album.artists
+                                 if artist is not None and artist.strip()]
 
                 if valid_artists:
                     # Insert artists if they don't exist (IGNORE on conflict)
@@ -82,7 +84,9 @@ class AlbumDatabaseManager:
             ))
             if album.artists:
                 # Filter out None and empty artist names
-                valid_artists = [artist for artist in album.artists if artist is not None and artist.strip()]
+                valid_artists = [artist
+                                 for artist in album.artists
+                                 if artist is not None and artist.strip()]
                 if valid_artists:
                     all_artists.update(valid_artists)
                     album_id_to_artists[album.id] = valid_artists

@@ -82,7 +82,9 @@ class GazelleAPI:
         wait=wait_fixed(4),
         reraise=True
     )
-    def post_call(self, action: str, params: Dict[str, str] = None, data: Dict[str, str] = None) -> Dict[str, Any]:
+    def post_call(self, action: str,
+                  params: Dict[str, str] = None,
+                  data: Dict[str, str] = None) -> Dict[str, Any]:
         """
         Makes a rate-limited POST API call to the Gazelle-based service with retries.
         Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
@@ -322,7 +324,7 @@ class GazelleAPI:
                         id="",  # No local ID yet
                         external_id=str(collage_dict.get('id', '')),
                         name=collage_dict.get('name', ''),
-                        torrent_groups=[],  # User collages don't include torrent groups in this response
+                        torrent_groups=[],
                         site=self.site.lower()
                     )
                     collections.append(collection)
@@ -333,7 +335,8 @@ class GazelleAPI:
             logger.error('Error retrieving user collages for user_id %s: %s', user_id, e)
             return None
 
-    def add_to_collage(self, collage_id: str, group_ids: List[str]) -> Optional[Dict[str, Any]]:
+    def add_to_collage(self, collage_id: str,
+                       group_ids: List[str]) -> Optional[Dict[str, Any]]:
         """
         Adds group IDs to a collage.
         
@@ -347,26 +350,27 @@ class GazelleAPI:
         if not group_ids:
             logger.warning('No group IDs provided to add to collage %s', collage_id)
             return None
-            
+
         # Format group IDs as comma-separated string
         group_ids_str = ','.join(group_ids)
-        
+
         params = {'collageid': str(collage_id)}
         data = {'groupids': group_ids_str}
-        
+
         logger.debug('Adding groups %s to collage %s', group_ids_str, collage_id)
-        
+
         try:
             result = self.post_call('addtocollage', params, data)
-            
+
             if result.get('status') == 'success':
-                logger.info('Successfully added groups to collage %s: added=%s, rejected=%s, duplicated=%s',
-                           collage_id,
-                           result.get('response', {}).get('groupsadded', []),
-                           result.get('response', {}).get('groupsrejected', []),
-                           result.get('response', {}).get('groupsduplicated', []))
+                logger.info('Successfully added groups to collage '
+                            '%s: added=%s, rejected=%s, duplicated=%s',
+                            collage_id,
+                            result.get('response', {}).get('groupsadded', []),
+                            result.get('response', {}).get('groupsrejected', []),
+                            result.get('response', {}).get('groupsduplicated', []))
             return result
-                    
+
         except Exception as e:
             logger.error('Error adding groups %s to collage %s: %s', group_ids_str, collage_id, e)
             return None
