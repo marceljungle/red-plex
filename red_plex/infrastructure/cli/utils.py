@@ -16,6 +16,39 @@ from red_plex.use_case.create_collection.torrent_name.torrent_name_sync_collecti
 from red_plex.use_case.upstream_sync.upstream_sync_use_case import UpstreamSyncUseCase
 
 
+def get_database_from_context(ctx) -> LocalDatabase:
+    """
+    Get database instance from Click context with error handling.
+
+    Args:
+        ctx: Click context object
+
+    Returns:
+        LocalDatabase instance
+
+    Raises:
+        SystemExit: If database is not initialized
+    """
+    local_database = ctx.obj.get('db')
+    if not local_database:
+        click.echo("Error: Database not initialized.", err=True)
+        ctx.exit(1)
+    return local_database
+
+
+def create_plex_manager(local_database: LocalDatabase) -> PlexManager:
+    """
+    Create a PlexManager instance.
+
+    Args:
+        local_database: LocalDatabase instance
+
+    Returns:
+        PlexManager instance
+    """
+    return PlexManager(db=local_database)
+
+
 def map_fetch_mode(fetch_mode: str) -> AlbumFetchMode:
     """Map the fetch mode string to an AlbumFetchMode enum."""
     if fetch_mode == 'query':

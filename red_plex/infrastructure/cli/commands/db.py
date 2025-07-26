@@ -4,9 +4,9 @@ import os
 
 import click
 
+from red_plex.infrastructure.cli.utils import get_database_from_context, create_plex_manager
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
-from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.use_case.site_tags.site_tags_use_case import SiteTagsUseCase
 
@@ -55,7 +55,7 @@ def db_albums_update(ctx):
     try:
         local_database = ctx.obj.get('db', None)
         local_database: LocalDatabase
-        plex_manager = PlexManager(db=local_database)
+        plex_manager = create_plex_manager(local_database)
         plex_manager.populate_album_table()
         click.echo("Albums table has been updated successfully.")
     except Exception as exc:  # pylint: disable=W0703
@@ -121,14 +121,9 @@ def scan_albums(ctx, site: str, always_skip: bool):
     This is an incremental process - only unscanned albums will be processed.
     """
     try:
-        # Get dependencies from context
-        local_database = ctx.obj.get('db')
-        if not local_database:
-            click.echo("Error: Database not initialized.", err=True)
-            ctx.exit(1)
-
-        # Initialize dependencies
-        plex_manager = PlexManager(db=local_database)
+        # Get dependencies from context using shared utilities
+        local_database = get_database_from_context(ctx)
+        plex_manager = create_plex_manager(local_database)
         gazelle_api = GazelleAPI(site)
 
         # Ensure albums table is populated
@@ -149,20 +144,13 @@ def scan_albums(ctx, site: str, always_skip: bool):
         ctx.exit(1)
 
 
-
-
-
 @db_remote_mappings.command('reset')
 @click.pass_context
 def reset_remote_mappings(ctx):
     """Reset remote mappings. Use with caution!"""
     if click.confirm('Are you sure you want to reset remote mappings?'):
         try:
-            local_database = ctx.obj.get('db')
-            if not local_database:
-                click.echo("Error: Database not initialized.", err=True)
-                ctx.exit(1)
-
+            local_database = get_database_from_context(ctx)
             local_database.reset_tag_mappings()
             click.echo("Remote mappings have been reset successfully.")
         except Exception as e:  # pylint: disable=W0703

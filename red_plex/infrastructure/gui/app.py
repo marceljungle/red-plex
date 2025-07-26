@@ -3,7 +3,7 @@ import logging
 import os
 
 from flask import Flask, render_template, g
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.gui.routes.bookmarks import register_bookmarks_routes
@@ -88,6 +88,5 @@ def create_app():
     @socketio.on('connect')
     def handle_connect():
         """Handle WebSocket connection."""
-        emit('status_update', {'message': 'Connected to red-plex server'})
 
     return app, socketio

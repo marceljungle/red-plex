@@ -3,15 +3,13 @@
 import click
 
 from red_plex.infrastructure.logger.logger import logger
-from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.use_case.site_tags.site_tags_use_case import SiteTagsUseCase
+from red_plex.infrastructure.cli.utils import get_database_from_context, create_plex_manager
 
 
 @click.group()
 def extras():
     """Extra features and advanced functionality."""
-    pass
-
 
 @extras.group('site-tags')
 def site_tags():
@@ -37,14 +35,9 @@ def convert_tags_to_collection(ctx, tags: str, collection_name: str):
             click.echo("Error: No valid tags provided.", err=True)
             ctx.exit(1)
 
-        # Get dependencies from context
-        local_database = ctx.obj.get('db')
-        if not local_database:
-            click.echo("Error: Database not initialized.", err=True)
-            ctx.exit(1)
-
-        # Initialize dependencies
-        plex_manager = PlexManager(db=local_database)
+        # Get dependencies from context using shared utility
+        local_database = get_database_from_context(ctx)
+        plex_manager = create_plex_manager(local_database)
 
         # Create the use case and execute conversion
         # No need of gazelle_api here since we're using the local database

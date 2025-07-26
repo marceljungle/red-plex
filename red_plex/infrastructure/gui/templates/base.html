@@ -174,16 +174,11 @@
         // Initialize socket connection - specific pages will add their own listeners
         const socket = io();
 
-        // Connection status logging
-        socket.on('connect', function() {
-            console.log('Connected to red-plex server');
-        });
-
         socket.on('disconnect', function() {
             console.log('Disconnected from red-plex server');
         });
 
-        // Global log monitor functionality
+        // Global log monitor functionality with persistent state
         function toggleLogMonitor() {
             const monitor = document.getElementById('logMonitor');
             const toggle = document.getElementById('logToggle');
@@ -191,11 +186,63 @@
             if (monitor.classList.contains('collapsed')) {
                 monitor.classList.remove('collapsed');
                 toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                localStorage.setItem('logMonitorCollapsed', 'false');
             } else {
                 monitor.classList.add('collapsed');
                 toggle.innerHTML = '<i class="bi bi-chevron-up"></i>';
+                localStorage.setItem('logMonitorCollapsed', 'true');
             }
         }
+
+        // Restore log monitor state and content on page load
+        function restoreLogMonitorState() {
+            const monitor = document.getElementById('logMonitor');
+            const toggle = document.getElementById('logToggle');
+            const logContent = document.getElementById('logContent');
+
+            // Restore collapsed state
+            const isCollapsed = localStorage.getItem('logMonitorCollapsed') === 'true';
+            if (isCollapsed) {
+                monitor.classList.add('collapsed');
+                toggle.innerHTML = '<i class="bi bi-chevron-up"></i>';
+            } else {
+                monitor.classList.remove('collapsed');
+                toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+            }
+
+            // Restore log content
+            const savedLogs = localStorage.getItem('logMonitorContent');
+            if (savedLogs) {
+                logContent.innerHTML = savedLogs;
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+        }
+
+        // Save log content to localStorage
+        function saveLogContent() {
+            const logContent = document.getElementById('logContent');
+            if (logContent) {
+                localStorage.setItem('logMonitorContent', logContent.innerHTML);
+            }
+        }
+
+        // Clear old log entries (keep only last 100 messages)
+        function cleanupLogs() {
+            const logContent = document.getElementById('logContent');
+            const messages = logContent.querySelectorAll('.status-message');
+            if (messages.length > 100) {
+                // Remove the oldest messages, keep the last 100
+                for (let i = 0; i < messages.length - 100; i++) {
+                    messages[i].remove();
+                }
+                saveLogContent();
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            restoreLogMonitorState();
+        });
 
         // Global status update listener for log monitor
         socket.on('status_update', function(data) {
@@ -222,18 +269,35 @@
                 logContent.appendChild(messageDiv);
                 logContent.scrollTop = logContent.scrollHeight; // Auto-scroll
                 
-                // Auto-expand log monitor when new messages arrive
+                // Clean up old logs and save content
+                cleanupLogs();
+                saveLogContent();
+
+                // Auto-expand log monitor when new messages arrive (only if not manually collapsed)
                 const monitor = document.getElementById('logMonitor');
                 const toggle = document.getElementById('logToggle');
-                if (monitor.classList.contains('collapsed')) {
+                const wasManuallyCollapsed = localStorage.getItem('logMonitorCollapsed') === 'true';
+
+                if (!wasManuallyCollapsed && monitor.classList.contains('collapsed')) {
                     monitor.classList.remove('collapsed');
                     toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                    localStorage.setItem('logMonitorCollapsed', 'false');
                 }
             }
         });
+
+        // Add a function to clear logs manually
+        function clearLogs() {
+            const logContent = document.getElementById('logContent');
+            if (logContent) {
+                logContent.innerHTML = '<div class="status-message"><i class="bi bi-info-circle"></i> Waiting for log messages...</div>';
+                localStorage.removeItem('logMonitorContent');
+            }
+        }
     </script>
 
     {% block scripts %}{% endblock %}
 
 </body>
 </html>
+
