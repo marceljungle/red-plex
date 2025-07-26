@@ -66,6 +66,10 @@
                                                class="btn btn-sm btn-outline-primary" title="Update this collage">
                                                 <i class="bi bi-arrow-clockwise"></i>
                                             </a>
+                                            <a href="{{ url_for('collages_upstream_sync') }}?collage_ids={{ collage.id }}" 
+                                               class="btn btn-sm btn-outline-success" title="Sync to upstream">
+                                                <i class="bi bi-cloud-upload"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -112,7 +116,10 @@
                                     <button type="submit" class="btn btn-warning">
                                         <i class="bi bi-arrow-clockwise"></i> Update All Collages
                                     </button>
-                                    <div class="form-text">This will check all stored collages for updates.</div>
+                                    <a href="{{ url_for('collages_upstream_sync') }}" class="btn btn-success">
+                                        <i class="bi bi-cloud-upload"></i> Sync to Upstream
+                                    </a>
+                                    <div class="form-text">Update: Check all stored collages for updates. Sync: Push local changes to upstream sites.</div>
                                 </div>
                             </div>
                         </form>

@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Upstream Sync - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-cloud-upload"></i> Upstream Sync
+        </h1>
+        <a href="{{ url_for('collages') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Collages
+        </a>
+    </div>
+
+    {% if processing %}
+        <div class="alert alert-info" role="alert">
+            <h6 class="alert-heading">
+                <i class="bi bi-clock"></i> Processing
+            </h6>
+            <p>Upstream sync is in progress. Check the status below for updates.</p>
+        </div>
+        
+        <!-- Status updates container -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Status Updates</h5>
+            </div>
+            <div class="card-body">
+                <div id="status-container" style="height: 400px; overflow-y: auto; background-color: #f8f9fa; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 14px; white-space: pre-wrap;"></div>
+            </div>
+        </div>
+    {% elif show_confirmation and preview_data %}
+        <!-- Confirmation dialog with album selection -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Confirm Albums to Sync</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Select which albums you want to add to the upstream collages. 
+                    By default, all albums are selected.
+                </p>
+                
+                <form method="POST" action="{{ url_for('collages_upstream_sync') }}">
+                    <input type="hidden" name="action" value="confirm_sync">
+                    <input type="hidden" name="selected_albums" id="selected_albums_data">
+                    
+                    {% for item in preview_data %}
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <strong>{{ item.collage.name }}</strong> 
+                                    <span class="badge bg-{{ 'danger' if item.collage.site == 'red' else 'warning' }}">
+                                        {{ item.collage.site.upper() }}
+                                    </span>
+                                    <small class="text-muted">(ID: {{ item.collage.external_id }})</small>
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">
+                                    {{ item.album_details|length }} new album(s) will be added:
+                                </p>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                onclick="selectAllAlbums('collage_{{ item.collage.id }}', true)">
+                                            Select All
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                                onclick="selectAllAlbums('collage_{{ item.collage.id }}', false)">
+                                            Deselect All
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    {% for album in item.album_details %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input album-checkbox" 
+                                                       type="checkbox" 
+                                                       id="album_{{ item.collage.id }}_{{ loop.index }}"
+                                                       data-collage-id="{{ item.collage.id }}"
+                                                       data-group-id="{{ album.group_id }}"
+                                                       checked>
+                                                <label class="form-check-label" for="album_{{ item.collage.id }}_{{ loop.index }}">
+                                                    {{ album.display_name }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary" onclick="prepareSelectedAlbums()">
+                            <i class="bi bi-cloud-upload"></i> Sync Selected Albums
+                        </button>
+                        <a href="{{ url_for('collages_upstream_sync') }}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <!-- Initial form to select collages -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Select Collages to Sync</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Choose which collages you want to sync to their upstream sources. 
+                            This will add any albums from your Plex collections that are missing from the upstream collages.
+                        </p>
+                        
+                        {% if collages %}
+                            <form method="POST" action="{{ url_for('collages_upstream_sync') }}">
+                                <input type="hidden" name="action" value="get_preview">
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                onclick="selectAllCollages(true)">
+                                            Select All
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                                onclick="selectAllCollages(false)">
+                                            Deselect All
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    {% for collage in collages %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input collage-checkbox" 
+                                                       type="checkbox" 
+                                                       name="collage_ids" 
+                                                       value="{{ collage.id }}"
+                                                       id="collage_{{ collage.id }}"
+                                                       {% if collage.id in selected_collage_ids %}checked{% endif %}>
+                                                <label class="form-check-label" for="collage_{{ collage.id }}">
+                                                    <strong>{{ collage.name or 'Unnamed Collage' }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        <span class="badge bg-{{ 'danger' if collage.site == 'red' else 'warning' }}">
+                                                            {{ collage.site.upper() }}
+                                                        </span>
+                                                        ID: {{ collage.external_id }}
+                                                    </small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-search"></i> Preview Albums to Sync
+                                    </button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="bi bi-collection text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="mt-3 text-muted">No Collages Found</h5>
+                                <p class="text-muted">You need to convert some collages first before you can sync them upstream.</p>
+                                <a href="{{ url_for('collages_convert') }}" class="btn btn-primary">
+                                    <i class="bi bi-plus-lg"></i> Convert Collages
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if not processing %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-info-circle"></i> About Upstream Sync
+                    </h6>
+                    <p>
+                        Upstream sync allows you to push changes from your local Plex collections back to the original collages on RED/OPS sites.
+                    </p>
+                    <ul class="mb-0">
+                        <li><strong>Requirements:</strong> You must own the collages on the source site</li>
+                        <li><strong>Safety:</strong> Only albums that are missing from the upstream collage will be added</li>
+                        <li><strong>Selection:</strong> You can choose exactly which albums to sync for each collage</li>
+                        <li><strong>Rate limits:</strong> The sync process respects API rate limits automatically</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function selectAllCollages(select) {
+    const checkboxes = document.querySelectorAll('.collage-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = select;
+    });
+}
+
+function selectAllAlbums(collageClass, select) {
+    const checkboxes = document.querySelectorAll(`input[data-collage-id="${collageClass.replace('collage_', '')}"]`);
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = select;
+    });
+}
+
+function prepareSelectedAlbums() {
+    const selectedData = {};
+    const checkboxes = document.querySelectorAll('.album-checkbox:checked');
+    
+    checkboxes.forEach(checkbox => {
+        const collageId = checkbox.getAttribute('data-collage-id');
+        const groupId = checkbox.getAttribute('data-group-id');
+        
+        if (!selectedData[collageId]) {
+            selectedData[collageId] = [];
+        }
+        selectedData[collageId].push(groupId);
+    });
+    
+    document.getElementById('selected_albums_data').value = JSON.stringify(selectedData);
+}
+
+// WebSocket handling for status updates
+{% if processing %}
+const socket = io();
+const statusContainer = document.getElementById('status-container');
+
+socket.on('status_update', function(data) {
+    const timestamp = new Date().toLocaleTimeString();
+    const message = data.message;
+    const isError = data.error;
+    const isFinished = data.finished;
+    
+    const logEntry = `[${timestamp}] ${message}\n`;
+    statusContainer.textContent += logEntry;
+    statusContainer.scrollTop = statusContainer.scrollHeight;
+    
+    if (isError) {
+        statusContainer.style.color = '#dc3545';
+    } else if (isFinished) {
+        statusContainer.style.color = '#28a745';
+        setTimeout(function() {
+            window.location.href = '{{ url_for("collages") }}';
+        }, 3000);
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

@@ -179,6 +179,7 @@ def push_collections_to_upstream(local_database: LocalDatabase,
                 f'\nCollage "{collage.name}" ({collage.external_id}) '
                 f'will have {len(missing_group_ids)} new items added:')
 
+            album_details = []
             for i, group_id in enumerate(missing_group_ids, 1):
                 try:
                     # Get torrent group details for confirmation
@@ -186,19 +187,52 @@ def push_collections_to_upstream(local_database: LocalDatabase,
                     if torrent_group:
                         artists_str = ', '.join(torrent_group.artists) if (
                             torrent_group.artists) else 'Unknown Artist'
-                        click.echo(f'  {i}. {artists_str} - {torrent_group.album_name}')
+                        album_info = f'{artists_str} - {torrent_group.album_name}'
+                        click.echo(f'  {i}. {album_info}')
+                        album_details.append((group_id, album_info))
                     else:
-                        click.echo(f'  {i}. Group ID {group_id} (unable to get details)')
+                        album_info = f'Group ID {group_id} (unable to get details)'
+                        click.echo(f'  {i}. {album_info}')
+                        album_details.append((group_id, album_info))
                 except Exception as e:
                     logger.debug('Error getting details for group %s: %s', group_id, e)
-                    click.echo(f'  {i}. Group ID {group_id} (unable to get details)')
+                    album_info = f'Group ID {group_id} (unable to get details)'
+                    click.echo(f'  {i}. {album_info}')
+                    album_details.append((group_id, album_info))
 
-            # Ask for confirmation
-            if not click.confirm(
-                    f'\nProceed with adding these {len(missing_group_ids)} '
-                    f'items to the upstream collage?'):
+            # Ask for album selection
+            click.echo(f'\nSpecify which albums to add (e.g., "1,3,4" for albums 1, 3, and 4)')
+            click.echo('Leave empty to add all albums, or "skip" to skip this collage:')
+            
+            selection = click.prompt('Albums to add', type=str, default='', show_default=False)
+            selection = selection.strip()
+            
+            if selection.lower() == 'skip':
                 click.echo('Skipping this collage.')
                 continue
+            
+            # Parse selection
+            selected_group_ids = missing_group_ids  # Default to all
+            if selection:
+                try:
+                    # Parse comma-separated numbers
+                    selected_indices = [int(x.strip()) - 1 for x in selection.split(',') 
+                                      if x.strip().isdigit()]
+                    
+                    # Validate indices
+                    valid_indices = [i for i in selected_indices 
+                                   if 0 <= i < len(missing_group_ids)]
+                    
+                    if not valid_indices:
+                        click.echo('No valid album numbers specified. Adding all albums.')
+                    else:
+                        selected_group_ids = [missing_group_ids[i] for i in valid_indices]
+                        click.echo(f'Selected {len(selected_group_ids)} album(s) to add.')
+                        
+                except ValueError:
+                    click.echo('Invalid selection format. Adding all albums.')
+                    
+            missing_group_ids = selected_group_ids
 
             # Add missing groups to the collage
             logger.info('Adding %d new items to collage "%s"', len(missing_group_ids), collage.name)
