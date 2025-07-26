@@ -13,6 +13,7 @@ from red_plex.use_case.upstream_sync.upstream_sync_use_case import UpstreamSyncU
 
 logger = logging.getLogger('red_plex')
 
+
 def map_fetch_mode(fetch_mode_str) -> AlbumFetchMode:
     """Map the fetch mode string to an AlbumFetchMode enum."""
     if fetch_mode_str == 'query':
@@ -30,28 +31,28 @@ def register_collages_routes(app, socketio, get_db):
         try:
             db = get_db()
             collages = db.get_all_collage_collections()
-            
+
             # Determine which collages the user owns for each site
             user_owned_collages = {}  # site -> set of external_ids
-            
+
             # Group collages by site to minimize API calls
             collages_by_site = {}
             for collage in collages:
-                site = collage.site.lower()
+                site = collage.site
                 if site not in collages_by_site:
                     collages_by_site[site] = []
                 collages_by_site[site].append(collage)
-            
+
             # For each site, check user ownership
-            for site, site_collages in collages_by_site.items():
+            for site, _ in collages_by_site.items():
                 try:
                     api = GazelleAPI(site)
                     user_info = api.get_user_info()
-                    
+
                     if user_info and 'id' in user_info:
                         user_id = str(user_info['id'])
                         user_collages = api.get_user_collages(user_id)
-                        
+
                         if user_collages is not None:
                             # Extract external IDs of owned collages
                             owned_external_ids = {uc.external_id for uc in user_collages}
@@ -62,17 +63,17 @@ def register_collages_routes(app, socketio, get_db):
                     else:
                         # Failed to get user info
                         user_owned_collages[site] = set()
-                        
+
                 except Exception as e:
                     logger.error('Error checking collage ownership for site %s: %s', site, e)
                     # On error, assume no ownership
-                    user_owned_collages[site] = set()
-            
-            return render_template('collages.html', 
-                                   collages=collages, 
+                    user_owned_collages[site.upper()] = set()
+            return render_template('collages.html',
+                                   collages=collages,
                                    user_owned_collages=user_owned_collages)
         except Exception as e:
             flash(f'Error loading collages: {str(e)}', 'error')
+            logger.error('Error loading collages: %s', e, exc_info=True)
             return render_template('collages.html', collages=[], user_owned_collages={})
 
     @app.route('/collages/convert', methods=['GET', 'POST'])
@@ -295,10 +296,10 @@ def register_collages_routes(app, socketio, get_db):
                                     duplicated = result.get('duplicated', 0)
                                     logger.info('Collage "%s": %d added, %d rejected, '
                                                 '%d duplicated',
-                                              collage_name, added, rejected, duplicated)
+                                                collage_name, added, rejected, duplicated)
                                 else:
                                     logger.error('Failed to sync collage "%s": %s',
-                                               collage_name, result.get('error', 'Unknown error'))
+                                                 collage_name, result.get('error', 'Unknown error'))
 
                             with app.app_context():
                                 socketio.emit('status_update', {

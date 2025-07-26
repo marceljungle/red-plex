@@ -66,8 +66,8 @@
                                                class="btn btn-sm btn-outline-primary" title="Update this collage">
                                                 <i class="bi bi-arrow-clockwise"></i>
                                             </a>
-                                            {% if user_owned_collages.get(collage.site, set()) and collage.external_id in user_owned_collages.get(collage.site, set()) %}
-                                            <a href="{{ url_for('collages_upstream_sync') }}?collage_ids={{ collage.id }}" 
+                                            {% if user_owned_collages.get(collage.site) and collage.external_id in user_owned_collages.get(collage.site) %}
+                                            <a href="{{ url_for('collages_upstream_sync') }}?collage_ids={{ collage.id }}"
                                                class="btn btn-sm btn-outline-success" title="Sync to upstream">
                                                 <i class="bi bi-cloud-upload"></i>
                                             </a>
