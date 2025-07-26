@@ -89,7 +89,7 @@ class GazelleAPI:
         Makes a rate-limited POST API call to the Gazelle-based service with retries.
         Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
         """
-        url = f'{self.base_url.rstrip("?action=")}{action}'
+        url = f'{self.base_url}{action}'
         logger.debug('Calling POST API: %s', url)
 
         self._wait_for_rate_limit()

@@ -152,7 +152,7 @@ class SiteTagDatabaseManager:
             SELECT DISTINCT group_id
             FROM rating_key_group_id_mappings
             WHERE rating_key IN ({placeholders}) AND site = ?
-        """, rating_keys + [site])
+        """, rating_keys + [site.lower()])
 
         return [str(row[0]) for row in cur.fetchall()]
 
