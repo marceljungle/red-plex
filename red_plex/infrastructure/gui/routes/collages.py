@@ -173,7 +173,51 @@ def register_collages_routes(app, socketio, get_db):
         if request.method == 'GET':
             try:
                 db = get_db()
-                collages = db.get_all_collage_collections()
+                all_collages = db.get_all_collage_collections()
+
+                # Determine which collages the user owns for each site
+                user_owned_collages = {}  # site -> set of external_ids
+                user_collages = []  # Only collages owned by the user
+
+                # Group collages by site to minimize API calls
+                collages_by_site = {}
+                for collage in all_collages:
+                    site = collage.site
+                    if site not in collages_by_site:
+                        collages_by_site[site] = []
+                    collages_by_site[site].append(collage)
+
+                # For each site, check user ownership
+                for site, site_collages in collages_by_site.items():
+                    try:
+                        api = GazelleAPI(site)
+                        user_info = api.get_user_info()
+
+                        if user_info and 'id' in user_info:
+                            user_id = str(user_info['id'])
+                            user_owned_collages_list = api.get_user_collages(user_id)
+
+                            if user_owned_collages_list is not None:
+                                # Extract external IDs of owned collages
+                                owned_external_ids = {uc.external_id
+                                                      for uc in user_owned_collages_list}
+                                user_owned_collages[site] = owned_external_ids
+
+                                # Add owned collages to the filtered list
+                                for collage in site_collages:
+                                    if collage.external_id in owned_external_ids:
+                                        user_collages.append(collage)
+                            else:
+                                # get_user_collages returned None (not supported for this site)
+                                user_owned_collages[site] = set()
+                        else:
+                            # Failed to get user info
+                            user_owned_collages[site] = set()
+
+                    except Exception as e:
+                        logger.error('Error checking collage ownership for site %s: %s', site, e)
+                        # On error, assume no ownership
+                        user_owned_collages[site] = set()
 
                 # Get collage_ids from query parameters for specific collages
                 collage_ids_param = request.args.get('collage_ids', '')
@@ -182,11 +226,14 @@ def register_collages_routes(app, socketio, get_db):
                     selected_collage_ids = collage_ids_param.split(',')
 
                 return render_template('collages_upstream_sync.html',
-                                       collages=collages,
-                                       selected_collage_ids=selected_collage_ids)
+                                       collages=user_collages,  # Only show user-owned collages
+                                       selected_collage_ids=selected_collage_ids,
+                                       user_owned_collages=user_owned_collages)
             except Exception as e:
                 flash(f'Error loading collages: {str(e)}', 'error')
-                return render_template('collages_upstream_sync.html', collages=[])
+                return render_template('collages_upstream_sync.html',
+                                       collages=[],
+                                       user_owned_collages={})
 
         elif request.method == 'POST':
             try:
@@ -322,12 +369,10 @@ def register_collages_routes(app, socketio, get_db):
                                 thread_db.close()
 
                     socketio.start_background_task(target=process_upstream_sync)
-                    flash('Upstream sync started! Check the status below.', 'info')
-                    db = LocalDatabase()
-                    all_collages = db.get_all_collage_collections()
-                    db.close()
+                    flash('Upstream sync started! Check the status below.',
+                          'info')
                     return render_template('collages_upstream_sync.html',
-                                           collages=all_collages,
+                                           collages=[],
                                            processing=True)
 
             except Exception as e:
