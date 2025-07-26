@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Site Tags{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1><i class="bi bi-tags"></i> Site Tags</h1>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Overview</h5>
+                </div>
+                <div class="card-body">
+                    <p>Site tags functionality allows you to create Plex collections from albums that have been tagged on RED/OPS sites.</p>
+                    
+                    <h6>Statistics</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>Albums with mappings:</strong> {{ stats.mapped_albums }}</li>
+                        <li><strong>Total tags:</strong> {{ stats.total_tags }}</li>
+                        <li><strong>Total mappings:</strong> {{ stats.total_mappings }}</li>
+                    </ul>
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('site_tags_convert') }}" class="btn btn-primary">
+                            <i class="bi bi-collection"></i> Convert Tags to Collection
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">How it Works</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li><strong>Scan albums:</strong> Use <code>red-plex db remote-mappings scan</code> to create mappings between your Plex albums and site group IDs</li>
+                        <li><strong>Tags are collected:</strong> During the scan process, tags from the site are automatically stored</li>
+                        <li><strong>Convert to collections:</strong> Use this interface or CLI to create Plex collections based on specific tags</li>
+                    </ol>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Prerequisites:</strong> You need to have remote mappings data first. Use the <a href="{{ url_for('remote_mappings') }}">Remote Mappings</a> section to scan your albums.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if recent_mappings %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Tagged Albums</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Album</th>
+                                    <th>Artist(s)</th>
+                                    <th>Site</th>
+                                    <th>Tags</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mapping in recent_mappings %}
+                                <tr>
+                                    <td>{{ mapping.album_name }}</td>
+                                    <td>{{ mapping.artists }}</td>
+                                    <td>{{ mapping.site.upper() }}</td>
+                                    <td>
+                                        {% if mapping.tags %}
+                                            <span class="badge bg-secondary me-1">{{ mapping.tags[:50] }}{% if mapping.tags|length > 50 %}...{% endif %}</span>
+                                        {% else %}
+                                            <span class="text-muted">No tags</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
