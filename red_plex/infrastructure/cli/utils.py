@@ -201,37 +201,37 @@ def push_collections_to_upstream(local_database: LocalDatabase,
                     album_details.append((group_id, album_info))
 
             # Ask for album selection
-            click.echo(f'\nSpecify which albums to add (e.g., "1,3,4" for albums 1, 3, and 4)')
+            click.echo('\nSpecify which albums to add (e.g., "1,3,4" for albums 1, 3, and 4)')
             click.echo('Leave empty to add all albums, or "skip" to skip this collage:')
-            
+
             selection = click.prompt('Albums to add', type=str, default='', show_default=False)
             selection = selection.strip()
-            
+
             if selection.lower() == 'skip':
                 click.echo('Skipping this collage.')
                 continue
-            
+
             # Parse selection
             selected_group_ids = missing_group_ids  # Default to all
             if selection:
                 try:
                     # Parse comma-separated numbers
-                    selected_indices = [int(x.strip()) - 1 for x in selection.split(',') 
-                                      if x.strip().isdigit()]
-                    
+                    selected_indices = [int(x.strip()) - 1 for x in selection.split(',')
+                                        if x.strip().isdigit()]
+
                     # Validate indices
-                    valid_indices = [i for i in selected_indices 
-                                   if 0 <= i < len(missing_group_ids)]
-                    
+                    valid_indices = [i for i in selected_indices
+                                     if 0 <= i < len(missing_group_ids)]
+
                     if not valid_indices:
                         click.echo('No valid album numbers specified. Adding all albums.')
                     else:
                         selected_group_ids = [missing_group_ids[i] for i in valid_indices]
                         click.echo(f'Selected {len(selected_group_ids)} album(s) to add.')
-                        
+
                 except ValueError:
                     click.echo('Invalid selection format. Adding all albums.')
-                    
+
             missing_group_ids = selected_group_ids
 
             # Add missing groups to the collage
