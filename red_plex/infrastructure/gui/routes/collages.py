@@ -9,6 +9,7 @@ from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.infrastructure.service.collection_processor import CollectionProcessingService
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
+from red_plex.use_case.upstream_sync.upstream_sync_use_case import UpstreamSyncUseCase
 
 
 def map_fetch_mode(fetch_mode_str) -> AlbumFetchMode:
@@ -168,93 +169,30 @@ def register_collages_routes(app, socketio, get_db):
                         if collage:
                             selected_collages.append(collage)
 
-                    # Get preview data for each collage
+                    # Use the upstream sync use case to get preview
+                    upstream_sync = UpstreamSyncUseCase(db, plex_manager)
+                    preview_response = upstream_sync.get_sync_preview(selected_collages)
+
+                    if not preview_response.success:
+                        flash(f'Error getting sync preview: {preview_response.error_message}', 'error')
+                        return render_template('collages_upstream_sync.html', collages=db.get_all_collage_collections())
+
+                    # Convert response to template format
                     preview_data = []
-                    for collage in selected_collages:
-                        try:
-                            gazelle_api = GazelleAPI(collage.site)
-
-                            # Get user info and verify ownership
-                            user_info = gazelle_api.get_user_info()
-                            if not user_info:
-                                continue
-
-                            user_id = user_info.get('id')
-                            if not user_id:
-                                continue
-
-                            user_collages = gazelle_api.get_user_collages(str(user_id))
-                            if not user_collages:
-                                continue
-
-                            # Check ownership
-                            owns_collage = any(uc.external_id == collage.external_id
-                                               for uc in user_collages)
-                            if not owns_collage:
-                                continue
-
-                            # Get Plex collection items
-                            plex_collection = plex_manager.get_collection_by_rating_key(collage.id)
-                            if not plex_collection:
-                                continue
-
-                            collection_items = plex_collection.items()
-                            current_rating_keys = [item.ratingKey for item in collection_items]
-
-                            if not current_rating_keys:
-                                continue
-
-                            # Get group IDs for rating keys
-                            group_ids = db.get_group_ids_by_rating_keys(current_rating_keys,
-                                                                        collage.site.upper())
-                            if not group_ids:
-                                continue
-
-                            # Get current collage content
-                            current_collage_data = gazelle_api.get_collage(collage.external_id)
-                            if not current_collage_data:
-                                continue
-
-                            current_group_ids = {str(tg.id)
-                                                 for tg in current_collage_data.torrent_groups}
-                            missing_group_ids = [gid
-                                                 for gid in group_ids
-                                                 if gid not in current_group_ids]
-
-                            if missing_group_ids:
-                                # Get album details for preview
-                                album_details = []
-                                for group_id in missing_group_ids:
-                                    try:
-                                        torrent_group = gazelle_api.get_torrent_group(group_id)
-                                        if torrent_group:
-                                            artists_str = ', '.join(torrent_group.artists) if (
-                                                torrent_group.artists) else 'Unknown Artist'
-                                            album_info = (f'{artists_str} - '
-                                                          f'{torrent_group.album_name}')
-                                        else:
-                                            album_info = (f'Group ID '
-                                                          f'{group_id} (unable to get details)')
-                                    except Exception:
-                                        album_info = (f'Group ID '
-                                                      f'{group_id} (unable to get details)')
-
-                                    album_details.append({
-                                        'group_id': group_id,
-                                        'display_name': album_info
-                                    })
-
-                                preview_data.append({
-                                    'collage': collage,
-                                    'album_details': album_details
-                                })
-
-                        except Exception as e:
-                            logging.getLogger('red_plex').error(
-                                'Error getting preview for collage %s: %s',
-                                collage.name,
-                                e)
-                            continue
+                    for collage_preview in preview_response.preview_data:
+                        collage = db.get_collage_collection(collage_preview.collage_id)
+                        if collage:
+                            album_details = [
+                                {
+                                    'group_id': album.group_id,
+                                    'display_name': album.display_name
+                                }
+                                for album in collage_preview.albums_to_add
+                            ]
+                            preview_data.append({
+                                'collage': collage,
+                                'album_details': album_details
+                            })
 
                     return render_template('collages_upstream_sync.html',
                                            collages=db.get_all_collage_collections(),
@@ -282,50 +220,46 @@ def register_collages_routes(app, socketio, get_db):
                         thread_db = None
                         try:
                             thread_db = LocalDatabase()
+                            plex_manager = PlexManager(db=thread_db)
 
                             with app.app_context():
                                 socketio.emit('status_update',
                                               {'message': 'Starting upstream sync process...'})
 
-                            # Process each collage
-                            for collage_id, group_ids in albums_data.items():
+                            # Get collages to sync
+                            collages_to_sync = []
+                            for collage_id in albums_data.keys():
                                 collage = thread_db.get_collage_collection(collage_id)
-                                if not collage:
-                                    continue
+                                if collage:
+                                    collages_to_sync.append(collage)
 
-                                logger.info('Syncing collage "%s" with %d albums...',
-                                            collage.name, len(group_ids))
+                            if not collages_to_sync:
+                                logger.warning('No valid collages found for sync')
+                                return
 
-                                try:
-                                    gazelle_api = GazelleAPI(collage.site)
-                                    result = gazelle_api.add_to_collage(collage.external_id,
-                                                                        group_ids)
+                            # Use upstream sync use case
+                            upstream_sync = UpstreamSyncUseCase(thread_db, plex_manager)
+                            sync_response = upstream_sync.sync_collections_upstream(
+                                collages_to_sync, albums_data)
 
-                                    if result and result.get('status') == 'success':
-                                        response_data = result.get('response', {})
-                                        added_count = len(response_data.get('groupsadded',
-                                                                            []))
-                                        rejected_count = len(response_data.get('groupsrejected',
-                                                                               []))
-                                        duplicated_count = len(response_data.get('groupsduplicated',
-                                                                                 []))
+                            # Log results
+                            for collage_id, result in sync_response.sync_results.items():
+                                collage = thread_db.get_collage_collection(collage_id)
+                                collage_name = collage.name if collage else collage_id
 
-                                        logger.info('Collage "%s": %d added, '
-                                                    '%d rejected, %d duplicated',
-                                                    collage.name,
-                                                    added_count,
-                                                    rejected_count,
-                                                    duplicated_count)
-                                    else:
-                                        logger.error('Failed to sync collage "%s": %s',
-                                                     collage.name, result)
-
-                                except Exception as e:
-                                    logger.error('Error syncing collage "%s": %s', collage.name, e)
+                                if result.get('success', False):
+                                    added = result.get('added', 0)
+                                    rejected = result.get('rejected', 0)
+                                    duplicated = result.get('duplicated', 0)
+                                    logger.info('Collage "%s": %d added, %d rejected, %d duplicated',
+                                              collage_name, added, rejected, duplicated)
+                                else:
+                                    logger.error('Failed to sync collage "%s": %s',
+                                               collage_name, result.get('error', 'Unknown error'))
 
                             with app.app_context():
                                 socketio.emit('status_update', {
-                                    'message': 'Upstream sync completed!',
+                                    'message': f'Upstream sync completed! {sync_response.synced_collages}/{sync_response.total_collages} collages synced successfully.',
                                     'finished': True
                                 })
 

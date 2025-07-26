@@ -13,24 +13,7 @@
         </a>
     </div>
 
-    {% if processing %}
-        <div class="alert alert-info" role="alert">
-            <h6 class="alert-heading">
-                <i class="bi bi-clock"></i> Processing
-            </h6>
-            <p>Upstream sync is in progress. Check the status below for updates.</p>
-        </div>
-        
-        <!-- Status updates container -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Status Updates</h5>
-            </div>
-            <div class="card-body">
-                <div id="status-container" style="height: 400px; overflow-y: auto; background-color: #f8f9fa; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 14px; white-space: pre-wrap;"></div>
-            </div>
-        </div>
-    {% elif show_confirmation and preview_data %}
+    {% if show_confirmation and preview_data %}
         <!-- Confirmation dialog with album selection -->
         <div class="card">
             <div class="card-header">
@@ -271,39 +254,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
-{% block scripts %}
-<script>
-    {% if processing %}
-    // Listen for status updates for upstream sync
-    socket.on('status_update', function(data) {
-        const statusContainer = document.getElementById('status-container');
-
-        if (statusContainer) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'status-message';
-
-            if (data.error) {
-                messageDiv.style.color = '#dc3545';
-                messageDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + data.message;
-            } else if (data.finished) {
-                messageDiv.style.color = '#198754';
-                messageDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
-                // Redirect after completion
-                setTimeout(function() {
-                    window.location.href = '{{ url_for("collages_upstream_sync") }}';
-                }, 3000);
-            } else {
-                messageDiv.style.color = '#0d6efd';
-                messageDiv.innerHTML = '<i class="bi bi-info-circle"></i> ' + data.message;
-            }
-
-            statusContainer.appendChild(messageDiv);
-            statusContainer.scrollTop = statusContainer.scrollHeight; // Auto-scroll
-        }
-    });
-    {% endif %}
-</script>
-{% endblock %}
 
 {% endblock %}

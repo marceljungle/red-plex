@@ -74,23 +74,6 @@
             </div>
         </div>
 
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-terminal"></i> Status Output
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="status-output" class="status-output">
-                        {% if processing %}
-                        <div class="status-message">Scan started. Waiting for updates...</div>
-                        {% else %}
-                        <div class="status-message text-muted">Ready to start scanning. Select your settings and click "Start Scan".</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -117,30 +100,4 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    // Listen for status updates for site tags scanning
-    socket.on('status_update', function(data) {
-        const statusOutput = document.getElementById('status-output');
-
-        if (statusOutput) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'status-message';
-
-            if (data.error) {
-                messageDiv.style.color = '#dc3545';
-                messageDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + data.message;
-            } else if (data.finished) {
-                messageDiv.style.color = '#198754';
-                messageDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
-            } else {
-                messageDiv.style.color = '#0d6efd';
-                messageDiv.innerHTML = '<i class="bi bi-info-circle"></i> ' + data.message;
-            }
-
-            statusOutput.appendChild(messageDiv);
-            statusOutput.scrollTop = statusOutput.scrollHeight; // Auto-scroll
-        }
-    });
-</script>
 {% endblock %}
