@@ -11,6 +11,7 @@ from red_plex.infrastructure.service.collection_processor import CollectionProce
 from red_plex.use_case.create_collection.album_fetch_mode import AlbumFetchMode
 from red_plex.use_case.upstream_sync.upstream_sync_use_case import UpstreamSyncUseCase
 
+logger = logging.getLogger('red_plex')
 
 def map_fetch_mode(fetch_mode_str) -> AlbumFetchMode:
     """Map the fetch mode string to an AlbumFetchMode enum."""
@@ -53,7 +54,6 @@ def register_collages_routes(app, socketio, get_db):
 
                 # Start processing in background
                 def process_collages():
-                    logger = logging.getLogger('red_plex')
                     thread_db = None
                     try:
                         thread_db = LocalDatabase()
@@ -170,12 +170,15 @@ def register_collages_routes(app, socketio, get_db):
                             selected_collages.append(collage)
 
                     # Use the upstream sync use case to get preview
+                    logger.info('Getting upstream sync preview for collages: %s', collage_ids)
                     upstream_sync = UpstreamSyncUseCase(db, plex_manager)
                     preview_response = upstream_sync.get_sync_preview(selected_collages)
 
                     if not preview_response.success:
-                        flash(f'Error getting sync preview: {preview_response.error_message}', 'error')
-                        return render_template('collages_upstream_sync.html', collages=db.get_all_collage_collections())
+                        flash(f'Error getting sync preview: {preview_response.error_message}',
+                              'error')
+                        return render_template('collages_upstream_sync.html',
+                                               collages=db.get_all_collage_collections())
 
                     # Convert response to template format
                     preview_data = []
@@ -216,7 +219,6 @@ def register_collages_routes(app, socketio, get_db):
 
                     # Start sync process in background
                     def process_upstream_sync():
-                        logger = logging.getLogger('red_plex')
                         thread_db = None
                         try:
                             thread_db = LocalDatabase()
@@ -251,7 +253,8 @@ def register_collages_routes(app, socketio, get_db):
                                     added = result.get('added', 0)
                                     rejected = result.get('rejected', 0)
                                     duplicated = result.get('duplicated', 0)
-                                    logger.info('Collage "%s": %d added, %d rejected, %d duplicated',
+                                    logger.info('Collage "%s": %d added, %d rejected, '
+                                                '%d duplicated',
                                               collage_name, added, rejected, duplicated)
                                 else:
                                     logger.error('Failed to sync collage "%s": %s',
@@ -259,7 +262,10 @@ def register_collages_routes(app, socketio, get_db):
 
                             with app.app_context():
                                 socketio.emit('status_update', {
-                                    'message': f'Upstream sync completed! {sync_response.synced_collages}/{sync_response.total_collages} collages synced successfully.',
+                                    'message': f'Upstream sync completed! '
+                                               f'{sync_response.synced_collages}'
+                                               f'/{sync_response.total_collages}'
+                                               f' collages synced successfully.',
                                     'finished': True
                                 })
 
@@ -276,8 +282,11 @@ def register_collages_routes(app, socketio, get_db):
 
                     socketio.start_background_task(target=process_upstream_sync)
                     flash('Upstream sync started! Check the status below.', 'info')
+                    db = LocalDatabase()
+                    all_collages = db.get_all_collage_collections()
+                    db.close()
                     return render_template('collages_upstream_sync.html',
-                                           collages=[],
+                                           collages=all_collages,
                                            processing=True)
 
             except Exception as e:

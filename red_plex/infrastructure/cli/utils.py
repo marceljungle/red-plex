@@ -81,81 +81,82 @@ def push_collections_to_upstream(local_database: LocalDatabase,
     """
     # Initialize upstream sync use case
     upstream_sync = UpstreamSyncUseCase(local_database, plex_manager)
-    
+
     # Get preview of what would be synced
     preview_response = upstream_sync.get_sync_preview(collage_list)
-    
+
     if not preview_response.success:
         logger.error('Failed to get sync preview: %s', preview_response.error_message)
         return False
-    
+
     if not preview_response.preview_data:
         logger.info('No collages need syncing - all are up to date')
         return True
-    
+
     # Show confirmation dialog for each collage
     selected_albums = {}
-    
+
     for collage_preview in preview_response.preview_data:
         click.echo(
             f'\nCollage "{collage_preview.collage_name}" ({collage_preview.external_id}) '
             f'will have {len(collage_preview.albums_to_add)} new items added:')
-        
+
         # Show albums with numbers
         for i, album in enumerate(collage_preview.albums_to_add, 1):
             click.echo(f'  {i}. {album.display_name}')
-        
+
         # Ask for album selection
         click.echo('\nSpecify which albums to add (e.g., "1,3,4" for albums 1, 3, and 4)')
         click.echo('Leave empty to add all albums, or "skip" to skip this collage:')
-        
+
         selection = click.prompt('Albums to add', type=str, default='', show_default=False)
         selection = selection.strip()
-        
+
         if selection.lower() == 'skip':
             click.echo('Skipping this collage.')
             continue
-        
+
         # Parse selection
-        selected_group_ids = [album.group_id for album in collage_preview.albums_to_add]  # Default to all
+        selected_group_ids = [album.group_id
+                              for album in collage_preview.albums_to_add]  # Default to all
         if selection:
             try:
                 # Parse comma-separated numbers
                 selected_indices = [int(x.strip()) - 1 for x in selection.split(',')
                                     if x.strip().isdigit()]
-                
+
                 # Validate indices
                 valid_indices = [i for i in selected_indices
                                  if 0 <= i < len(collage_preview.albums_to_add)]
-                
+
                 if not valid_indices:
                     click.echo('No valid album numbers specified. Adding all albums.')
                 else:
-                    selected_group_ids = [collage_preview.albums_to_add[i].group_id 
+                    selected_group_ids = [collage_preview.albums_to_add[i].group_id
                                           for i in valid_indices]
                     click.echo(f'Selected {len(selected_group_ids)} album(s) to add.')
-                    
+
             except ValueError:
                 click.echo('Invalid selection format. Adding all albums.')
-        
+
         selected_albums[collage_preview.collage_id] = selected_group_ids
-    
+
     if not selected_albums:
         logger.info('No albums selected for sync')
         return True
-    
+
     # Filter collages to only sync those with selected albums
     collages_to_sync = [c for c in collage_list if c.id in selected_albums]
-    
+
     # Perform the sync
     sync_response = upstream_sync.sync_collections_upstream(collages_to_sync, selected_albums)
-    
+
     # Log results
     logger.info('Upstream sync completed: %d/%d collections synced successfully',
                 sync_response.synced_collages, sync_response.total_collages)
-    
+
     if sync_response.errors:
         for error in sync_response.errors:
             logger.error(error)
-    
+
     return sync_response.success

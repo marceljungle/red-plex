@@ -87,10 +87,10 @@ def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
 
         if push:
             # Push mode: sync local collections to upstream
-            click.echo("Pushing local collection updates to upstream collages...")
+            logger.info("Pushing local collection updates to upstream collages...")
             if collage_ids:
-                click.echo(f"Processing specific collages: "
-                           f"{', '.join(c.name for c in target_collages)}")
+                logger.info("Processing specific collages: %s",
+                            ', '.join(c.name for c in target_collages))
             success = push_collections_to_upstream(
                 local_database=local_database,
                 collage_list=target_collages,
