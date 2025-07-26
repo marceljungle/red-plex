@@ -312,6 +312,9 @@ class GazelleAPI:
 
     def get_user_collages(self, user_id: str) -> Optional[List[Collection]]:
         """Retrieves collages created by the specified user."""
+        if self.site.lower() != 'red':
+            logger.warning('get_user_collages is only supported for RED.')
+            return None
         params = {'userid': str(user_id)}
         try:
             response = self.get_call('collages', params)
