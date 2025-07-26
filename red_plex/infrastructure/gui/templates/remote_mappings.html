@@ -82,18 +82,18 @@
                     <tbody>
                         {% for mapping in recent_mappings %}
                         <tr>
-                            <td><code>{{ mapping[0] }}</code></td>
+                            <td><code>{{ mapping.rating_key }}</code></td>
                             <td>
-                                <span class="badge bg-primary">{{ mapping[1] }}</span>
+                                <span class="badge bg-primary">{{ mapping.group_id }}</span>
                             </td>
                             <td>
-                                <span class="badge bg-{{ 'danger' if mapping[2] == 'red' else 'warning' }}">
-                                    {{ mapping[2]|upper }}
+                                <span class="badge bg-{{ 'danger' if mapping.site == 'red' else 'warning' }}">
+                                    {{ mapping.site|upper }}
                                 </span>
                             </td>
                             <td>
-                                {% if mapping[3] %}
-                                    {% for tag in mapping[3].split(', ') %}
+                                {% if mapping.tags %}
+                                    {% for tag in mapping.tags.split(', ') %}
                                         <span class="badge bg-secondary me-1">{{ tag }}</span>
                                     {% endfor %}
                                 {% else %}

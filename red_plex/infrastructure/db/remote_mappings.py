@@ -118,20 +118,40 @@ class RemoteMappingDatabaseManager:
     def get_recent_remote_mappings(self, limit: int = 20):
         """
         Get recent remote mappings for display.
-        Returns a list of tuples (rating_key, group_id, site, tags).
+        Returns a list of dictionaries with album information.
         """
         cur = self.conn.cursor()
         cur.execute("""
             SELECT stm.rating_key, stm.group_id, stm.site, 
-                   GROUP_CONCAT(st.tag_name, ', ') as tags
+                   a.name as album_name,
+                   GROUP_CONCAT(DISTINCT ar.artist_name) as artists,
+                   GROUP_CONCAT(DISTINCT st.tag_name) as tags
             FROM rating_key_group_id_mappings stm
+            LEFT JOIN albums a ON stm.rating_key = a.album_id
+            LEFT JOIN album_artists aa ON a.album_id = aa.album_id
+            LEFT JOIN artists ar ON aa.artist_id = ar.artist_id
             LEFT JOIN mapping_tags mt ON stm.id = mt.mapping_id
             LEFT JOIN site_tags st ON mt.tag_id = st.id
             GROUP BY stm.id
             ORDER BY stm.id DESC
             LIMIT ?
         """, (limit,))
-        return cur.fetchall()
+
+        results = []
+        for row in cur.fetchall():
+            # Handle the comma separation manually since SQLite GROUP_CONCAT uses comma by default
+            artists = row[4].replace(',', ', ') if row[4] else 'Unknown Artist'
+            tags = row[5].replace(',', ', ') if row[5] else ''
+
+            results.append({
+                'rating_key': row[0],
+                'group_id': row[1],
+                'site': row[2],
+                'album_name': row[3] or 'Unknown Album',
+                'artists': artists,
+                'tags': tags
+            })
+        return results
 
     def get_group_ids_by_rating_keys(self, rating_keys: List[str], site: str) -> List[str]:
         """
