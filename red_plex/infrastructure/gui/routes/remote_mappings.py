@@ -1,4 +1,4 @@
-"""Site tags route handlers."""
+"""Remote mappings route handlers."""
 import logging
 
 from flask import render_template, request, flash
@@ -10,15 +10,15 @@ from red_plex.use_case.site_tags.site_tags_use_case import SiteTagsUseCase
 
 
 # pylint: disable=W0718,R0915
-def register_site_tags_routes(app, socketio, get_db):
-    """Register site tags-related routes."""
+def register_remote_mappings_routes(app, socketio, get_db):
+    """Register remote mappings-related routes."""
 
-    @app.route('/site-tags')
-    def site_tags():
-        """View site tags mappings."""
+    @app.route('/remote-mappings')
+    def remote_mappings():
+        """View remote mappings."""
         try:
             db = get_db()
-            # Get basic stats about site tag mappings
+            # Get basic stats about remote mappings
             mapped_albums, total_tags, total_mappings = db.get_site_tags_stats()
             stats = {
                 'mapped_albums': mapped_albums,
@@ -29,18 +29,18 @@ def register_site_tags_routes(app, socketio, get_db):
             # Get recent mappings for display
             recent_mappings = db.get_recent_site_tag_mappings(limit=20)
 
-            return render_template('site_tags.html',
+            return render_template('remote_mappings.html',
                                    stats=stats,
                                    recent_mappings=recent_mappings)
         except Exception as e:
-            flash(f'Error loading site tags: {str(e)}', 'error')
-            return render_template('site_tags.html',
+            flash(f'Error loading remote mappings: {str(e)}', 'error')
+            return render_template('remote_mappings.html',
                                    stats={'mapped_albums': 0, 'total_tags': 0, 'total_mappings': 0},
                                    recent_mappings=[])
 
-    @app.route('/site-tags/scan', methods=['GET', 'POST'])
-    def site_tags_scan():
-        """Scan albums for site tag mappings."""
+    @app.route('/remote-mappings/scan', methods=['GET', 'POST'])
+    def remote_mappings_scan():
+        """Scan albums for remote mappings."""
         if request.method == 'POST':
             try:
                 site = request.form.get('site')
@@ -48,7 +48,7 @@ def register_site_tags_routes(app, socketio, get_db):
 
                 if not site:
                     flash('Please select a site.', 'error')
-                    return render_template('site_tags_scan.html')
+                    return render_template('remote_mappings_scan.html')
 
                 # Start processing in background
                 def process_scan():
@@ -59,7 +59,7 @@ def register_site_tags_routes(app, socketio, get_db):
 
                         with app.app_context():
                             socketio.emit('status_update',
-                                          {'message': 'Starting site tags scan process...'})
+                                          {'message': 'Starting remote mappings scan process...'})
 
                         logger.info("Connecting to Plex server...")
                         plex_manager = PlexManager(db=thread_db)
@@ -85,12 +85,12 @@ def register_site_tags_routes(app, socketio, get_db):
 
                         with app.app_context():
                             socketio.emit('status_update', {
-                                'message': 'Site tags scan completed successfully!',
+                                'message': 'Remote mappings scan completed successfully!',
                                 'finished': True
                             })
 
                     except Exception as e:
-                        logger.critical('An unhandled error occurred during site tags scan: %s',
+                        logger.critical('An unhandled error occurred during remote mappings scan: %s',
                                         e,
                                         exc_info=True)
                         with app.app_context():
@@ -104,18 +104,18 @@ def register_site_tags_routes(app, socketio, get_db):
 
                 socketio.start_background_task(target=process_scan)
 
-                flash('Site tags scan started! Check the status below.', 'info')
-                return render_template('site_tags_scan.html',
+                flash('Remote mappings scan started! Check the status below.', 'info')
+                return render_template('remote_mappings_scan.html',
                                        processing=True)
 
             except Exception as e:
-                flash(f'Error starting site tags scan: {str(e)}', 'error')
+                flash(f'Error starting remote mappings scan: {str(e)}', 'error')
 
-        return render_template('site_tags_scan.html')
+        return render_template('remote_mappings_scan.html')
 
-    @app.route('/site-tags/convert', methods=['GET', 'POST'])
-    def site_tags_convert():
-        """Convert site tags to Plex collections."""
+    @app.route('/remote-mappings/convert', methods=['GET', 'POST'])
+    def remote_mappings_convert():
+        """Convert tags to Plex collections using remote mappings."""
         if request.method == 'POST':
             try:
                 tags = request.form.get('tags', '').strip()
@@ -123,11 +123,11 @@ def register_site_tags_routes(app, socketio, get_db):
 
                 if not tags:
                     flash('Please provide tags.', 'error')
-                    return render_template('site_tags_convert.html')
+                    return render_template('remote_mappings_convert.html')
 
                 if not collection_name:
                     flash('Please provide a collection name.', 'error')
-                    return render_template('site_tags_convert.html')
+                    return render_template('remote_mappings_convert.html')
 
                 # Parse tags
                 tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
@@ -142,7 +142,7 @@ def register_site_tags_routes(app, socketio, get_db):
                         with app.app_context():
                             socketio.emit('status_update',
                                           {'message':
-                                               'Starting site tags to collection conversion...'})
+                                               'Starting tags to collection conversion...'})
 
                         logger.info("Connecting to Plex server...")
                         plex_manager = PlexManager(db=thread_db)
@@ -187,10 +187,10 @@ def register_site_tags_routes(app, socketio, get_db):
                 socketio.start_background_task(target=process_convert)
 
                 flash('Collection creation started! Check the status below.', 'info')
-                return render_template('site_tags_convert.html',
+                return render_template('remote_mappings_convert.html',
                                        processing=True)
 
             except Exception as e:
                 flash(f'Error starting collection creation: {str(e)}', 'error')
 
-        return render_template('site_tags_convert.html')
+        return render_template('remote_mappings_convert.html')

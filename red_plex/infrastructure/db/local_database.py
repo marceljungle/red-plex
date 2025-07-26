@@ -6,7 +6,7 @@ from red_plex.domain.models import Album, Collection
 from red_plex.infrastructure.db.albums import AlbumDatabaseManager
 from red_plex.infrastructure.db.base import BaseDatabaseManager
 from red_plex.infrastructure.db.collection import CollectionDatabaseManager
-from red_plex.infrastructure.db.site_tags import SiteTagDatabaseManager
+from red_plex.infrastructure.db.remote_mappings import RemoteMappingDatabaseManager
 
 
 # pylint: disable=R0904
@@ -26,7 +26,7 @@ class LocalDatabase(BaseDatabaseManager):
         # Initialize specialized managers
         self._album_manager = AlbumDatabaseManager(self.conn)
         self._collection_manager = CollectionDatabaseManager(self.conn)
-        self._site_tag_manager = SiteTagDatabaseManager(self.conn)
+        self._remote_mapping_manager = RemoteMappingDatabaseManager(self.conn)
 
     # --------------------------------------------------------------------------
     #                               ALBUMS
@@ -111,30 +111,30 @@ class LocalDatabase(BaseDatabaseManager):
                                 site: str,
                                 tags: List[str]) -> None:
         """Insert or update a site tag mapping with its associated tags."""
-        return self._site_tag_manager.insert_rating_key_group_id_mapping(
+        return self._remote_mapping_manager.insert_rating_key_group_id_mapping(
             rating_key,
             group_id, site, tags)
 
     def get_rating_keys_by_tags(self, tags: List[str]) -> List[str]:
         """Get rating keys that have mappings containing all specified tags."""
-        return self._site_tag_manager.get_rating_keys_by_tags(tags)
+        return self._remote_mapping_manager.get_rating_keys_by_tags(tags)
 
     def get_group_ids_by_rating_keys(self, rating_keys: List[str], site: str) -> List[str]:
         """Get group IDs for given rating keys from a specific site."""
-        return self._site_tag_manager.get_group_ids_by_rating_keys(rating_keys, site)
+        return self._remote_mapping_manager.get_group_ids_by_rating_keys(rating_keys, site)
 
     def get_unscanned_albums(self) -> List[str]:
         """Get rating keys from albums table that are not present in mappings."""
-        return self._site_tag_manager.get_unscanned_albums()
+        return self._remote_mapping_manager.get_unscanned_albums()
 
     def get_site_tags_stats(self):
         """Get statistics about site tag mappings."""
-        return self._site_tag_manager.get_site_tags_stats()
+        return self._remote_mapping_manager.get_remote_mappings_stats()
 
     def get_recent_site_tag_mappings(self, limit: int = 20):
         """Get recent site tag mappings for display."""
-        return self._site_tag_manager.get_recent_site_tag_mappings(limit)
+        return self._remote_mapping_manager.get_recent_remote_mappings(limit)
 
     def reset_tag_mappings(self):
         """Reset site tag mappings."""
-        return self._site_tag_manager.reset_tag_mappings()
+        return self._remote_mapping_manager.reset_remote_mappings()

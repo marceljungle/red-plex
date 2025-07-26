@@ -31,15 +31,15 @@ def register_database_routes(app, socketio, get_db):
                     stats['collages'] = len(db.get_all_collage_collections())
                     stats['bookmarks'] = len(db.get_all_bookmark_collections())
 
-                    # Get site tags stats
+                    # Get remote mappings stats
                     cur = db.conn.cursor()
                     cur.execute("SELECT COUNT(*) FROM rating_key_group_id_mappings")
-                    stats['site_tags'] = cur.fetchone()[0]
+                    stats['remote_mappings'] = cur.fetchone()[0]
                 except Exception as e:
                     logger.warning('Error getting database stats: %s', e)
-                    stats = {'albums': 0, 'collages': 0, 'bookmarks': 0, 'site_tags': 0}
+                    stats = {'albums': 0, 'collages': 0, 'bookmarks': 0, 'remote_mappings': 0}
             else:
-                stats = {'albums': 0, 'collages': 0, 'bookmarks': 0, 'site_tags': 0}
+                stats = {'albums': 0, 'collages': 0, 'bookmarks': 0, 'remote_mappings': 0}
 
             return render_template('database.html',
                                    db_path=db_path,
@@ -53,7 +53,7 @@ def register_database_routes(app, socketio, get_db):
                                    stats={'albums': 0,
                                           'collages': 0,
                                           'bookmarks': 0,
-                                          'site_tags': 0})
+                                          'remote_mappings': 0})
 
     @app.route('/database/albums/update', methods=['POST'])
     def database_albums_update():
@@ -152,9 +152,9 @@ def register_database_routes(app, socketio, get_db):
             elif table == 'bookmarks':
                 db.reset_bookmark_collections()
                 flash('Bookmarks table reset successfully!', 'success')
-            elif table == 'site-tags':
+            elif table == 'remote-mappings':
                 db.reset_tag_mappings()
-                flash('Site tags mappings reset successfully!', 'success')
+                flash('Remote mappings reset successfully!', 'success')
             else:
                 flash(f'Unknown table: {table}', 'error')
         except Exception as e:

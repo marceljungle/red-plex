@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Convert Tags to Collection - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-collection text-success"></i> Convert Tags to Collection</h1>
+        <a href="{{ url_for('remote_mappings') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Remote Mappings
+        </a>
+    </div>
+
+    {% if not processing %}
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Collection Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">Tags</label>
+                            <input type="text" name="tags" id="tags" class="form-control" required 
+                                   placeholder="electronic, ambient, downtempo">
+                            <div class="form-text">Enter comma-separated list of tags to filter by</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="collection_name" class="form-label">Collection Name</label>
+                            <input type="text" name="collection_name" id="collection_name" class="form-control" required 
+                                   placeholder="My Electronic Collection">
+                            <div class="form-text">Name for the Plex collection to create/update</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-collection"></i> Create Collection
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Collection Creation</h5>
+                </div>
+                <div class="card-body">
+                    <p>This process will:</p>
+                    <ol>
+                        <li>Find albums that match <strong>all</strong> specified tags</li>
+                        <li>Create or update a Plex collection with these albums</li>
+                        <li>Show the number of albums added to the collection</li>
+                    </ol>
+                    <div class="alert alert-info" role="alert">
+                        <small><strong>Requirements:</strong> You must have remote mappings for your albums. Use the scan feature first if you haven't already.</small>
+                    </div>
+                    
+                    <h6>Tag Examples:</h6>
+                    <ul class="small">
+                        <li><code>electronic, ambient</code> - Electronic and ambient albums</li>
+                        <li><code>jazz, vocal</code> - Jazz albums with vocals</li>
+                        <li><code>classical, orchestral</code> - Classical orchestral music</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    
+    socket.on('status_update', function(data) {
+        // Global log monitor will handle status updates
+    });
+</script>
+{% endblock %}

@@ -120,9 +120,9 @@
                href="{{ url_for('bookmarks') }}">
                 <i class="bi bi-bookmark"></i> Bookmarks
             </a>
-            <a class="nav-link {% if request.endpoint in ['site_tags', 'site_tags_scan', 'site_tags_convert'] %}active{% endif %}" 
-               href="{{ url_for('site_tags') }}">
-                <i class="bi bi-tags"></i> Site Tags
+            <a class="nav-link {% if request.endpoint in ['remote_mappings', 'remote_mappings_scan', 'remote_mappings_convert'] %}active{% endif %}" 
+               href="{{ url_for('remote_mappings') }}">
+                <i class="bi bi-arrow-left-right"></i> Remote Mappings
             </a>
             <a class="nav-link {% if request.endpoint == 'database' %}active{% endif %}" 
                href="{{ url_for('database') }}">

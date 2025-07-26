@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Remote Mappings - red-plex{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-arrow-left-right text-primary"></i> Remote Mappings</h1>
+        <div>
+            <a href="{{ url_for('remote_mappings_scan') }}" class="btn btn-primary">
+                <i class="bi bi-search"></i> Scan Albums
+            </a>
+            <a href="{{ url_for('remote_mappings_convert') }}" class="btn btn-success">
+                <i class="bi bi-collection"></i> Create Collection
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Mapped Albums</h6>
+                            <h2 class="mb-0">{{ stats.mapped_albums }}</h2>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-music-note-list fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Total Tags</h6>
+                            <h2 class="mb-0">{{ stats.total_tags }}</h2>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-tags fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Total Mappings</h6>
+                            <h2 class="mb-0">{{ stats.total_mappings }}</h2>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-link-45deg fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Mappings -->
+    {% if recent_mappings %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Mappings</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Rating Key</th>
+                            <th>Group ID</th>
+                            <th>Site</th>
+                            <th>Tags</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mapping in recent_mappings %}
+                        <tr>
+                            <td><code>{{ mapping[0] }}</code></td>
+                            <td>
+                                <span class="badge bg-primary">{{ mapping[1] }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'danger' if mapping[2] == 'red' else 'warning' }}">
+                                    {{ mapping[2]|upper }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if mapping[3] %}
+                                    {% for tag in mapping[3].split(', ') %}
+                                        <span class="badge bg-secondary me-1">{{ tag }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">No tags</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle"></i>
+        No remote mappings found. Use the <strong>Scan Albums</strong> button above to create mappings by scanning your Plex albums against RED/OPS sites.
+    </div>
+    {% endif %}
+
+    <!-- Info Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-question-circle"></i> About Remote Mappings</h5>
+                </div>
+                <div class="card-body">
+                    <p>Remote mappings connect your local Plex albums to torrent groups on RED/OPS sites. This enables:</p>
+                    <ul>
+                        <li><strong>Collection Creation:</strong> Build Plex collections based on site tags</li>
+                        <li><strong>Upstream Sync:</strong> Push your collections back to site collages</li>
+                        <li><strong>Tag-based Organization:</strong> Use site metadata to organize your library</li>
+                    </ul>
+                    <p class="mb-0">
+                        <strong>Getting Started:</strong> Click "Scan Albums" to begin mapping your Plex library to site content.
+                        This process searches for your albums on the selected site and creates the necessary mappings.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

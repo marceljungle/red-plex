@@ -10,7 +10,7 @@ from red_plex.infrastructure.gui.routes.bookmarks import register_bookmarks_rout
 from red_plex.infrastructure.gui.routes.collages import register_collages_routes
 from red_plex.infrastructure.gui.routes.config import register_config_routes
 from red_plex.infrastructure.gui.routes.database import register_database_routes
-from red_plex.infrastructure.gui.routes.site_tags import register_site_tags_routes
+from red_plex.infrastructure.gui.routes.remote_mappings import register_remote_mappings_routes
 from red_plex.infrastructure.logger.logger import configure_logger
 
 
@@ -80,7 +80,7 @@ def create_app():
     register_config_routes(app)
     register_collages_routes(app, socketio, get_db)
     register_bookmarks_routes(app, socketio, get_db)
-    register_site_tags_routes(app, socketio, get_db)
+    register_remote_mappings_routes(app, socketio, get_db)
     register_database_routes(app, socketio, get_db)
 
     @socketio.on('connect')
