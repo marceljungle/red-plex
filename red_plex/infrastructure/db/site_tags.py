@@ -11,14 +11,15 @@ class SiteTagDatabaseManager:
     def __init__(self, conn):
         self.conn = conn
 
-    def insert_site_tag_mapping(self, rating_key: str,
-                                group_id: int,
-                                site: str,
-                                tags: List[str]) -> None:
+    def insert_rating_key_group_id_mapping(self, rating_key: str,
+                                           group_id: int,
+                                           site: str,
+                                           tags: List[str]) -> None:
         """
-        Insert or update a site tag mapping with its associated tags.
+        Insert or update mapping with its associated tags.
         """
-        logger.debug("Inserting site tag mapping: rating_key=%s, group_id=%s, site=%s",
+        logger.debug("Inserting rating key -> group id mapping: "
+                     "rating_key=%s, group_id=%s, site=%s",
                      rating_key, group_id, site)
 
         with self.conn:

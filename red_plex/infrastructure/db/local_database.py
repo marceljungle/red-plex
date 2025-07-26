@@ -111,7 +111,9 @@ class LocalDatabase(BaseDatabaseManager):
                                 site: str,
                                 tags: List[str]) -> None:
         """Insert or update a site tag mapping with its associated tags."""
-        return self._site_tag_manager.insert_site_tag_mapping(rating_key, group_id, site, tags)
+        return self._site_tag_manager.insert_rating_key_group_id_mapping(
+            rating_key,
+            group_id, site, tags)
 
     def get_rating_keys_by_tags(self, tags: List[str]) -> List[str]:
         """Get rating keys that have mappings containing all specified tags."""
