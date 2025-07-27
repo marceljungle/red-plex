@@ -1,6 +1,6 @@
 """Collection database operations for collage and bookmark collections."""
 
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from red_plex.domain.models import Collection, TorrentGroup
 from red_plex.infrastructure.logger.logger import logger
@@ -33,12 +33,86 @@ class CollectionDatabaseManager:
         )
         # Insert new group_ids
         if coll.torrent_groups:
-            for tg in coll.torrent_groups:
-                self.conn.execute(
-                    "INSERT INTO collection_torrent_groups(rating_key, group_id) VALUES(?, ?)",
-                    (coll.id, tg.id)
-                )
+            group_data = [(coll.id, tg.id) for tg in coll.torrent_groups]
+            self.conn.executemany(
+                "INSERT INTO collection_torrent_groups(rating_key, group_id) VALUES(?, ?)",
+                group_data
+            )
         self.conn.commit()
+
+    def merge_torrent_groups_for_collage_collection(self, rating_key: str,
+                                                    new_group_ids: Set[int]) -> None:
+        """
+        Merges a new set of torrent group IDs with the existing ones for a collage collection.
+
+        This method fetches the current torrent groups for a given collection,
+        merges them with the new set of group IDs provided, and updates the
+        database with the combined list, ensuring no duplicates.
+
+        Args:
+            rating_key: The ID of the collage collection to update.
+            new_group_ids: A set of new torrent group IDs to merge.
+        """
+        logger.debug(
+            "Merging torrent groups for collage collection with rating_key %s",
+            rating_key
+        )
+
+        # First, ensure the collage collection exists.
+        cur = self.conn.cursor()
+        cur.execute(
+            "SELECT 1 FROM collage_collections WHERE rating_key = ?", (rating_key,)
+        )
+        if not cur.fetchone():
+            logger.warning(
+                "Attempted to merge torrent groups for a non-existent collage collection: %s",
+                rating_key
+            )
+            return
+
+        # Get existing group IDs and form a merged set to handle duplicates.
+        existing_group_ids = set(self._get_torrent_group_ids_for(rating_key))
+        merged_group_ids = existing_group_ids.union(new_group_ids)
+
+        # If there's no change, we can skip the database write.
+        if merged_group_ids == existing_group_ids:
+            logger.debug(
+                "No new torrent groups to add for rating_key %s. Skipping update.",
+                rating_key
+            )
+            return
+
+        # Use a transaction to perform the delete and bulk insert atomically.
+        try:
+            # Remove all old group_ids for the rating_key
+            self.conn.execute(
+                "DELETE FROM collection_torrent_groups WHERE rating_key = ?",
+                (rating_key,)
+            )
+
+            # Insert the new merged set of group_ids
+            if merged_group_ids:
+                data_to_insert = [(rating_key, group_id) for group_id in merged_group_ids]
+                self.conn.executemany(
+                    "INSERT INTO collection_torrent_groups(rating_key, group_id) VALUES(?, ?)",
+                    data_to_insert
+                )
+
+            self.conn.commit()
+            logger.debug(
+                "Successfully merged and updated torrent groups for rating_key %s. "
+                "Total groups: %d",
+                rating_key,
+                len(merged_group_ids)
+            )
+        except self.conn.Error as e:
+            self.conn.rollback()
+            logger.error(
+                "Database error while merging torrent groups for rating_key %s: %s",
+                rating_key,
+                e
+            )
+            raise e
 
     def get_collage_collection(self, rating_key: str) -> Optional[Collection]:
         """
@@ -140,11 +214,11 @@ class CollectionDatabaseManager:
         )
         # Insert new group_ids
         if coll.torrent_groups:
-            for tg in coll.torrent_groups:
-                self.conn.execute(
-                    "INSERT INTO collection_torrent_groups(rating_key, group_id) VALUES(?, ?)",
-                    (coll.id, tg.id)
-                )
+            group_data = [(coll.id, tg.id) for tg in coll.torrent_groups]
+            self.conn.executemany(
+                "INSERT INTO collection_torrent_groups(rating_key, group_id) VALUES(?, ?)",
+                group_data
+            )
         self.conn.commit()
 
     def get_bookmark_collection(self, rating_key: str) -> Optional[Collection]:

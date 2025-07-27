@@ -1,6 +1,6 @@
 """Defines the LocalDatabase class for managing a SQLite database."""
 
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from red_plex.domain.models import Album, Collection
 from red_plex.infrastructure.db.albums import AlbumDatabaseManager
@@ -63,6 +63,16 @@ class LocalDatabase(BaseDatabaseManager):
     def insert_or_update_collage_collection(self, coll: Collection) -> None:
         """Insert or update a collage-based collection, along with its torrent groups."""
         return self._collection_manager.insert_or_update_collage_collection(coll)
+
+    def merge_torrent_groups_for_collage_collection(self, rating_key: str,
+                                                    new_group_ids: Set[int]) -> None:
+        """
+        Merges a new set of torrent group IDs with existing ones for a collage collection.
+        """
+        return self._collection_manager.merge_torrent_groups_for_collage_collection(
+            rating_key,
+            new_group_ids
+        )
 
     def get_collage_collection(self, rating_key: str) -> Optional[Collection]:
         """Retrieve a single collage-based collection by rating_key."""

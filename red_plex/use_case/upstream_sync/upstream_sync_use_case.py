@@ -158,6 +158,11 @@ class UpstreamSyncUseCase:
             add_result = gazelle_api.add_to_collage(collage.external_id, group_ids_to_sync)
 
             if add_result and add_result.get('status') == 'success':
+                # Update the local collection database table with new group IDs
+                self.db.merge_torrent_groups_for_collage_collection(
+                    collage.id,
+                    set(int(x) for x in group_ids_to_sync))
+
                 response_data = add_result.get('response', {})
                 added_count = len(response_data.get('groupsadded', []))
                 rejected_count = len(response_data.get('groupsrejected', []))

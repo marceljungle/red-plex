@@ -97,20 +97,20 @@ def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
                 plex_manager=plex_manager
             )
             if success:
-                click.echo("All collections successfully synced to upstream.")
+                logger.info("All collections successfully synced to upstream.")
             else:
-                click.echo("Some collections failed to sync. Check logs for details.")
+                logger.info("Some collections failed to sync. Check logs for details.")
+        else:
+            if collage_ids:
+                click.echo(f"Updating specific collages: "
+                           f"{', '.join(c.name for c in target_collages)}")
+            update_collections_from_collages(
+                local_database=local_database,
+                collage_list=target_collages,
+                plex_manager=plex_manager,
+                fetch_bookmarks=False,
+                fetch_mode=fetch_mode)
 
-        # Always update local collections
-        if collage_ids:
-            click.echo(f"Updating specific collages: "
-                       f"{', '.join(c.name for c in target_collages)}")
-        update_collections_from_collages(
-            local_database=local_database,
-            collage_list=target_collages,
-            plex_manager=plex_manager,
-            fetch_bookmarks=False,
-            fetch_mode=fetch_mode)
     except Exception as exc:  # pylint: disable=W0718
         logger.exception('Failed to update stored collections: %s', exc)
         click.echo(f"An error occurred while updating stored collections: {exc}")
