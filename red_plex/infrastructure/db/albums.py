@@ -38,25 +38,31 @@ class AlbumDatabaseManager:
 
             # 3. Insert artists and their new associations
             if album.artists:
-                # Insert artists if they don't exist (IGNORE on conflict)
-                self.conn.executemany(
-                    "INSERT OR IGNORE INTO artists(artist_name) VALUES (?)",
-                    [(artist,) for artist in album.artists]
-                )
+                # Filter out None and empty artist names
+                valid_artists = [artist
+                                 for artist in album.artists
+                                 if artist is not None and artist.strip()]
 
-                # Get artist IDs
-                cur = self.conn.cursor()
-                artist_ids = dict(cur.execute(
-                    f"SELECT artist_name, artist_id FROM artists WHERE artist_name IN "
-                    f"({','.join('?' * len(album.artists))})",
-                    album.artists
-                ))
+                if valid_artists:
+                    # Insert artists if they don't exist (IGNORE on conflict)
+                    self.conn.executemany(
+                        "INSERT OR IGNORE INTO artists(artist_name) VALUES (?)",
+                        [(artist,) for artist in valid_artists]
+                    )
 
-                # Insert into linking table
-                self.conn.executemany(
-                    "INSERT INTO album_artists(album_id, artist_id) VALUES (?, ?)",
-                    [(album.id, artist_ids[name]) for name in album.artists]
-                )
+                    # Get artist IDs
+                    cur = self.conn.cursor()
+                    artist_ids = dict(cur.execute(
+                        f"SELECT artist_name, artist_id FROM artists WHERE artist_name IN "
+                        f"({','.join('?' * len(valid_artists))})",
+                        valid_artists
+                    ))
+
+                    # Insert into linking table
+                    self.conn.executemany(
+                        "INSERT INTO album_artists(album_id, artist_id) VALUES (?, ?)",
+                        [(album.id, artist_ids[name]) for name in valid_artists]
+                    )
 
     def insert_albums_bulk(self, albums: List[Album]) -> None:
         """
@@ -77,8 +83,13 @@ class AlbumDatabaseManager:
                 album.added_at.isoformat() if album.added_at else None
             ))
             if album.artists:
-                all_artists.update(album.artists)
-                album_id_to_artists[album.id] = album.artists
+                # Filter out None and empty artist names
+                valid_artists = [artist
+                                 for artist in album.artists
+                                 if artist is not None and artist.strip()]
+                if valid_artists:
+                    all_artists.update(valid_artists)
+                    album_id_to_artists[album.id] = valid_artists
 
         with self.conn:
             # 1. Insert/update all albums
@@ -114,7 +125,8 @@ class AlbumDatabaseManager:
                 album_artist_links = []
                 for album_id, artist_names in album_id_to_artists.items():
                     for name in artist_names:
-                        album_artist_links.append((album_id, artist_name_to_id[name]))
+                        if name in artist_name_to_id:
+                            album_artist_links.append((album_id, artist_name_to_id[name]))
 
                 self.conn.executemany(
                     "INSERT INTO album_artists(album_id, artist_id) VALUES (?, ?)",

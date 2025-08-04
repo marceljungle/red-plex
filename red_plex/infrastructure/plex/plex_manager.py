@@ -2,6 +2,7 @@
 
 import os
 import re
+import time
 from datetime import datetime, timezone
 from typing import List
 from typing import Optional
@@ -10,8 +11,11 @@ import click
 from plexapi.audio import Album as PlexAlbum
 from plexapi.base import MediaContainer
 from plexapi.collection import Collection as PlexCollection
+from plexapi.exceptions import PlexApiException
 from plexapi.library import MusicSection
 from plexapi.server import PlexServer
+from requests.exceptions import (ConnectionError as RequestsConnectionError,
+                                 Timeout, RequestException)
 
 from red_plex.domain.models import Collection, Album
 from red_plex.infrastructure.config.config import load_config
@@ -19,6 +23,7 @@ from red_plex.infrastructure.constants.constants import ALBUM_TAGS
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.mapper.plex_mapper import PlexMapper
+
 
 # pylint: disable=W0718
 class PlexManager:
@@ -31,7 +36,8 @@ class PlexManager:
         self.url = config_data.plex_url
         self.token = config_data.plex_token
         self.section_name = config_data.section_name
-        self.plex = PlexServer(self.url, self.token, timeout=1200)
+        # Increase timeout to 30 minutes for large operations
+        self.plex = PlexServer(self.url, self.token, timeout=1800)
 
         self.library_section: MusicSection
         self.library_section = self.plex.library.section(self.section_name)
@@ -39,6 +45,44 @@ class PlexManager:
         # Initialize the album db
         self.local_database = db
         self.album_data = self.local_database.get_all_albums()
+
+    def _retry_with_backoff(self, func, max_retries=3, base_delay=1):
+        """Retry a function with exponential backoff."""
+        for attempt in range(max_retries):
+            try:
+                return func()
+            except (RequestsConnectionError, Timeout, RequestException, PlexApiException) as e:
+                if attempt == max_retries - 1:
+                    raise e
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Attempt %d failed: %s. Retrying in %d seconds...",
+                               attempt + 1, e, delay)
+                time.sleep(delay)
+        return None  # Add explicit return for consistency
+
+    def _get_album_path_safely(self, album: PlexAlbum) -> Optional[str]:
+        """Safely get album path with retry logic."""
+
+        def _get_tracks():
+            return album.tracks()
+
+        try:
+            tracks = self._retry_with_backoff(_get_tracks)
+            if tracks and tracks[0].media and tracks[0].media[0].parts:
+                media_path = tracks[0].media[0].parts[0].file
+                return os.path.dirname(media_path)
+        except Exception as e:
+            logger.warning("Failed to get path for album %s (ID: %s): %s",
+                           album.title, album.ratingKey, e)
+
+        # Fallback: try to construct path from album metadata if available
+        try:
+            if hasattr(album, 'locations') and album.locations:
+                return album.locations[0]
+        except Exception:
+            pass
+
+        return None
 
     def populate_album_table(self):
         """Fetches new albums from Plex and updates the db."""
@@ -65,24 +109,54 @@ class PlexManager:
 
     def get_albums_given_filter(self, plex_filter: dict) -> List[Album]:
         """Returns a list of albums that match the specified filter."""
-        albums: List[PlexAlbum]
+
+        def _search_albums():
+            return self.library_section.searchAlbums(filters=plex_filter)
+
         try:
-            albums = self.library_section.searchAlbums(filters=plex_filter)
+            albums = self._retry_with_backoff(_search_albums)
         except Exception as e:
-            logger.warning('An error occurred while fetching albums given filter: %s', e)
+            logger.error('Failed to fetch albums after retries: %s', e)
             return []
-        domain_albums: List[Album]
-        domain_albums = []
-        for album in albums:
-            tracks = album.tracks()
-            if tracks:
-                media_path = tracks[0].media[0].parts[0].file
-                album_folder_path = os.path.dirname(media_path)
-                domain_albums.append(Album(id=album.ratingKey,
-                                           name=album.title,
-                                           artists=[album.parentTitle],
-                                           added_at=album.addedAt,
-                                           path=album_folder_path))
+
+        domain_albums: List[Album] = []
+        batch_size = 100  # Process albums in batches
+        total_albums = len(albums)
+
+        for i, album in enumerate(albums):
+            try:
+                # Log progress every 100 albums
+                if i % batch_size == 0:
+                    logger.info('Processing album %d/%d: %s', i + 1, total_albums, album.title)
+
+                album_path = self._get_album_path_safely(album)
+
+                # Create album even if path is None (we'll skip those with None paths later)
+                domain_album = Album(
+                    id=album.ratingKey,
+                    name=album.title,
+                    artists=[album.parentTitle] if album.parentTitle else [],
+                    added_at=album.addedAt,
+                    path=album_path
+                )
+
+                # Only add albums that have a valid path
+                if album_path:
+                    domain_albums.append(domain_album)
+                else:
+                    logger.warning("Skipping album '%s' - no valid path found", album.title)
+
+                # Small delay every 50 albums to be nice to the server
+                if i % 50 == 0 and i > 0:
+                    time.sleep(0.1)
+
+            except Exception as e:
+                logger.warning('Error processing album %s (ID: %s): %s',
+                               album.title, album.ratingKey, e)
+                continue
+
+        logger.info('Successfully processed %d out of %d albums',
+                    len(domain_albums), total_albums)
         return domain_albums
 
     def get_album_by_rating_key(self, rating_key: int) -> Optional[Album]:
@@ -303,6 +377,19 @@ class PlexManager:
             )
         logger.info('No existing collection found with name "%s" in Plex.', name)
         return None
+
+    def get_collection_by_rating_key(self, rating_key: str) -> Optional[PlexCollection]:
+        """Finds a Plex collection by rating key."""
+        try:
+            collection = self.library_section.fetchItem(int(rating_key))
+            if collection and hasattr(collection, 'TYPE') and collection.TYPE == 'collection':
+                return collection
+            logger.warning('Item with rating key "%s" is not a collection '
+                           'or does not exist.', rating_key)
+            return None
+        except Exception as e:
+            logger.error('Error fetching collection with rating key "%s": %s', rating_key, e)
+            return None
 
     def add_items_to_collection(self, collection: Collection, albums: List[Album]) -> None:
         """Adds albums to an existing collection."""

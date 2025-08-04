@@ -29,6 +29,7 @@
             margin-left: 250px;
             padding: 2rem;
             padding-top: 80px;
+            padding-bottom: 300px; /* Space for log monitor */
         }
         .nav-link.active {
             background-color: #dc3545;
@@ -52,6 +53,41 @@
         }
         .success-message {
             color: #198754;
+        }
+        .log-monitor {
+            position: fixed;
+            bottom: 0;
+            left: 250px;
+            right: 0;
+            background: white;
+            border-top: 2px solid #dee2e6;
+            z-index: 1040;
+            transition: transform 0.3s ease;
+        }
+        .log-monitor.collapsed {
+            transform: translateY(calc(100% - 40px));
+        }
+        .log-monitor-header {
+            background: #f8f9fa;
+            padding: 8px 15px;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .log-monitor-content {
+            height: 250px;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            background-color: #f5f5f5;
+        }
+        .log-monitor-toggle {
+            font-size: 1rem;
+            color: #6c757d;
         }
     </style>
 </head>
@@ -84,7 +120,11 @@
                href="{{ url_for('bookmarks') }}">
                 <i class="bi bi-bookmark"></i> Bookmarks
             </a>
-            <a class="nav-link {% if request.endpoint in ['site_tags', 'site_tags_scan', 'site_tags_convert'] %}active{% endif %}" 
+            <a class="nav-link {% if request.endpoint in ['remote_mappings', 'remote_mappings_scan'] %}active{% endif %}" 
+               href="{{ url_for('remote_mappings') }}">
+                <i class="bi bi-arrow-left-right"></i> Remote Mappings
+            </a>
+            <a class="nav-link {% if request.endpoint in ['site_tags', 'site_tags_convert'] %}active{% endif %}" 
                href="{{ url_for('site_tags') }}">
                 <i class="bi bi-tags"></i> Site Tags
             </a>
@@ -112,34 +152,152 @@
         {% block content %}{% endblock %}
     </div>
 
+    <!-- Global Log Monitor -->
+    <div class="log-monitor collapsed" id="logMonitor">
+        <div class="log-monitor-header" onclick="toggleLogMonitor()">
+            <span><i class="bi bi-terminal"></i> Application Logs</span>
+            <span class="log-monitor-toggle" id="logToggle">
+                <i class="bi bi-chevron-up"></i>
+            </span>
+        </div>
+        <div class="log-monitor-content" id="logContent">
+            <div class="status-message">
+                <i class="bi bi-info-circle"></i> Waiting for log messages...
+            </div>
+        </div>
+    </div>
+
    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
     <script>
+        // Initialize socket connection - specific pages will add their own listeners
         const socket = io();
 
-        socket.on('status_update', function(data) {
-            const statusOutput = document.getElementById('status-output');
+        socket.on('disconnect', function() {
+            console.log('Disconnected from red-plex server');
+        });
 
-            if (statusOutput) {
+        // Global log monitor functionality with persistent state
+        function toggleLogMonitor() {
+            const monitor = document.getElementById('logMonitor');
+            const toggle = document.getElementById('logToggle');
+            
+            if (monitor.classList.contains('collapsed')) {
+                monitor.classList.remove('collapsed');
+                toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                localStorage.setItem('logMonitorCollapsed', 'false');
+            } else {
+                monitor.classList.add('collapsed');
+                toggle.innerHTML = '<i class="bi bi-chevron-up"></i>';
+                localStorage.setItem('logMonitorCollapsed', 'true');
+            }
+        }
+
+        // Restore log monitor state and content on page load
+        function restoreLogMonitorState() {
+            const monitor = document.getElementById('logMonitor');
+            const toggle = document.getElementById('logToggle');
+            const logContent = document.getElementById('logContent');
+
+            // Restore collapsed state
+            const isCollapsed = localStorage.getItem('logMonitorCollapsed') === 'true';
+            if (isCollapsed) {
+                monitor.classList.add('collapsed');
+                toggle.innerHTML = '<i class="bi bi-chevron-up"></i>';
+            } else {
+                monitor.classList.remove('collapsed');
+                toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+            }
+
+            // Restore log content
+            const savedLogs = localStorage.getItem('logMonitorContent');
+            if (savedLogs) {
+                logContent.innerHTML = savedLogs;
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+        }
+
+        // Save log content to localStorage
+        function saveLogContent() {
+            const logContent = document.getElementById('logContent');
+            if (logContent) {
+                localStorage.setItem('logMonitorContent', logContent.innerHTML);
+            }
+        }
+
+        // Clear old log entries (keep only last 100 messages)
+        function cleanupLogs() {
+            const logContent = document.getElementById('logContent');
+            const messages = logContent.querySelectorAll('.status-message');
+            if (messages.length > 100) {
+                // Remove the oldest messages, keep the last 100
+                for (let i = 0; i < messages.length - 100; i++) {
+                    messages[i].remove();
+                }
+                saveLogContent();
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            restoreLogMonitorState();
+        });
+
+        // Global status update listener for log monitor
+        socket.on('status_update', function(data) {
+            const logContent = document.getElementById('logContent');
+            
+            if (logContent) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = 'status-message';
-
+                
+                // Get current timestamp
+                const timestamp = new Date().toLocaleTimeString();
+                
                 if (data.error) {
                     messageDiv.style.color = '#dc3545';
+                    messageDiv.innerHTML = `<span style="color: #6c757d;">[${timestamp}]</span> <i class="bi bi-exclamation-triangle"></i> ${data.message}`;
                 } else if (data.finished) {
                     messageDiv.style.color = '#198754';
+                    messageDiv.innerHTML = `<span style="color: #6c757d;">[${timestamp}]</span> <i class="bi bi-check-circle"></i> ${data.message}`;
+                } else {
+                    messageDiv.style.color = '#0d6efd';
+                    messageDiv.innerHTML = `<span style="color: #6c757d;">[${timestamp}]</span> <i class="bi bi-info-circle"></i> ${data.message}`;
                 }
+                
+                logContent.appendChild(messageDiv);
+                logContent.scrollTop = logContent.scrollHeight; // Auto-scroll
+                
+                // Clean up old logs and save content
+                cleanupLogs();
+                saveLogContent();
 
-                messageDiv.innerHTML = data.message;
+                // Auto-expand log monitor when new messages arrive (only if not manually collapsed)
+                const monitor = document.getElementById('logMonitor');
+                const toggle = document.getElementById('logToggle');
+                const wasManuallyCollapsed = localStorage.getItem('logMonitorCollapsed') === 'true';
 
-                statusOutput.appendChild(messageDiv);
-                statusOutput.scrollTop = statusOutput.scrollHeight; // Auto-scroll
+                if (!wasManuallyCollapsed && monitor.classList.contains('collapsed')) {
+                    monitor.classList.remove('collapsed');
+                    toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                    localStorage.setItem('logMonitorCollapsed', 'false');
+                }
             }
         });
+
+        // Add a function to clear logs manually
+        function clearLogs() {
+            const logContent = document.getElementById('logContent');
+            if (logContent) {
+                logContent.innerHTML = '<div class="status-message"><i class="bi bi-info-circle"></i> Waiting for log messages...</div>';
+                localStorage.removeItem('logMonitorContent');
+            }
+        }
     </script>
 
     {% block scripts %}{% endblock %}
 
 </body>
 </html>
+

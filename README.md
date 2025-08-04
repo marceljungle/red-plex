@@ -46,12 +46,6 @@ red-plex gui --debug
 
 The web interface provides the same functionality as the CLI commands but with a user-friendly visual interface, real-time progress updates, and intuitive navigation.
 
-## What are RED and OPS?
-
-- **Redacted (RED)**: A private music tracker focused on high-quality audio files
-- **Orpheus Network (OPS)**: Another private music tracker with curated content
-- Both use the Gazelle framework and offer "collages" (curated collections) and personal bookmarks
-
 ## Table of Contents
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
@@ -63,8 +57,10 @@ The web interface provides the same functionality as the CLI commands but with a
 - [Usage & Commands](#usage--commands)
   - [Configuration Commands](#configuration-commands)
   - [Collages](#collages)
+  - [Upstream Sync](#upstream-sync)
   - [Bookmarks](#bookmarks)
   - [Site Tags](#site-tags)
+  - [Remote Mappings](#remote-mappings)
   - [Fetch Mode (-fm)](#fetch-mode--fm)
   - [Database Commands](#database-commands)
 - [Examples](#examples)
@@ -154,9 +150,10 @@ OPS:
     seconds: 15
 ```
 
-### Getting Your Plex Token
+### Getting Your Plex HTTPs URL
 
-Visit: https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={YOUR_TOKEN}
+Visit: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token
+Also visit: https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={YOUR_TOKEN}
 
 ## Overview
 
@@ -172,6 +169,8 @@ Visit: https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={YOUR_TOKEN}
 - **Web Interface**: Modern Flask-based GUI with Bootstrap styling and real-time updates.
 - **Collections from Collages/Bookmarks**: Create or update entire Plex collections for each collage or bookmarked set.
 - **Site Tags Mapping**: Map your Plex albums to site groups using album and artist names, then create collections based on specific tags.
+- **Upstream Sync**: Push local Plex collection changes back to upstream collages on RED, enabling bidirectional synchronization between Plex collections and site collages.
+- **Remote Mappings**: Core functionality that links Plex collections with site group IDs, enabling features like site tags and upstream sync.
 - **Local SQLite Database**: All data (albums, collages, bookmarks, site mappings) is kept in one DB, no more CSV.
 - **Two Fetch Modes**: Choose between `torrent_name` (default) for direct path matching or `query` for metadata-based searches in Plex.
 - **Configurable Logging**: Choose between INFO, DEBUG, etc., in `config.yml`.
@@ -219,6 +218,40 @@ red-plex collages convert [COLLAGE_IDS] --site [red|ops] --fetch-mode [torrent_n
 red-plex collages update --fetch-mode [torrent_name|query]
 ```
 
+### Upstream Sync
+
+**⚠️ Important Prerequisites:**
+- Only works with **RED** (Redacted) - OPS doesn't have the required API operations
+- You must **own** the collages on the tracker site
+- First **convert the collage** from the site using `red-plex collages convert` (even if the collage is empty)
+- Run **remote mappings scan** to link Plex items with site group IDs: `red-plex db remote-mappings scan -s red`
+
+**How it works:**
+- Pushes local Plex collection changes back to upstream collages on RED
+- Uses fuzzy string matching to find albums on the site (may cause occasional mismatches)
+- Shows confirmation dialog with exactly what will be added before making changes
+- **Never deletes** anything from upstream collages, only adds missing items
+- If you update your Plex library, run a new remote-mappings scan to link new albums
+
+```bash
+# Sync all collections to upstream collages
+red-plex collages update --push
+
+# Sync specific collections to upstream collages  
+red-plex collages update 12345 67890 --push
+
+# Alternative flag name
+red-plex collages update --update-upstream
+```
+
+**Scanning Process:**
+- Can be cancelled anytime with **Ctrl+C** and resumed later
+- Each mapping is saved to the database during scanning (no data loss)
+- Scans latest added entries in Plex, so interrupted scans can continue from where they left off
+- ⚠️ **Current limitation**: If you have many unmatched albums (e.g., 200 albums with no matches), they'll appear in the scan queue each time. This is being improved to ignore previously failed matches.
+
+**Available in both CLI and Web Interface**
+
 ### Bookmarks
 
 ```bash
@@ -232,15 +265,28 @@ red-plex bookmarks update --fetch-mode [torrent_name|query]
 ### Site Tags
 
 ```bash
-# Scan albums and create site tag mappings using album and artist names
-red-plex extras site-tags scan --site [red|ops] [--always-skip]
-
 # Create collections from albums matching specific tags
 red-plex extras site-tags convert --tags [tag1,tag2,...] --collection-name [name]
-
-# Reset site tag mappings
-red-plex extras site-tags reset
 ```
+
+### Remote Mappings
+
+Remote mappings are the core functionality that links your Plex music library with site group IDs, enabling features like site tags and upstream sync.
+
+```bash
+# Scan albums and create remote mappings using album and artist names
+red-plex db remote-mappings scan --site [red|ops] [--always-skip]
+
+# Reset remote mappings (clears the relationship data)
+red-plex db remote-mappings reset
+```
+
+**Scanning Features:**
+- **Interruptible**: Can be cancelled with **Ctrl+C** at any time and resumed later
+- **No data loss**: Each mapping is saved to database immediately during the scan
+- **Incremental**: Processes latest Plex additions first, so you can resume interrupted scans
+- **Fuzzy matching**: Uses string similarity to match Plex albums with site releases
+- ⚠️ **Current limitation**: Albums with no matches will reappear in future scans (improvement planned)
 
 ### Fetch Mode (-fm)
 
@@ -265,6 +311,10 @@ red-plex db collections reset   # Clear the collage collections table
 
 # Manage bookmarks table
 red-plex db bookmarks reset     # Clear the bookmark collections table
+
+# Manage remote mappings (core feature for site tags and upstream sync)
+red-plex db remote-mappings scan --site [red|ops]  # Create Plex-to-site mappings
+red-plex db remote-mappings reset                  # Clear remote mapping data
 ```
 
 ## Examples
@@ -281,11 +331,15 @@ red-plex collages convert 1111 2222 3333 --site ops
 # From bookmarks (RED or OPS), default mode
 red-plex bookmarks convert --site red
 
-# Site tags - scan albums and create mappings using album/artist names
-red-plex extras site-tags scan --site red
+# Remote mappings - scan albums and create mappings using album/artist names
+red-plex db remote-mappings scan --site red
 
 # Site tags - create collection from specific tags
 red-plex extras site-tags convert --tags "electronic,ambient" --collection-name "Electronic Ambient"
+
+# Upstream sync - push Plex collection changes back to RED collages (RED only)
+red-plex collages update 12345 --push  # Sync specific collage
+red-plex collages update --push         # Sync all collages
 ```
 
 ### Updating Collections
@@ -299,6 +353,9 @@ red-plex bookmarks update
 
 # Update albums from Plex
 red-plex db albums update
+
+# Sync collections to upstream collages (RED only)
+red-plex collages update --push
 ```
 
 ### Using Query Fetch Mode
@@ -327,15 +384,21 @@ red-plex collages convert 12345 67890 --site red
 # 4. Create collection from your bookmarks
 red-plex bookmarks convert --site red
 
-# 5. Scan albums for site tag mappings
-red-plex extras site-tags scan --site red
+# 5. Scan albums for remote mappings (required for site tags and upstream sync)
+red-plex db remote-mappings scan --site red
 
 # 6. Create collections from specific tags
 red-plex extras site-tags convert --tags "electronic,downtempo" --collection-name "Electronic Downtempo"
 
-# 7. Later, update all collections with new releases
+# 7. Sync collections back to upstream collages (RED only, requires ownership)
+red-plex collages update --push
+
+# 8. Later, update all collections with new releases
 red-plex collages update
 red-plex bookmarks update
+
+# 9. If you add new music to Plex, re-scan for new mappings
+red-plex db remote-mappings scan --site red
 ```
 
 #### Web Interface
@@ -353,11 +416,13 @@ red-plex gui
 
 # 6. Use the Bookmarks page to convert your bookmarks
 
-# 7. Use the Site Tags page to scan albums and create tag mappings
+# 7. Use the Remote Mappings page to scan albums and create mappings
 
 # 8. Use Site Tags to create collections from specific tags
 
-# 9. Return to Database page later to update all collections
+# 9. Use the Collages page to sync collections to upstream (RED only)
+
+# 10. Return to Database page later to update all collections
 ```
 
 ## Configuration Details
@@ -396,13 +461,6 @@ SECTION_NAME: Music
 ## Troubleshooting
 
 ### Common Issues
-
-#### "No module named 'plexapi'" Error
-```bash
-pip install plexapi
-# or
-pip install red-plex --upgrade
-```
 
 #### Authentication Errors
 - Verify your API keys are correct in `config.yml`
@@ -449,6 +507,16 @@ pip install red-plex --upgrade
   - `INFO`: Standard information (default)
   - `WARNING`: Minimal output
 - **Collection Updates**: When you run `collages update` or `bookmarks update`, new albums are added to existing Plex collections, but removed items from tracker collages are not automatically removed from Plex collections
+- **Upstream Sync (RED Only)**: 
+  - Only works with RED (Redacted) - OPS doesn't support the required API operations
+  - You must own the collages you want to sync to
+  - Convert collages from the site first, even if they're empty
+  - Run `red-plex db remote-mappings scan --site red` to create the necessary mappings
+  - Uses fuzzy string matching which may occasionally cause mismatches
+  - Never deletes items from upstream collages, only adds missing ones
+  - Can be interrupted with Ctrl+C and resumed later with no data loss
+  - Re-scan after adding new music to your Plex library
+- **Remote Mappings**: Core functionality that links Plex items with site group IDs. Required for both site tags and upstream sync features
 
 ## Contributing
 
@@ -463,5 +531,3 @@ pip install -e .
 ```
 
 ---
-
-**Disclaimer**: This tool is for personal use with your own music library and tracker accounts. Respect the rules and terms of service of the private trackers you use.

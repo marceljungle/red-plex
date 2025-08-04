@@ -1,9 +1,10 @@
 """GUI launcher CLI command."""
-
 import subprocess
 import sys
 
 import click
+
+from red_plex.infrastructure.logger.logger import logger
 
 
 @click.command()
@@ -28,7 +29,7 @@ def gui(host, port, debug):
 
     # If the --debug flag is passed, add Gunicorn's reload option
     if debug:
-        click.echo("   -> Debug mode on (auto-reload enabled).")
+        logger.info("Debug mode enabled: auto-reloading will be active.")
         command.append('--reload')
 
     command.append('wsgi:app')
@@ -37,12 +38,5 @@ def gui(host, port, debug):
         # Execute the Gunicorn command
         subprocess.run(command, check=True)
     except FileNotFoundError:
-        click.echo(
-            "Error: 'gunicorn' command not found.",
-            err=True
-        )
-        click.echo(
-            "Please make sure you have installed it with: pip install gunicorn eventlet",
-            err=True
-        )
+        logger.error("Gunicorn is not installed. Please install it with: pip install gunicorn")
         sys.exit(1)

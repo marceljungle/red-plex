@@ -73,8 +73,8 @@
                             <div class="mb-2">
                                 <i class="bi bi-tags text-info" style="font-size: 2rem;"></i>
                             </div>
-                            <h4 class="mb-0">{{ stats.get('site_tags', 0) }}</h4>
-                            <small class="text-muted">Site Tags</small>
+                            <h4 class="mb-0">{{ stats.get('remote_mappings', 0) }}</h4>
+                            <small class="text-muted">Remote Mappings</small>
                         </div>
                     </div>
                 </div>
@@ -169,46 +169,30 @@
             </div>
         </div>
 
-        <!-- Site Tags Management -->
+        <!-- Remote Mappings Management -->
         <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-tags text-info"></i> Site Tags
+                        <i class="bi bi-arrow-left-right text-info"></i> Remote Mappings
                     </h5>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="card-text">
-                        Manage site tag mappings. These link your albums to site groups and their tags.
+                        Manage remote mappings. These link your albums to site groups and their tags.
                     </p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('site_tags') }}" class="btn btn-outline-info w-100 mb-2">
-                            <i class="bi bi-eye"></i> View Site Tags
+                        <a href="{{ url_for('remote_mappings') }}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-eye"></i> View Remote Mappings
                         </a>
-                        <form method="POST" action="{{ url_for('database_reset', table='site-tags') }}" 
-                              onsubmit="return confirm('Are you sure you want to reset the site tags mappings? This will remove all site tag mapping data.')" 
+                        <form method="POST" action="{{ url_for('database_reset', table='remote-mappings') }}" 
+                              onsubmit="return confirm('Are you sure you want to reset the remote mappings? This will remove all remote mapping data.')" 
                               class="d-inline">
                             <button type="submit" class="btn btn-outline-danger w-100">
-                                <i class="bi bi-trash"></i> Reset Site Tags
+                                <i class="bi bi-trash"></i> Reset Remote Mappings
                             </button>
                         </form>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Status Output for Updates -->
-    <div class="row mt-4" id="status-row" style="display: none;">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-clock"></i> Update Status
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="status-output" class="status-output"></div>
                 </div>
             </div>
         </div>
@@ -247,7 +231,7 @@
                             </ul>
                         </div>
                         <div class="col-md-4">
-                            <h6>Site Tags Database</h6>
+                            <h6>Remote Mappings Database</h6>
                             <p>
                                 Stores mappings between your Plex albums and site groups, including 
                                 their associated tags for creating tag-based collections.
@@ -280,19 +264,4 @@
     </div>
 </div>
 
-{% block scripts %}
-<script>
-    // Show status output when album update starts
-    document.querySelector('form[action*="albums/update"] button').addEventListener('click', function() {
-        const statusRow = document.getElementById('status-row');
-        const statusOutput = document.getElementById('status-output');
-        
-        statusRow.style.display = 'block';
-        statusOutput.innerHTML = '<div class="status-message"><i class="bi bi-hourglass-split"></i> Starting album update from Plex...</div>';
-        
-        // Scroll to status output
-        statusRow.scrollIntoView({ behavior: 'smooth' });
-    });
-</script>
-{% endblock %}
 {% endblock %}

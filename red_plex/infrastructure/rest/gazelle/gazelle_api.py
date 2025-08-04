@@ -42,27 +42,12 @@ class GazelleAPI:
         self.rate_limit = rate_limit  # Store rate_limit for calculations
         self.limiter = Limiter(rate_limit, raise_when_fail=False)
 
-    @retry(
-        retry=retry_if_exception_type(requests.exceptions.RequestException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(4),
-        reraise=True
-    )
-    def api_call(self, action: str, params: Dict[str, str]) -> Dict[str, Any]:
-        """
-        Makes a rate-limited API call to the Gazelle-based service with retries.
-        Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
-        """
-        formatted_params = '&' + '&'.join(f'{k}={v}' for k, v in params.items()) if params else ''
-        formatted_url = f'{self.base_url}{action}{formatted_params}'
-        logger.debug('Calling API: %s', formatted_url)
-
+    def _wait_for_rate_limit(self):
+        """Handle rate limiting by waiting if necessary."""
         while True:
             did_acquire = self.limiter.try_acquire('api_call')
             if did_acquire:
-                response = requests.get(formatted_url, headers=self.headers, timeout=10)
-                response.raise_for_status()
-                return response.json()
+                return
             delay_ms = self.get_retry_after()
             delay_seconds = delay_ms / 1000.0
             if delay_seconds > 0.001:
@@ -70,6 +55,47 @@ class GazelleAPI:
                 time.sleep(delay_seconds)
             else:
                 time.sleep(0.001)
+
+    @retry(
+        retry=retry_if_exception_type(requests.exceptions.RequestException),
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(4),
+        reraise=True
+    )
+    def get_call(self, action: str, params: Dict[str, str]) -> Dict[str, Any]:
+        """
+        Makes a rate-limited GET API call to the Gazelle-based service with retries.
+        Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
+        """
+        formatted_params = '&' + '&'.join(f'{k}={v}' for k, v in params.items()) if params else ''
+        formatted_url = f'{self.base_url}{action}{formatted_params}'
+        logger.debug('Calling GET API: %s', formatted_url)
+
+        self._wait_for_rate_limit()
+        response = requests.get(formatted_url, headers=self.headers, timeout=10)
+        response.raise_for_status()
+        return response.json()
+
+    @retry(
+        retry=retry_if_exception_type(requests.exceptions.RequestException),
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(4),
+        reraise=True
+    )
+    def post_call(self, action: str,
+                  params: Dict[str, str] = None,
+                  data: Dict[str, str] = None) -> Dict[str, Any]:
+        """
+        Makes a rate-limited POST API call to the Gazelle-based service with retries.
+        Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
+        """
+        url = f'{self.base_url}{action}'
+        logger.debug('Calling POST API: %s', url)
+
+        self._wait_for_rate_limit()
+        response = requests.post(url, headers=self.headers, params=params, data=data, timeout=10)
+        response.raise_for_status()
+        return response.json()
 
     def get_retry_after(self) -> int:
         """Calculates the time to wait until another request can be made."""
@@ -108,7 +134,7 @@ class GazelleAPI:
         """Retrieves collage data as domain object"""
         params = {'id': str(collage_id), 'showonlygroups': 'true'}
         try:
-            json_data = self.api_call('collage', params)
+            json_data = self.get_call('collage', params)
         except Exception as e:  # pylint: disable=W0703
             logger.error('Error retrieving collage data for collage_id %s: %s', collage_id, e)
             return None
@@ -119,7 +145,7 @@ class GazelleAPI:
         """Retrieves torrent group data."""
         params = {'id': str(torrent_group_id)}
         try:
-            json_data = self.api_call('torrentgroup', params)
+            json_data = self.get_call('torrentgroup', params)
         except Exception as e:  # pylint: disable=W0703
             logger.error('Error retrieving torrent group data '
                          'for group_id %s: %s', torrent_group_id, e)
@@ -133,7 +159,7 @@ class GazelleAPI:
         """Retrieves user bookmarks."""
         logger.debug('Retrieving user bookmarks...')
         try:
-            bookmarks_response = self.api_call('bookmarks', {})
+            bookmarks_response = self.get_call('bookmarks', {})
         except Exception as e:  # pylint: disable=W0703
             logger.error('Error retrieving user bookmarks: %s', e)
             return None
@@ -153,7 +179,7 @@ class GazelleAPI:
             else:
                 params = {'groupname': album_name, 'artistname': artist}
             try:
-                response = self.api_call('browse', params)
+                response = self.get_call('browse', params)
                 results = response.get('response', {}).get('results', [])
                 if results:
                     domain_tgs = [GazelleMapper.map_torrent_group(tg) for tg in results]
@@ -214,7 +240,7 @@ class GazelleAPI:
             logger.info("No results found. Trying a final search with album name only.")
             try:
                 params = {'groupname': album_name}
-                response = self.api_call('browse', params)
+                response = self.get_call('browse', params)
                 results = response.get('response', {}).get('results', [])
                 if results:
                     all_possible_groups = [GazelleMapper.map_torrent_group(tg) for tg in results]
@@ -271,6 +297,86 @@ class GazelleAPI:
 
         logger.info("Best match score is below threshold. Returning all potential results.")
         return all_possible_groups
+
+    def get_user_info(self) -> Optional[Dict[str, Any]]:
+        """Retrieves current user information including user ID."""
+        try:
+            response = self.get_call('index', {})
+            if response.get('status') == 'success':
+                return response.get('response', {})
+            logger.error('Failed to get user info: %s', response)
+            return None
+        except Exception as e:
+            logger.error('Error retrieving user info: %s', e)
+            return None
+
+    def get_user_collages(self, user_id: str) -> Optional[List[Collection]]:
+        """Retrieves collages created by the specified user."""
+        if self.site.lower() != 'red':
+            logger.debug('get_user_collages is only supported for RED.')
+            return None
+        params = {'userid': str(user_id)}
+        try:
+            response = self.get_call('collages', params)
+            if response.get('status') == 'success':
+                collages_data = response.get('response', [])
+                # Map to Collection domain objects
+                collections = []
+                for collage_dict in collages_data:
+                    collection = Collection(
+                        id="",  # No local ID yet
+                        external_id=str(collage_dict.get('id', '')),
+                        name=collage_dict.get('name', ''),
+                        torrent_groups=[],
+                        site=self.site.lower()
+                    )
+                    collections.append(collection)
+                return collections
+            logger.error('Failed to get user collages: %s', response)
+            return None
+        except Exception as e:
+            logger.error('Error retrieving user collages for user_id %s: %s', user_id, e)
+            return None
+
+    def add_to_collage(self, collage_id: str,
+                       group_ids: List[str]) -> Optional[Dict[str, Any]]:
+        """
+        Adds group IDs to a collage.
+        
+        Args:
+            collage_id: The ID of the collage to add to
+            group_ids: List of group IDs to add
+            
+        Returns:
+            Response dict containing status and results, or None on error
+        """
+        if not group_ids:
+            logger.warning('No group IDs provided to add to collage %s', collage_id)
+            return None
+
+        # Format group IDs as comma-separated string
+        group_ids_str = ','.join(group_ids)
+
+        params = {'collageid': str(collage_id)}
+        data = {'groupids': group_ids_str}
+
+        logger.debug('Adding groups %s to collage %s', group_ids_str, collage_id)
+
+        try:
+            result = self.post_call('addtocollage', params, data)
+
+            if result.get('status') == 'success':
+                logger.info('Successfully added groups to collage '
+                            '%s: added=%s, rejected=%s, duplicated=%s',
+                            collage_id,
+                            result.get('response', {}).get('groupsadded', []),
+                            result.get('response', {}).get('groupsrejected', []),
+                            result.get('response', {}).get('groupsduplicated', []))
+            return result
+
+        except Exception as e:
+            logger.error('Error adding groups %s to collage %s: %s', group_ids_str, collage_id, e)
+            return None
 
     @staticmethod
     def _normalize_string(text: str) -> str:
