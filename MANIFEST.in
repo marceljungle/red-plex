@@ -1,0 +1,4 @@
+graft red_plex/infrastructure/gui/templates
+
+global-exclude *.pyc
+global-exclude __pycache__
