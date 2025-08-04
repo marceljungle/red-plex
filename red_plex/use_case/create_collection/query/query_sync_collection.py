@@ -57,6 +57,14 @@ class QuerySyncCollectionUseCase:
 
         # 4. Create or update if albums were found
         if not matched_albums:
+            # Create the entry in the database with no albums, for sync matching, for example.
+            if plex_collection:
+                found_collection = Collection(id=plex_collection.id,
+                           name=plex_collection.name,
+                           external_id=collage_id,
+                           site=site)
+                self._save_to_db(found_collection, fetch_bookmarks)
+
             # No new albums found or nothing to do.
             return CreateCollectionResponse(response_status=True,
                                             collection_data=source_collection,

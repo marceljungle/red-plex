@@ -45,23 +45,32 @@ class GazelleMapper:
         person_roles = [
             'artists', 'composers', 'conductor',
             'dj', 'producer', 'arranger', 'remixedBy'
-            'with'
+                                          'with'
         ]
 
         return TorrentGroup(
-            id=data.get('id') or group_data.get('id'),
+            id=data.get('id')
+               or data.get('groupId')
+               or group_data.get('id')
+               or group_data.get('groupId'),
 
             album_name=GazelleMapper._clean_text(
-                data.get('name') or group_data.get('name') or ''
+                data.get('name')
+                or data.get('groupName')
+                or group_data.get('name')
+                or group_data.get('groupName')
+                or ''
             ),
 
             artists=[
-                GazelleMapper._clean_text(person.get('name', ''))
-                for role in person_roles
-                for person in music_info.get(role, [])
-            ],
+                        GazelleMapper._clean_text(person.get('name', ''))
+                        for role in person_roles
+                        for person in music_info.get(role, [])
+                    ] or ([data.get('artist')] if data.get('artist') else []),
 
-            file_paths=GazelleMapper._map_torrent_group_file_paths(torrents)
+            file_paths=GazelleMapper._map_torrent_group_file_paths(torrents),
+
+            tags=data.get('tags') or group_data.get('tags') or []
         )
 
     @staticmethod

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Convert Tags to Collection{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1><i class="bi bi-collection"></i> Convert Tags to Collection</h1>
+    <p class="text-muted">Create a Plex collection from albums matching specific tags.</p>
+    
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('site_tags') }}">Site Tags</a></li>
+            <li class="breadcrumb-item active">Convert to Collection</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Collection Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">Tags</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="tags" 
+                                   name="tags" 
+                                   placeholder="jazz, electronic, ambient"
+                                   required>
+                            <div class="form-text">
+                                Enter comma-separated tags to filter albums by. Only albums with these tags will be included.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="collection_name" class="form-label">Collection Name</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="collection_name" 
+                                   name="collection_name" 
+                                   placeholder="My Jazz Collection"
+                                   required>
+                            <div class="form-text">
+                                Name for the Plex collection. If a collection with this name exists, it will be updated.
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-play-circle"></i> Create Collection
+                        </button>
+                        <a href="{{ url_for('site_tags') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Site Tags
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">How it Works</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li><strong>Enter tags:</strong> Specify the tags you want to filter by</li>
+                        <li><strong>Name the collection:</strong> Choose a name for your Plex collection</li>
+                        <li><strong>Processing:</strong> The system will find all albums matching those tags</li>
+                        <li><strong>Collection created:</strong> A new collection will be created in Plex with the matching albums</li>
+                    </ol>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> Only albums that have been scanned and have remote mappings will be included.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

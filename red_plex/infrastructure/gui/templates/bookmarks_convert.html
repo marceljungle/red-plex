@@ -102,27 +102,6 @@
         </div>
     </div>
 
-    {% if processing %}
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-clock"></i> Processing Status
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="status-output" class="status-output">
-                            <div class="status-message">
-                                <i class="bi bi-hourglass-split"></i> Starting bookmark conversion...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    {% endif %}
-
     <div class="row mt-4">
         <div class="col-12">
             <div class="alert alert-warning" role="alert">
@@ -149,11 +128,7 @@
         
         if (site) {
             // Pre-fill and potentially auto-submit for updates
-            const form = document.querySelector('form');
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Update Bookmarks';
-            submitBtn.classList.remove('btn-primary');
-            submitBtn.classList.add('btn-warning');
+            document.getElementById('site').value = site;
         }
     });
 </script>

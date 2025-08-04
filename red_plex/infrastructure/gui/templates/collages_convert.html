@@ -129,24 +129,6 @@ Or:
         </div>
     </div>
 
-    {% if processing %}
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-clock"></i> Processing Status
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="status-output" class="status-output" style="max-height: 400px; overflow-y: auto; font-family: monospace; background-color: #f5f5f5; padding: 15px; border-radius: 4px;">
-                            </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    {% endif %}
-
     <div class="row mt-4">
         <div class="col-12">
             <div class="alert alert-info" role="alert">
@@ -163,8 +145,5 @@ Or:
         </div>
     </div>
 </div>
-
-{% block scripts %}
-{% endblock %}
 
 {% endblock %}
