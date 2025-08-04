@@ -46,12 +46,6 @@ red-plex gui --debug
 
 The web interface provides the same functionality as the CLI commands but with a user-friendly visual interface, real-time progress updates, and intuitive navigation.
 
-## What are RED and OPS?
-
-- **Redacted (RED)**: A private music tracker focused on high-quality audio files
-- **Orpheus Network (OPS)**: Another private music tracker with curated content
-- Both use the Gazelle framework and offer "collages" (curated collections) and personal bookmarks
-
 ## Table of Contents
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
@@ -156,9 +150,10 @@ OPS:
     seconds: 15
 ```
 
-### Getting Your Plex Token
+### Getting Your Plex HTTPs URL
 
-Visit: https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={YOUR_TOKEN}
+Visit: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token
+Also visit: https://plex.tv/api/resources?includeHttps=1&X-Plex-Token={YOUR_TOKEN}
 
 ## Overview
 
@@ -467,13 +462,6 @@ SECTION_NAME: Music
 
 ### Common Issues
 
-#### "No module named 'plexapi'" Error
-```bash
-pip install plexapi
-# or
-pip install red-plex --upgrade
-```
-
 #### Authentication Errors
 - Verify your API keys are correct in `config.yml`
 - Check that your Plex token is valid
@@ -543,5 +531,3 @@ pip install -e .
 ```
 
 ---
-
-**Disclaimer**: This tool is for personal use with your own music library and tracker accounts. Respect the rules and terms of service of the private trackers you use.
