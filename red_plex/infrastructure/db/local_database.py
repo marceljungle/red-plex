@@ -78,6 +78,10 @@ class LocalDatabase(BaseDatabaseManager):
         """Retrieve a single collage-based collection by rating_key."""
         return self._collection_manager.get_collage_collection(rating_key)
 
+    def get_collage_collection_by_external_id(self, external_id: str) -> Optional[Collection]:
+        """Retrieve a single collage-based collection by external_id."""
+        return self._collection_manager.get_collage_collection_by_external_id(external_id)
+
     def get_all_collage_collections(self) -> List[Collection]:
         """Retrieve all collage-based collections from the DB."""
         return self._collection_manager.get_all_collage_collections()

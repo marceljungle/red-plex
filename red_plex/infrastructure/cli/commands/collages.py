@@ -10,6 +10,7 @@ from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.infrastructure.service.collection_processor import CollectionProcessingService
+from red_plex.use_case.show_missing.show_missing_use_case import ShowMissingUseCase
 
 
 @click.group('collages')
@@ -171,3 +172,67 @@ def convert_collages(ctx, collage_ids, site, fetch_mode):
     )
 
     click.echo("Processing finished.")
+
+
+@collages.command('show-missing')
+@click.pass_context
+@click.argument('collage_id')
+def show_missing(ctx, collage_id):
+    """
+    Show missing torrent groups from the local collection compared to the site collage.
+    
+    COLLAGE_ID is the external ID of the collage to check.
+    """
+    local_database = ctx.obj.get('db')
+    if not local_database:
+        click.echo("Error: Database not initialized.", err=True)
+        return
+
+    # Get the local collection to determine which site to use
+    local_collection = local_database.get_collage_collection_by_external_id(collage_id)
+    if not local_collection:
+        click.echo(
+            f"Error: No local collection found for collage ID {collage_id}. "
+            f"You may need to convert it first using "
+            f"'red-plex collages convert {collage_id} --site <site>'", err=True)
+        return
+
+    site = local_collection.site
+
+    # Initialize Gazelle API
+    try:
+        gazelle_api = GazelleAPI(site)
+    except Exception as e: # pylint: disable=W0718
+        logger.error("Failed to initialize Gazelle API: %s", e, exc_info=True)
+        click.echo(f"Error: Failed to initialize API for {site.upper()} - {e}", err=True)
+        return
+
+    # Use the show missing use case
+    use_case = ShowMissingUseCase(local_database, gazelle_api)
+    result = use_case.execute(collage_id)
+
+    if not result.success:
+        click.echo(f"Error: {result.error_message}", err=True)
+        return
+
+    click.echo(f"Checking collage '{result.collage_name}' "
+               f"(ID: {collage_id}) on {result.site.upper()}...")
+
+    if not result.has_missing_groups:
+        click.echo("✓ No missing groups found! "
+                   "Your local collection is up to date.")
+        return
+
+    click.echo(f"\nFound {len(result.missing_groups)} missing group(s) "
+               "in your local collection:")
+    click.echo("=" * 80)
+
+    # Display missing groups
+    for i, missing_group in enumerate(result.missing_groups, 1):
+        artists_str = ", ".join(missing_group.artist_names)
+        click.echo(f"{i:3d}. {artists_str} - {missing_group.album_name}")
+        click.echo(f"     Link: {missing_group.torrent_url}")
+        if i < len(result.missing_groups):  # Don't add extra line after last item
+            click.echo()
+
+    click.echo("=" * 80)
