@@ -378,6 +378,20 @@ class GazelleAPI:
             logger.error('Error adding groups %s to collage %s: %s', group_ids_str, collage_id, e)
             return None
 
+    def get_torrent_group_url(self, group_id: str) -> str:
+        """
+        Get the full URL for a torrent group page.
+        
+        Args:
+            group_id: The ID of the torrent group
+            
+        Returns:
+            Full URL to the torrent group page
+        """
+        # Get the base URL (remove '/ajax.php?action=' suffix to get clean base)
+        base_url = self.base_url.replace('/ajax.php?action=', '')
+        return f"{base_url}/torrents.php?id={group_id}"
+
     @staticmethod
     def _normalize_string(text: str) -> str:
         """

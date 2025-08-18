@@ -81,9 +81,6 @@ class ShowMissingUseCase:
                 missing_groups=[]
             )
 
-        # Get the base URL from config for links
-        base_url = self._get_base_url(site)
-
         # Fetch details for each missing group
         missing_groups = []
         for group_id in sorted(missing_group_ids):
@@ -92,7 +89,7 @@ class ShowMissingUseCase:
                 if torrent_group:
                     artists = torrent_group.artists if torrent_group.artists else ["Unknown Artist"]
                     album_name = torrent_group.album_name or "Unknown Album"
-                    torrent_url = f"{base_url}/torrents.php?id={group_id}"
+                    torrent_url = self.gazelle_api.get_torrent_group_url(str(group_id))
 
                     missing_groups.append(MissingGroupInfo(
                         group_id=group_id,
@@ -106,7 +103,7 @@ class ShowMissingUseCase:
                         group_id=group_id,
                         artist_names=["Unknown Artist"],
                         album_name="Details not available",
-                        torrent_url=f"{base_url}/torrents.php?id={group_id}"
+                        torrent_url=self.gazelle_api.get_torrent_group_url(str(group_id))
                     ))
             except Exception as e:  # pylint: disable=W0718
                 logger.warning("Failed to fetch details for group %s: %s", group_id, e)
@@ -115,7 +112,7 @@ class ShowMissingUseCase:
                     group_id=group_id,
                     artist_names=["Unknown Artist"],
                     album_name="Error fetching details",
-                    torrent_url=f"{base_url}/torrents.php?id={group_id}"
+                    torrent_url=self.gazelle_api.get_torrent_group_url(str(group_id))
                 ))
 
         return ShowMissingResponse(
@@ -124,17 +121,3 @@ class ShowMissingUseCase:
             site=site,
             missing_groups=missing_groups
         )
-
-    def _get_base_url(self, site: str) -> str:
-        """Get the base URL for the site from config."""
-        try:
-            # pylint: disable=C0415
-            from red_plex.infrastructure.config.config import load_config
-            config_data = load_config()
-            site_config = config_data.site_configurations.get(site.upper())
-            if site_config:
-                return site_config.base_url.rstrip('/')
-            return f"https://{site}.example.com"  # fallback
-        except Exception as e:  # pylint: disable=W0718
-            logger.warning("Failed to load config for URL construction: %s", e)
-            return f"https://{site}.example.com"  # fallback
