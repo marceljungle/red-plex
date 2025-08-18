@@ -143,6 +143,35 @@ class CollectionDatabaseManager:
             site=site
         )
 
+    def get_collage_collection_by_external_id(self, external_id: str) -> Optional[Collection]:
+        """
+        Retrieve a single collage-based collection (and associated group_ids) by external_id.
+        Returns a Collection or None if not found.
+        """
+        cur = self.conn.cursor()
+        # Get collage collection fields
+        cur.execute(
+            """
+            SELECT rating_key, name, site, external_id
+            FROM collage_collections
+            WHERE external_id = ?
+            """,
+            (external_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        rating_key_val, name, site, external_id_val = row
+        # Get associated group_ids
+        group_ids = self._get_torrent_group_ids_for(rating_key_val)
+        return Collection(
+            id=rating_key_val,
+            external_id=external_id_val,
+            name=name,
+            torrent_groups=[TorrentGroup(id=gid) for gid in group_ids],
+            site=site
+        )
+
     def get_all_collage_collections(self) -> List[Collection]:
         """
         Retrieve all collage-based collections from the DB,

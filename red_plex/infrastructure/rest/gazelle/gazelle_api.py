@@ -29,12 +29,12 @@ class GazelleAPI:
         site_config = config_data.site_configurations.get(site.upper())
 
         api_key = site_config.api_key
-        base_url = site_config.base_url
+        self.base_url = site_config.base_url
         rate_limit_config = site_config.rate_limit
         rate_limit = Rate(
             rate_limit_config.calls, Duration.SECOND * rate_limit_config.seconds)
 
-        self.base_url = base_url.rstrip('/') + '/ajax.php?action='
+        self.base_url_with_action = self.base_url.rstrip('/') + '/ajax.php?action='
         self.headers = {'Authorization': api_key}
 
         # Initialize the rate limiter: default to 10 calls per 10 seconds if not specified
@@ -68,7 +68,7 @@ class GazelleAPI:
         Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
         """
         formatted_params = '&' + '&'.join(f'{k}={v}' for k, v in params.items()) if params else ''
-        formatted_url = f'{self.base_url}{action}{formatted_params}'
+        formatted_url = f'{self.base_url_with_action}{action}{formatted_params}'
         logger.debug('Calling GET API: %s', formatted_url)
 
         self._wait_for_rate_limit()
@@ -89,7 +89,7 @@ class GazelleAPI:
         Makes a rate-limited POST API call to the Gazelle-based service with retries.
         Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
         """
-        url = f'{self.base_url}{action}'
+        url = f'{self.base_url_with_action}{action}'
         logger.debug('Calling POST API: %s', url)
 
         self._wait_for_rate_limit()
@@ -377,6 +377,10 @@ class GazelleAPI:
         except Exception as e:
             logger.error('Error adding groups %s to collage %s: %s', group_ids_str, collage_id, e)
             return None
+
+    def get_torrent_group_url(self, group_id: str) -> str:
+        """ Constructs the URL for a torrent group based on its ID."""
+        return f"{self.base_url}/torrents.php?id={group_id}"
 
     @staticmethod
     def _normalize_string(text: str) -> str:
