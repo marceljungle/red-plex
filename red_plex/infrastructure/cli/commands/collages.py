@@ -182,27 +182,33 @@ def show_missing(ctx, collage_id):
     
     COLLAGE_ID is the external ID of the collage to check.
     """
+    # pylint: disable=R0914,R0912,R0915,W0718,C0415
     local_database = ctx.obj.get('db')
     if not local_database:
         click.echo("Error: Database not initialized.", err=True)
         return
 
     # Get the local collection by external_id
-    local_collection = local_database.get_collage_collection_by_external_id(collage_id)
+    local_collection = local_database.get_collage_collection_by_external_id(
+        collage_id)
     if not local_collection:
-        click.echo(f"Error: No local collection found for collage ID {collage_id}. "
-                  f"You may need to convert it first using 'red-plex collages convert {collage_id} --site <site>'", err=True)
+        click.echo(
+            f"Error: No local collection found for collage ID {collage_id}. "
+            f"You may need to convert it first using "
+            f"'red-plex collages convert {collage_id} --site <site>'", err=True)
         return
 
     site = local_collection.site
-    click.echo(f"Checking collage '{local_collection.name}' (ID: {collage_id}) on {site.upper()}...")
+    click.echo(f"Checking collage '{local_collection.name}' "
+               f"(ID: {collage_id}) on {site.upper()}...")
 
     # Initialize Gazelle API
     try:
         gazelle_api = GazelleAPI(site)
     except Exception as e:
         logger.error("Failed to initialize Gazelle API: %s", e, exc_info=True)
-        click.echo(f"Error: Failed to initialize API for {site.upper()} - {e}", err=True)
+        click.echo(f"Error: Failed to initialize API for {site.upper()} - {e}",
+                   err=True)
         return
 
     # Get the current collage from the site
@@ -210,11 +216,13 @@ def show_missing(ctx, collage_id):
         site_collection = gazelle_api.get_collage(collage_id)
     except Exception as e:
         logger.error("Failed to fetch collage from site: %s", e, exc_info=True)
-        click.echo(f"Error: Failed to fetch collage {collage_id} from {site.upper()} - {e}", err=True)
+        click.echo(f"Error: Failed to fetch collage {collage_id} "
+                   f"from {site.upper()} - {e}", err=True)
         return
 
     if not site_collection:
-        click.echo(f"Error: Collage {collage_id} not found on {site.upper()}", err=True)
+        click.echo(f"Error: Collage {collage_id} not found on {site.upper()}",
+                   err=True)
         return
 
     # Compare group IDs
@@ -223,10 +231,12 @@ def show_missing(ctx, collage_id):
     missing_group_ids = site_group_ids - local_group_ids
 
     if not missing_group_ids:
-        click.echo("✓ No missing groups found! Your local collection is up to date.")
+        click.echo("✓ No missing groups found! "
+                   "Your local collection is up to date.")
         return
 
-    click.echo(f"\nFound {len(missing_group_ids)} missing group(s) in your local collection:")
+    click.echo(f"\nFound {len(missing_group_ids)} missing group(s) "
+               "in your local collection:")
     click.echo("=" * 80)
 
     # Get the base URL from config for links
@@ -247,10 +257,11 @@ def show_missing(ctx, collage_id):
         try:
             torrent_group = gazelle_api.get_torrent_group(str(group_id))
             if torrent_group:
-                artists_str = ", ".join(torrent_group.artists) if torrent_group.artists else "Unknown Artist"
+                artists_str = (", ".join(torrent_group.artists)
+                               if torrent_group.artists else "Unknown Artist")
                 album_name = torrent_group.album_name or "Unknown Album"
                 torrent_url = f"{base_url}/torrents.php?id={group_id}"
-                
+
                 click.echo(f"{i:3d}. {artists_str} - {album_name}")
                 click.echo(f"     Link: {torrent_url}")
                 if i < len(missing_group_ids):  # Don't add extra line after last item
@@ -268,5 +279,5 @@ def show_missing(ctx, collage_id):
                 click.echo()
 
     click.echo("=" * 80)
-    click.echo(f"\nTo add these missing groups to your local collection, run:")
+    click.echo("\nTo add these missing groups to your local collection, run:")
     click.echo(f"red-plex collages update {collage_id}")
