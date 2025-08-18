@@ -10,6 +10,7 @@ from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
 from red_plex.infrastructure.rest.gazelle.gazelle_api import GazelleAPI
 from red_plex.infrastructure.service.collection_processor import CollectionProcessingService
+from red_plex.use_case.show_missing.show_missing_use_case import ShowMissingUseCase
 
 
 @click.group('collages')
@@ -201,13 +202,12 @@ def show_missing(ctx, collage_id):
     # Initialize Gazelle API
     try:
         gazelle_api = GazelleAPI(site)
-    except Exception as e:
+    except Exception as e: # pylint: disable=W0718
         logger.error("Failed to initialize Gazelle API: %s", e, exc_info=True)
         click.echo(f"Error: Failed to initialize API for {site.upper()} - {e}", err=True)
         return
 
     # Use the show missing use case
-    from red_plex.use_case.show_missing.show_missing_use_case import ShowMissingUseCase
     use_case = ShowMissingUseCase(local_database, gazelle_api)
     result = use_case.execute(collage_id)
 
