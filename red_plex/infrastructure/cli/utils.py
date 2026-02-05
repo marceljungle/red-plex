@@ -4,6 +4,7 @@ from typing import List
 import click
 
 from red_plex.domain.models import Collection
+from red_plex.infrastructure.constants.constants import MultiMatchMode
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
@@ -54,6 +55,16 @@ def map_fetch_mode(fetch_mode: str) -> AlbumFetchMode:
     if fetch_mode == 'query':
         return AlbumFetchMode.QUERY
     return AlbumFetchMode.TORRENT_NAME
+
+
+def map_multi_match_mode(mode: str) -> MultiMatchMode:
+    """Map the multi-match mode string to a MultiMatchMode enum."""
+    mode_lower = mode.lower()
+    if mode_lower == 'all':
+        return MultiMatchMode.ALL
+    if mode_lower == 'none':
+        return MultiMatchMode.NONE
+    return MultiMatchMode.ASK
 
 
 def update_collections_from_collages(local_database: LocalDatabase,

@@ -47,7 +47,7 @@ setup(
         'plexapi',
         'requests',
         'tenacity',
-        'pyrate-limiter',
+        'pyrate-limiter==3.7.0',
         'click',
         'pyyaml',
         'flask',

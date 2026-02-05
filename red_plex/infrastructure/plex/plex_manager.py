@@ -19,13 +19,13 @@ from requests.exceptions import (ConnectionError as RequestsConnectionError,
 
 from red_plex.domain.models import Collection, Album
 from red_plex.infrastructure.config.config import load_config
-from red_plex.infrastructure.constants.constants import ALBUM_TAGS
+from red_plex.infrastructure.constants.constants import ALBUM_TAGS, MultiMatchMode
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.mapper.plex_mapper import PlexMapper
 
 
-# pylint: disable=W0718
+# pylint: disable=W0718,R0902,R0911
 class PlexManager:
     """Handles operations related to Plex."""
 
@@ -45,6 +45,9 @@ class PlexManager:
         # Initialize the album db
         self.local_database = db
         self.album_data = self.local_database.get_all_albums()
+
+        # Multi-match behavior mode (default: ask user)
+        self.multi_match_mode = MultiMatchMode.ASK
 
     def _retry_with_backoff(self, func, max_retries=3, base_delay=1):
         """Retry a function with exponential backoff."""
@@ -189,7 +192,16 @@ class PlexManager:
             # Single match found
             if len(domain_albums) == 1:
                 return domain_albums
-            # Multiple matches found, prompt the user
+            # Multiple matches found - check multi_match_mode
+            if self.multi_match_mode == MultiMatchMode.ALL:
+                logger.info("Multiple matches for '%s' by %s - keeping all (%d matches)",
+                           album_name, ', '.join(artists), len(domain_albums))
+                return domain_albums
+            if self.multi_match_mode == MultiMatchMode.NONE:
+                logger.info("Multiple matches for '%s' by %s - skipping all (%d matches)",
+                           album_name, ', '.join(artists), len(domain_albums))
+                return []
+            # Default: prompt the user
             print(f"Multiple matches found for album '{album_name}' by {', '.join(artists)}:")
             for i, album in enumerate(domain_albums, 1):
                 print(f"{i}. {album.name} by {', '.join(album.artists)}")
@@ -238,7 +250,17 @@ class PlexManager:
         if len(rating_keys) == 1:
             return list(rating_keys.keys())
 
-        # Multiple matches found, prompt the user
+        # Multiple matches found - check multi_match_mode
+        if self.multi_match_mode == MultiMatchMode.ALL:
+            logger.info("Multiple matches for path '%s' - keeping all (%d matches)",
+                       path, len(rating_keys))
+            return list(rating_keys.keys())
+        if self.multi_match_mode == MultiMatchMode.NONE:
+            logger.info("Multiple matches for path '%s' - skipping all (%d matches)",
+                       path, len(rating_keys))
+            return []
+
+        # Default: prompt the user
         print(f"Multiple matches found for path: {path}")
         for i, (_, folder_path) in enumerate(rating_keys.items(), 1):
             print(f"{i}. {folder_path}")
