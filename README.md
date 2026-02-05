@@ -215,7 +215,7 @@ red-plex config reset
 red-plex collages convert [COLLAGE_IDS] --site [red|ops] --fetch-mode [torrent_name|query]
 
 # Update all collages in the database, re-checking the site data
-red-plex collages update --fetch-mode [torrent_name|query]
+red-plex collages update --fetch-mode [torrent_name|query] --on-multi-match [ask|all|none]
 ```
 
 ### Upstream Sync
@@ -259,7 +259,7 @@ red-plex collages update --update-upstream
 red-plex bookmarks convert --site [red|ops] --fetch-mode [torrent_name|query]
 
 # Update all bookmarks in the database
-red-plex bookmarks update --fetch-mode [torrent_name|query]
+red-plex bookmarks update --fetch-mode [torrent_name|query] --on-multi-match [ask|all|none]
 ```
 
 ### Site Tags
@@ -295,6 +295,28 @@ The `--fetch-mode` (or `-fm`) option controls how red-plex locates albums in Ple
 #### For all commands (`collages convert`, `collages update`, `bookmarks convert`, `bookmarks update`):
 - **torrent_name** (default): Searches for directories matching the torrent folder name
 - **query**: Searches using `Artist` and `Album` metadata, ideal for organized libraries managed by tools like Beets or Lidarr
+
+### Multi-Match Mode (-m)
+
+The `--on-multi-match` (or `-m`) option controls behavior when multiple album matches are found in Plex:
+
+#### For update commands (`collages update`, `bookmarks update`):
+- **ask** (default): Prompts the user to choose which matches to keep
+- **all**: Automatically keeps all matching albums (useful for multi-disc releases)
+- **none**: Automatically skips albums with multiple matches
+
+This is particularly useful when updating large collections where multi-disc albums consistently produce multiple matches:
+
+```bash
+# Skip interactive prompts by keeping all matches (common for multi-disc albums)
+red-plex collages update --on-multi-match all
+
+# Skip all albums with multiple matches
+red-plex collages update -m none
+
+# Default behavior: ask for each album with multiple matches
+red-plex collages update --on-multi-match ask
+```
 
 ### Database Commands
 
@@ -350,6 +372,12 @@ red-plex collages update
 
 # Update all stored bookmarks
 red-plex bookmarks update
+
+# Update collages, automatically keeping all multi-disc matches
+red-plex collages update --on-multi-match all
+
+# Update bookmarks, skipping albums with multiple matches
+red-plex bookmarks update -m none
 
 # Update albums from Plex
 red-plex db albums update
