@@ -4,6 +4,7 @@ import click
 
 from red_plex.infrastructure.cli.utils import (update_collections_from_collages,
                                                map_fetch_mode,
+                                               map_multi_match_mode,
                                                push_collections_to_upstream)
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
@@ -40,8 +41,20 @@ def collages():
     default=False,
     help='Push local collection changes back to upstream collages on the site'
 )
+@click.option(
+    '--on-multi-match', '-m',
+    type=click.Choice(['ask', 'all', 'none'], case_sensitive=False),
+    default='ask',
+    show_default=True,
+    help=(
+            'Behavior when multiple album matches are found:\n'
+            '\n- ask: prompt user to choose (default)\n'
+            '\n- all: automatically keep all matches\n'
+            '\n- none: automatically skip albums with multiple matches\n'
+    )
+)
 # pylint: disable=R0912
-def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
+def update_collages(ctx, collage_ids, fetch_mode: str, push: bool, on_multi_match: str):
     """
     Synchronize stored collections with their source collages.
     
@@ -84,6 +97,7 @@ def update_collages(ctx, collage_ids, fetch_mode: str, push: bool):
         plex_manager = PlexManager(local_database)
         if not plex_manager:
             return
+        plex_manager.multi_match_mode = map_multi_match_mode(on_multi_match)
         plex_manager.populate_album_table()
 
         if push:

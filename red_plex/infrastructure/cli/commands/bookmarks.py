@@ -2,7 +2,9 @@
 
 import click
 
-from red_plex.infrastructure.cli.utils import update_collections_from_collages, map_fetch_mode
+from red_plex.infrastructure.cli.utils import (update_collections_from_collages,
+                                               map_fetch_mode,
+                                               map_multi_match_mode)
 from red_plex.infrastructure.db.local_database import LocalDatabase
 from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.plex.plex_manager import PlexManager
@@ -30,8 +32,20 @@ def bookmarks():
             '(if you use Beets/Lidarr)\n'
     )
 )
+@click.option(
+    '--on-multi-match', '-m',
+    type=click.Choice(['ask', 'all', 'none'], case_sensitive=False),
+    default='ask',
+    show_default=True,
+    help=(
+            'Behavior when multiple album matches are found:\n'
+            '\n- ask: prompt user to choose (default)\n'
+            '\n- all: automatically keep all matches\n'
+            '\n- none: automatically skip albums with multiple matches\n'
+    )
+)
 # pylint: disable=R0801
-def update_bookmarks_collection(ctx, fetch_mode: str):
+def update_bookmarks_collection(ctx, fetch_mode: str, on_multi_match: str):
     """Synchronize all stored bookmarks with their source collages."""
     # Import here to avoid circular imports with cli.py
 
@@ -48,6 +62,7 @@ def update_bookmarks_collection(ctx, fetch_mode: str):
         plex_manager = PlexManager(local_database)
         if not plex_manager:
             return
+        plex_manager.multi_match_mode = map_multi_match_mode(on_multi_match)
         plex_manager.populate_album_table()
 
         update_collections_from_collages(

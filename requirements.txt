@@ -1,6 +1,6 @@
 plexapi
 requests
-pyrate-limiter
+pyrate-limiter==3.7.0
 tenacity
 click
 pyyaml

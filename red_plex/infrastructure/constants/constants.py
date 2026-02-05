@@ -1,5 +1,15 @@
 """ This module stores constants"""
 
+from enum import Enum
+
+
+class MultiMatchMode(Enum):
+    """Defines behavior when multiple album matches are found."""
+    ASK = "ask"
+    ALL = "all"
+    NONE = "none"
+
+
 ALBUM_TAGS = [
     "EP", "E.P", "E.P.", "Single", "Album", "Soundtrack", "Anthology",
     "Compilation", "Live Album", "Remix", "Bootleg", "Interview",
