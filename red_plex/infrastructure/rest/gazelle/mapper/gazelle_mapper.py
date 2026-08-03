@@ -2,7 +2,7 @@
 
 import html
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from red_plex.domain.models import Collection, TorrentGroup
 from red_plex.infrastructure.logger.logger import logger
@@ -12,9 +12,17 @@ class GazelleMapper:
     """Maps Gazelle API responses to domain models"""
 
     @staticmethod
-    def map_collage(response: Dict[str, Any]) -> Collection:
+    def map_collage(response: Dict[str, Any]) -> Optional[Collection]:
         """Convert raw API response to Collage domain object"""
-        collage_data = response.get('response', {})
+        if not isinstance(response, dict):
+            logger.warning('Unexpected collage API response format: %s', response)
+            return None
+        collage_data = response.get('response')
+        if not isinstance(collage_data, dict):
+            # The API can return a non-dict 'response' (e.g. an empty list)
+            # for deleted or unavailable collages.
+            logger.warning('Unexpected collage data in API response: %s', response)
+            return None
         collage_id = collage_data.get('id')
         return Collection(
             external_id=str(collage_id),
