@@ -1,5 +1,5 @@
 """Shared utilities for CLI commands."""
-from typing import List
+from typing import Dict, List
 
 import click
 
@@ -76,30 +76,50 @@ def update_collections_from_collages(local_database: LocalDatabase,
     Forces the update of each collage (force_update=True)
     """
 
-    for collage in collage_list:
-        logger.info('Updating collection for collage "%s"...', collage.name)
-        gazelle_api = GazelleAPI(collage.site)
+    # Reuse one API client per site so its rate limiter is shared across the whole run
+    gazelle_apis: Dict[str, GazelleAPI] = {}
+    processed_collages = set()
 
-        if AlbumFetchMode.TORRENT_NAME == fetch_mode:
-            collection_creator = TorrentNameCollectionCreatorUseCase(local_database,
-                                                                     plex_manager,
-                                                                     gazelle_api)
-            result = collection_creator.execute(
-                collage_id=collage.external_id,
-                site=collage.site,
-                fetch_bookmarks=fetch_bookmarks,
-                force_update=True
-            )
-        else:
-            collection_creator = QuerySyncCollectionUseCase(local_database,
-                                                            plex_manager,
-                                                            gazelle_api)
-            result = collection_creator.execute(
-                collage_id=collage.external_id,
-                site=collage.site,
-                fetch_bookmarks=fetch_bookmarks,
-                force_update=True
-            )
+    for collage in collage_list:
+        # Skip duplicated entries of the same collage within a run
+        collage_key = ((collage.site or '').lower(), str(collage.external_id))
+        if collage_key in processed_collages:
+            logger.info('Skipping duplicated entry for collage "%s" (id: %s, site: %s).',
+                        collage.name, collage.external_id, collage.site)
+            continue
+        processed_collages.add(collage_key)
+
+        logger.info('Updating collection for collage "%s"...', collage.name)
+        try:
+            site_key = (collage.site or '').lower()
+            if site_key not in gazelle_apis:
+                gazelle_apis[site_key] = GazelleAPI(collage.site)
+            gazelle_api = gazelle_apis[site_key]
+
+            if AlbumFetchMode.TORRENT_NAME == fetch_mode:
+                collection_creator = TorrentNameCollectionCreatorUseCase(local_database,
+                                                                         plex_manager,
+                                                                         gazelle_api)
+                result = collection_creator.execute(
+                    collage_id=collage.external_id,
+                    site=collage.site,
+                    fetch_bookmarks=fetch_bookmarks,
+                    force_update=True
+                )
+            else:
+                collection_creator = QuerySyncCollectionUseCase(local_database,
+                                                                plex_manager,
+                                                                gazelle_api)
+                result = collection_creator.execute(
+                    collage_id=collage.external_id,
+                    site=collage.site,
+                    fetch_bookmarks=fetch_bookmarks,
+                    force_update=True
+                )
+        except Exception as exc:  # pylint: disable=W0718
+            logger.exception('Failed to update collection for collage "%s": %s',
+                             collage.name, exc)
+            continue
 
         if result.response_status is None:
             logger.info('No valid data found for collage "%s".', collage.name)

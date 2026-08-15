@@ -19,6 +19,10 @@ from red_plex.infrastructure.logger.logger import logger
 from red_plex.infrastructure.rest.gazelle.mapper.gazelle_mapper import GazelleMapper
 
 
+class GazelleRateLimitError(Exception):
+    """Raised when the Gazelle API reports that the rate limit was exceeded."""
+
+
 # pylint: disable=W0718,R0914,R0913,R0917,R0912
 class GazelleAPI:
     """Handles API interactions with Gazelle-based services."""
@@ -57,6 +61,12 @@ class GazelleAPI:
                 time.sleep(0.001)
 
     @retry(
+        retry=retry_if_exception_type(GazelleRateLimitError),
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(10),
+        reraise=True
+    )
+    @retry(
         retry=retry_if_exception_type(requests.exceptions.RequestException),
         stop=stop_after_attempt(5),
         wait=wait_fixed(4),
@@ -66,6 +76,7 @@ class GazelleAPI:
         """
         Makes a rate-limited GET API call to the Gazelle-based service with retries.
         Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
+        API-level rate limit failures (HTTP 200 with a failure payload) are also retried.
         """
         formatted_params = '&' + '&'.join(f'{k}={v}' for k, v in params.items()) if params else ''
         formatted_url = f'{self.base_url_with_action}{action}{formatted_params}'
@@ -74,8 +85,16 @@ class GazelleAPI:
         self._wait_for_rate_limit()
         response = requests.get(formatted_url, headers=self.headers, timeout=10)
         response.raise_for_status()
-        return response.json()
+        json_data = response.json()
+        self._raise_if_rate_limited(json_data)
+        return json_data
 
+    @retry(
+        retry=retry_if_exception_type(GazelleRateLimitError),
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(10),
+        reraise=True
+    )
     @retry(
         retry=retry_if_exception_type(requests.exceptions.RequestException),
         stop=stop_after_attempt(5),
@@ -88,6 +107,7 @@ class GazelleAPI:
         """
         Makes a rate-limited POST API call to the Gazelle-based service with retries.
         Rate limit is handled in a loop, while network/HTTP errors trigger a retry.
+        API-level rate limit failures (HTTP 200 with a failure payload) are also retried.
         """
         url = f'{self.base_url_with_action}{action}'
         logger.debug('Calling POST API: %s', url)
@@ -95,7 +115,22 @@ class GazelleAPI:
         self._wait_for_rate_limit()
         response = requests.post(url, headers=self.headers, params=params, data=data, timeout=10)
         response.raise_for_status()
-        return response.json()
+        json_data = response.json()
+        self._raise_if_rate_limited(json_data)
+        return json_data
+
+    @staticmethod
+    def _raise_if_rate_limited(json_data: Any) -> None:
+        """
+        Detects API-level rate limit failures, which the Gazelle API returns
+        as HTTP 200 with a failure payload, and raises an error for them.
+        """
+        if (isinstance(json_data, dict)
+                and json_data.get('status') == 'failure'
+                and 'rate limit' in str(json_data.get('error', '')).lower()):
+            logger.warning('Gazelle API rate limit exceeded. '
+                           'Waiting before retrying the request.')
+            raise GazelleRateLimitError(json_data.get('error'))
 
     def get_retry_after(self) -> int:
         """Calculates the time to wait until another request can be made."""
